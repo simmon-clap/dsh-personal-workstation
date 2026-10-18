@@ -7,27 +7,39 @@
  *  插件在两种环境下都能加载，绝不会因为缺少 schema 库而启动失败。 */
 
 let z=null;
-try{({default:z}=await import('@deepseek-ai/schemastery'))}catch{z=null}
+try{
+ // 测试/无宿主环境可强制走降级实现，防止再出现 `schema.number is not a function` 这类缺方法崩溃。
+ if(globalThis.__DSH_FORCE_CONFIG_FALLBACK__)throw new Error('forced fallback');
+ ({default:z}=await import('@deepseek-ai/schemastery'))
+}catch{z=null}
 
-/** 降级实现：只需支持 default / description / role 的链式调用与形状可读。 */
+/** 降级实现：只需支持 default / description / role / volatile 的链式调用与形状可读。
+ *  链式方法必须返回**同一个节点**（带 shape），否则 `.object({...}).description(...)` 会把 shape 丢掉
+ *  —— P0-4 里"第三方环境一构建 schema 就崩/形状缺失"就是这一类。 */
 function fallbackNode(kind,inner){
  const meta={kind,...(inner?{inner}:{})};
- const chain={
-  default(value){meta.default=value;return chain},
-  description(text){meta.description=text;return chain},
-  role(name,extra){meta.role=name;if(extra!==undefined)meta.extra=extra;return chain},
-  volatile(){meta.volatile=true;return chain},
+ const node={
+  default(value){meta.default=value;return node},
+  description(text){meta.description=text;return node},
+  role(name,extra){meta.role=name;if(extra!==undefined)meta.extra=extra;return node},
+  volatile(){meta.volatile=true;return node},
   toJSON(){return meta},
  };
- return chain;
+ Object.defineProperty(node,'kind',{value:kind,enumerable:true});
+ if(inner)Object.defineProperty(node,'inner',{value:inner,enumerable:true});
+ return node;
 }
 const fallback={
  string:()=>fallbackNode('string'),
  boolean:()=>fallbackNode('boolean'),
+ number:()=>fallbackNode('number'),
  array:inner=>fallbackNode('array',inner),
- object:shape=>({...fallbackNode('object'),shape}),
+ object:shape=>{
+  const node=fallbackNode('object');
+  Object.defineProperty(node,'shape',{value:shape,enumerable:true});
+  return node;
+ },
 };
-
 const schema=z??fallback;
 
 /** 工作台插件的配置：基础设施 + 外部接入（凭据留空 = 未接入）。 */
