@@ -74,7 +74,9 @@
   "verify:public": "node prototype/public-repo-check.mjs",
   "verify:clean-install": "node prototype/clean-install-check.mjs",
   "verify:c7": "node prototype/c7-simulation.mjs",
-  "verify:paths": "node prototype/w5-real-paths.mjs"
+  "verify:paths": "node prototype/w5-real-paths.mjs",
+  "release": "node scripts/release.mjs",
+  "release:check": "node scripts/release.mjs --dry-run"
  },
  "engines": {
   "node": ">=24",
