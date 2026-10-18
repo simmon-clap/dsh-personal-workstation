@@ -1,0 +1,29 @@
+# 依赖与构建
+node_modules/
+releases/
+*.tgz
+
+# 本机数据（工作台数据库、备份、截图、录音/纪要一律不进仓库）
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+prototype/screenshots/
+backups/
+coverage/
+.DS_Store
+*~
+
+# 内部文档与项目账本不进公开仓库（本地保留，测试仍可读）
+/*.md
+!/README.md
+!/CHANGELOG.md
+/prototype/*.md
+/acceptance/
+/*.html
+
+# 作者环境的验收脚本（依赖真实库/真实项目名，不进公开仓库；本地保留）
+/prototype/accept-w1-dsh.mjs
+/prototype/accept-w1-realdata.mjs
+/prototype/w5-real-paths.mjs
+/prototype/c7-simulation.mjs

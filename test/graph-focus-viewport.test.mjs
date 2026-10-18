@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {runInNewContext} from 'node:vm';import {graphClient} from '../src/graph-client.mjs';
+test('focused node center maps to viewport center at any fitted scale',()=>{const focus=runInNewContext(graphClient+';graphFocusViewport');for(const scale of [.05,.5,1,3]){const point={x:-245,y:600},view=focus(point,800,500,scale);assert.equal((point.x+100)*scale+view.tx,400);assert.equal((point.y+38)*scale+view.ty,250)}});

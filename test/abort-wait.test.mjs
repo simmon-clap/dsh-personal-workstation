@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {abortableWait} from '../src/abort-wait.mjs';
+test('abort ends waiting without provider settlement and observes late rejection',async()=>{let fail;const provider=new Promise((_r,reject)=>fail=reject);const c=new AbortController();const pending=abortableWait(provider,c.signal);c.abort(new Error('stop'));await assert.rejects(pending,/stop/);fail(new Error('late provider error'));await Promise.resolve()});
+test('normal completion and already aborted calls settle correctly',async()=>{const c=new AbortController();assert.equal(await abortableWait(Promise.resolve(42),c.signal),42);c.abort(new Error('closed'));await assert.rejects(abortableWait(new Promise(()=>{}),c.signal),/closed/)});

@@ -1,0 +1,1031 @@
+/* 工作台修正层（产品侧维护，位于 VI 各层之后）。
+   这里只放两类内容，且都必须写明理由：
+   1) 手册明确要求、但原型与设计方应用页都没实现的版面规则；
+   2) 真实数据下才暴露、演示数据看不出来的边界。
+   视觉语言（颜色/字号/间距/圆角）仍以 VI 为准，不在本层改动。 */
+
+/* 手册 §07「对象名称最多两行，全文可展开」：
+   原型未限制行数，真实数据下项目卡标题会被拉成 8 行、任务行 4 行，破坏卡片节奏。
+   两行截断 + 省略号；全文在详情弹窗中完整可见（点卡片即打开）。 */
+.project h3,
+.resource h3,
+.taskrow strong,
+.column>button h3 {
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+/* 手册 §03「数据采用等宽数字」：数字跳动时不左右抖动，比例与分母逐位对齐。 */
+.metric b,
+.projectnumbers b,
+.gantt .name small,
+.taskrow small,
+[data-counts] {
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+}
+
+/* 手册 §08：静态骨架用真实的卡片类名，保证网格与高度与真实内容一致；
+   骨架只表达"正在读"，不显示任何假百分比。 */
+.sk{background:var(--ws-line);border-radius:5px;opacity:.75}
+.sk-block{padding:16px 16px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);margin:0 0 12px}
+.sk-row{padding:12px;border:1px solid var(--ws-line);border-radius:11px;background:var(--ws-surface);margin:8px 0}
+
+/* 待处理提示（用户要求：一眼看到有多少待办）。沿用 VI：只有一个行动色系、
+   数字用等宽、圆角与字号取 tokens；不靠颜色单独表达，读屏有完整 aria-label。 */
+.ws-badge{
+  margin-left:auto;
+  min-width:20px;
+  padding:4px 4px;
+  border-radius:999px;
+  /* 明暗都由 tokens 翻转，不自造色值。 */
+  background:var(--ws-action-soft);
+  color:var(--ws-action);
+  font-size:12px;
+  font-weight:600;
+  line-height:16px;
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+
+/* VI 选择控件：替掉原生 <select>（原生控件在 macOS 上是系统外观，与 VI 不是一套语言）。 */
+.viselect{position:relative;display:block}
+.viselect-label{display:block;font-size:12px;color:var(--ws-muted);margin:0 0 4px}
+.viselect-button{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  padding:8px 12px;border:1px solid var(--ws-line);border-radius:10px;background:var(--ws-surface);
+  color:var(--ws-ink);font-size:13px;text-align:left;cursor:pointer;
+}
+.viselect-button:hover{border-color:var(--ws-action)}
+.viselect-button[aria-expanded="true"]{border-color:var(--ws-action);box-shadow:0 0 0 3px var(--ws-action-soft)}
+.viselect-button .icon{transform:rotate(90deg);opacity:.6}
+.viselect-button[aria-expanded="true"] .icon{transform:rotate(-90deg)}
+.viselect-list{
+  position:absolute;z-index:5;left:0;right:0;top:calc(100% + 4px);max-height:240px;overflow:auto;
+  padding:4px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);
+  box-shadow:0 12px 28px color-mix(in srgb, var(--ws-ink) 14%, transparent);
+}
+.viselect-option{
+  display:block;width:100%;padding:8px 8px;border:0;border-radius:8px;background:none;
+  color:var(--ws-ink);font-size:13px;text-align:left;cursor:pointer;
+}
+.viselect-option:hover,.viselect-option:focus-visible{background:var(--ws-action-soft);color:var(--ws-action);outline:none}
+.viselect-option[aria-selected="true"]{color:var(--ws-action);font-weight:600}
+
+/* 弹窗头部的返回按钮：所有弹窗统一有返回入口。 */
+.drawerhead .back{
+  display:inline-flex;align-items:center;gap:4px;margin-right:8px;padding:4px 8px;
+  border:1px solid var(--ws-line);border-radius:999px;background:var(--ws-surface);
+  color:var(--ws-muted);font-size:12px;cursor:pointer;
+}
+.drawerhead .back:hover{color:var(--ws-action);border-color:var(--ws-action)}
+.drawerhead .back .icon{transform:rotate(180deg)}
+
+/* 引用字段（合作机构 / 负责人 / 依赖任务 / 参与人）：已选值用标签表达，添加走同一个 VI 选择控件。 */
+.refchips{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 4px}
+.refchip{
+  display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;
+  background:var(--ws-action-soft);color:var(--ws-action);font-size:12px;
+}
+.refchip-remove{width:14px;height:14px;padding:0;border:0;border-radius:999px;background:none;color:inherit;font-size:12px;line-height:1;cursor:pointer}
+.refchip-remove::before{content:'×'}
+
+/* 收件箱卡片：状态点 + 操作图标计数 + 差异条 + 来源时间。
+   颜色只用于状态与操作类型，文字始终在场（不靠颜色单独表达）。 */
+.inboxcard{display:flex;flex-direction:column;gap:8px;text-align:left}
+.inboxhead{display:flex;align-items:center;gap:8px}
+.inboxhead h2{flex:1;min-width:0;margin:0}
+.inboxhead time{font-size:12px__KEEP__;color:var(--ws-muted);font-variant-numeric:tabular-nums}
+.statusdot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ws-line)}
+/* VI §2 / §14 V5：待确认是**状态**，不是行动 —— 原来它用的是行动色，
+   实测与主色按钮 #315ED0 完全相同，于是"点我"和"这条在等你"两个含义在同一个界面里互相抵消。
+   改成中性墨色：等你处理是常态，不需要喊；要你动手的地方仍然是唯一那个蓝按钮。
+
+   ── 状态色点：全站唯一一张 data-state → 变量表 ──────────────────────────────
+   卡片状态点（.statusdot）与筛选片状态点（.fdot）共用这一组变量：同一个状态在任何地方
+   都是同一个颜色（VI §2 颜色只做辅助，判断始终由旁边的文字承担）。
+   合并前两处各写一遍，而且"已取消"卡片点用 --ws-line、筛选片用 --ws-muted —— 同一状态
+   两种灰；收口到 --ws-muted（--ws-line 在纸底上几乎看不到，等于状态点凭空消失）。 */
+.statusdot[data-state="draft"],.fdot[data-state="draft"]{background:var(--ws-ink)}
+.statusdot[data-state="conflict"],.fdot[data-state="conflict"]{background:var(--ws-warning)}
+.statusdot[data-state="committed"],.fdot[data-state="committed"]{background:var(--ws-success)}
+.statusdot[data-state="cancelled"],.fdot[data-state="cancelled"]{background:var(--ws-muted)}
+.inboxops{display:flex;flex-wrap:wrap;gap:4px}
+.opcount{font-size:12px;padding:4px 8px;border-radius:999px;background:var(--ws-paper);color:var(--ws-muted);font-variant-numeric:tabular-nums}
+.opcount[data-opcount="create"]{background:var(--ws-success-soft);color:var(--ws-success)}
+.opcount[data-opcount="update"]{background:var(--ws-action-soft);color:var(--ws-action)}
+.opcount[data-opcount="archive"],.opcount[data-opcount="delete"]{background:var(--ws-warning-soft);color:var(--ws-warning)}
+.diffbar{display:flex;height:4px;border-radius:999px;overflow:hidden;background:var(--ws-line)}
+.diffbar i{display:block;height:100%}
+.diffbar i[data-seg="create"]{background:var(--ws-success)}
+.diffbar i[data-seg="update"]{background:var(--ws-action)}
+.diffbar i[data-seg="archive"],.diffbar i[data-seg="delete"]{background:var(--ws-warning)}
+.diffbar i[data-seg="restore"]{background:var(--ws-muted)}
+.inboxmeta{margin:0;font-size:12px;color:var(--ws-muted)}
+.inboxnames{margin:0;font-size:12px;color:var(--ws-ink)}
+/* 收件箱卡片 + 归属行：卡片仍是 <button>（点开批次），「一键指定」放在卡片外的包裹层里——
+   按钮不能嵌套按钮，否则浏览器会把外层按钮提前闭合。包裹层只是 grid 单元，不引入新的色值。 */
+.inboxitem{display:flex;flex-direction:column;min-width:0}
+.inboxitem .inboxcard{flex:1}
+.inboxassign{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:8px 4px 0;font-size:12px;color:var(--ws-muted)}
+.inboxassign .viselect{display:inline-flex;vertical-align:middle}
+.inboxassign .btn{padding:4px 8px;font-size:12px}
+
+/* 路线图的交付项里程碑：细条表达"计划"，逾期用状态色，文字始终在（不靠颜色单独表达）。 */
+.milestones{position:relative;height:18px;margin-top:4px}
+.milestone{
+  position:absolute;top:0;transform:translateX(-50%);max-width:96px;overflow:hidden;text-overflow:ellipsis;
+  padding:4px 4px;border-radius:999px;border:1px solid var(--ws-line);background:var(--ws-surface);
+  color:var(--ws-muted);font-size:12px;white-space:nowrap;cursor:pointer;
+}
+.milestone[data-done="1"]{border-color:var(--ws-success);color:var(--ws-success)}
+.milestone[data-late="1"]{border-color:var(--ws-warning);color:var(--ws-warning)}
+
+/* 项目管理面板的行：交付项 / 计划 / 材料共用（一行内表达状态、名称与细节）。 */
+.managerow{
+  display:flex;align-items:center;gap:8px;padding:8px 8px;border:1px solid var(--ws-line);
+  border-radius:10px;background:var(--ws-surface);margin:4px 0;
+}
+.managerow strong{flex:none;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:550}
+.managerow small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--ws-muted)}
+.managerow .chip{
+  flex:none;padding:4px 8px;border-radius:999px;font-size:12px;
+  background:var(--ws-paper);color:var(--ws-muted);
+}
+.managerow .chip[data-state="done"]{background:var(--ws-success-soft);color:var(--ws-success)}
+.managerow .chip[data-state="late"]{background:var(--ws-warning-soft);color:var(--ws-warning)}
+.managerow .chip[data-state="open"]{background:var(--ws-action-soft);color:var(--ws-action)}
+.managerow .btn{padding:4px 8px;font-size:12px}
+.phase span small{display:block;font-size:12px;color:var(--ws-muted);font-variant-numeric:tabular-nums}
+
+/* 四张指标卡时改成四列：否则第 4 张会单独换行，看起来像掉出来的孤儿（3 张时保持原设计）。 */
+.detailmetrics:has(> div:nth-child(4)){grid-template-columns:repeat(4,1fr)}
+
+/* 批次差异卡（体检 A1）：原来弹窗正文直接把 JSON 打印成一块 <pre>，会议纪要这种长文本以 \n 转义塞在引号里没法读。
+   现在每行「字段名：旧值 → 新值」，字段名走中文标签；值保留原文换行，长文本默认 3 行后由「展开全文」补全。
+   本层只补版面规则，不引入新的色值（对比度仍由 VI 各层决定）。 */
+.diffrow{margin:4px 0;font-size:12px;line-height:1.7}
+.diffname{font-weight:600}
+.diffvalue{white-space:pre-wrap;word-break:break-word}
+.difftoggle{margin-left:4px;padding:4px 8px;font-size:12px}
+/* 归属核对块：自动关联要看得见、改得动（同一批草稿内修订），控件与值同行不挤压。 */
+[data-linkblock="1"] .viselect{display:inline-flex;vertical-align:middle;margin:0 4px}
+[data-linkblock="1"] .btn{padding:4px 8px;font-size:12px}
+
+/* 录入对话框的文本字段：外壳只给 .formrow 里的 input/select 全宽，裸 <label> 是行内元素，
+   名称/内容/链接会挤在一行互相重叠（真实浏览器实测）。这里只补必要的块级与全宽规则。 */
+#detailbody label[data-intake-field]{display:block;margin:12px 0;font-size:12px;color:var(--ws-muted)}
+#detailbody label[data-intake-field] input,
+#detailbody label[data-intake-field] textarea{display:block;width:100%;margin-top:4px;padding:8px;border:1px solid var(--ws-line);border-radius:9px;background:var(--ws-surface);color:var(--ws-ink);font:inherit}
+#detailbody label[data-intake-field] textarea{min-height:130px;resize:vertical}
+
+/* 日程行的时间列：外壳写死 `grid-template-columns:40px 1fr`，而真实数据的 <time> 是
+   「2026/10/12 10:30」（原型演示数据只有「10:30」）。40px 装不下 → 文本以 overflow:visible
+   溢出到右侧内容列（layout-metrics 量到内容比盒子宽 18px、右边界未越视口，属"内容溢出"型缺陷）。
+   修法：时间列按内容取宽并禁止折行——保留完整时间，不让它压到正文上。 */
+.scheduleline{grid-template-columns:max-content 1fr}
+.scheduleline time{white-space:nowrap}
+
+/* A3：编辑表单整体重排（体检 A3 的量化目标：单行最多 3 个控件、最窄输入框 ≥200px、四个分节）。
+   外壳只给 .formrow 里的 input/select 全宽；原来项目表单的字段用行内 <label>，于是出现
+   154–183px 的"坏掉的控件"、计划/文件夹挤在一行、交付项一行 6 个控件。这里补版面规则，不引入新色值。 */
+#detailbody [data-formsection]{margin:16px 0 0;padding:12px 0 4px;border-top:1px solid var(--ws-line)}
+#detailbody [data-formsection]:first-of-type{border-top:0;margin-top:4px}
+#detailbody [data-formsection]>h3{margin:0 0 8px}
+#detailbody .formfield{display:block;margin:12px 0}
+#detailbody .formfield>span,#detailbody .formfield>label{display:block;margin-bottom:4px;font-size:12px;color:var(--ws-muted)}
+#detailbody .formfield>input,#detailbody .formfield>textarea,#detailbody .formfield>select{display:block;width:100%;box-sizing:border-box}
+#detailbody .formfield>textarea{min-height:96px;resize:vertical}
+#detailbody .formfield .viselect{display:block;width:100%}
+#detailbody .formfield .viselect-button{width:100%;justify-content:space-between}
+#detailbody .formhint{margin:4px 0 0;font-size:12px;color:var(--ws-muted)}
+#detailbody .folderrow{display:flex;gap:8px;align-items:center}
+#detailbody .folderrow>input{flex:1;min-width:0}
+#detailbody .folderpanel{margin-top:8px}
+#detailbody .folderpanel .btn{margin:0 4px 4px 0}
+/* 交付项/步骤：两行式条目。第一行 勾选+名称+删除；第二行 日期+负责人+状态（每行最多 3 个控件）。 */
+#detailbody .itemrow{margin:8px 0;padding:8px 12px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface)}
+#detailbody .itemrow .itemline{display:flex;gap:8px;align-items:center}
+#detailbody .itemrow .itemline+.itemline{margin-top:8px}
+#detailbody .itemrow .itemline>input[data-role="done"]{flex:none;width:auto}
+#detailbody .itemrow .itemline>input[data-role="itemtitle"]{flex:1;min-width:0}
+#detailbody .itemrow .itemline>input[data-role="itemdue"]{flex:none;width:160px}
+#detailbody .itemrow .itemline>.itemsel{flex:1;min-width:0}
+#detailbody .itemrow .itemline>.itemsel .viselect,#detailbody .itemrow .itemline>.itemsel .viselect-button{display:block;width:100%}
+#detailbody .itemrow .itemline>button[data-role="itemremove"]{flex:none}
+
+/* 材料详情的内嵌阅读器（体检 A5）：正文可滚动、目录可点、全屏后占满整屏；只有版面，不引入新色值。 */
+.readertools{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 8px}
+.readertools .btn{padding:4px 8px;font-size:12px}
+.mdtoc{display:flex;flex-direction:column;gap:4px;padding:8px 12px;margin:0 0 8px;border:1px solid var(--ws-line);border-radius:10px;background:var(--ws-paper)}
+.mdtoc b{font-size:12px;color:var(--ws-muted);font-weight:550}
+.mdtoc a{font-size:12px;color:var(--ws-action);text-decoration:none;padding-left:calc(var(--md-depth,0) * 12px);cursor:pointer}
+/* VI §3 正文 14/22（2026-10-16）：阅读器是唯一读长文的地方，原来用的是 13px —— 正文档实际缺失。 */
+.mdbody{max-height:46vh;overflow:auto;padding-right:4px;font-size:14px;line-height:22px}
+.mdbody p{margin:4px 0}
+.mdbody h3,.mdbody h4,.mdbody h5,.mdbody h6{margin:12px 0 4px}
+.mdbody ul,.mdbody ol{margin:4px 0;padding-left:16px}
+.mdbody blockquote{margin:8px 0;padding:4px 12px;border-left:3px solid var(--ws-line);color:var(--ws-muted)}
+.mdbody pre{margin:8px 0;padding:8px 12px;border-radius:10px;background:var(--ws-paper);overflow:auto;white-space:pre-wrap}
+.mdbody code{background:var(--ws-paper);border-radius:4px;padding:0 4px}
+.mdbody hr{border:0;border-top:1px solid var(--ws-line);margin:12px 0}
+.readernote{margin:8px 0 0;font-size:12px;color:var(--ws-muted)}
+.reader:fullscreen{background:var(--ws-surface);padding:24px}
+.reader:fullscreen .mdbody{max-height:none;height:calc(100vh - 190px)}
+/* 录入对话框的拖放区：虚线框 + 悬停反馈，文字说明权限边界。 */
+.dropzone{margin:8px 0;padding:16px;border:1px dashed var(--ws-line);border-radius:12px;text-align:center;font-size:12px;color:var(--ws-muted);cursor:copy}
+.dropzone.over{border-color:var(--ws-action);color:var(--ws-action);background:var(--ws-action-soft)}
+
+/* 小节的行动按钮跟在标题右侧：弹窗里最多保留两条动作条（底部主操作 + 必要的确认行）。
+   注意：`.sectionhead` 是首页也在用的类，这里必须限定在弹窗内，否则首页版面会被改动。 */
+#detailbody .sectionhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 4px}
+#detailbody .sectionhead h3{margin:0}
+#detailbody .sectionactions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#detailbody .sectionactions .btn{padding:4px 12px;font-size:12px}
+
+/* 文件与资料卡片：路径 / 大小 / 文件状态 / 归属 一行小标签，放不下就截断（卡片本身已 overflow:hidden）。 */
+.filemeta{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0;max-width:100%}
+.filemeta .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--ws-muted);background:var(--ws-paper);border-radius:999px;padding:4px 8px}
+.filemeta .chip.warn{background:var(--ws-warning-soft);color:var(--ws-warning)}
+.filemeta .chip[data-state="current"]{background:var(--ws-success-soft);color:var(--ws-success)}
+.filemeta .chip[data-state="changed"]{background:var(--ws-warning-soft);color:var(--ws-warning)}
+.fileopen{color:var(--ws-action);font-weight:550}
+
+/* ── 全站唯一的「筛选」控件（VI §6「同一控件全站唯一实现」／审计 P2 #19）──────────
+   收件箱 / 项目 / 任务三处以前各写一套：收件箱是「按钮 + 常驻状态片 + 收起面板」，
+   项目是「按钮 + 7 个下拉」，任务是「一排常驻筛选、连按钮都没有」。现在三处共用
+   filterBarHtml + wireFilterBar 这一份实现：工具栏只留一个「筛选」按钮，条件全收进面板；
+   面板里两行 —— 状态片行（色点 + 文字）与下拉字段行，用同一套类、同一套间距。
+   按钮上写出有几条筛选生效（「筛选 · 2」）：不能让人看着一份被过滤过的列表却不知道。
+   横排换行、独占一整行：否则 7 个下拉竖着堆成一列，左侧模式页签也会被挤成两行。 */
+.filtertoggle{white-space:nowrap}
+.filtertoggle[data-active="1"]{border-color:var(--ws-action);color:var(--ws-action)}
+.filterpanel{display:flex;flex-wrap:wrap;gap:var(--ws-space-8) var(--ws-space-12);align-items:flex-end;flex:1 1 100%;width:100%;margin:0 0 var(--ws-space-12);padding:var(--ws-space-12);border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface)}
+/* [hidden] 得自己再写一次：UA 的 [hidden]{display:none} 优先级低于类选择器上的 display:flex。 */
+.filterpanel[hidden]{display:none}
+.filterpanel .filterstatus{flex:1 1 100%}
+.filterpanel .filterfields{display:flex;flex-wrap:wrap;gap:var(--ws-space-8) var(--ws-space-12);align-items:flex-end;flex:1 1 100%}
+.filterfield{display:flex;flex-direction:column;gap:var(--ws-space-4);flex:0 1 168px;min-width:150px}
+.filterfield .viselect-label{margin:0}
+.filterfield .viselect-button{padding:var(--ws-space-4) var(--ws-space-8);font-size:12px}
+.filterchip{display:inline-flex;align-items:center}
+
+/* 项目卡片上的优先级标签：高=行动色、中=常规、低=灰；逾期用警告色。文字始终在，不靠颜色单独表达。 */
+.project .chip.priority[data-level="high"]{background:var(--ws-action-soft);color:var(--ws-action);font-weight:550}
+.project .chip.priority[data-level="medium"]{background:var(--ws-paper);color:var(--ws-ink)}
+.project .chip.priority[data-level="low"]{background:var(--ws-paper);color:var(--ws-muted)}
+.project .chip.late{background:var(--ws-warning-soft);color:var(--ws-warning)}
+.project .chip{display:inline-block;margin:0 4px 4px 0}
+
+/* 设置页：状态用两列表格表达（名称 / 状态），长解释收进折叠条目——此前是两坨 <br> 文字。 */
+.settingsgrid{display:flex;flex-direction:column;gap:4px;border:1px solid var(--ws-line);border-radius:12px;overflow:hidden;margin:4px 0 8px}
+.settingsgrid[data-settings-group="base"]{background:var(--ws-surface)}
+.settingsrow{display:grid;grid-template-columns:150px 1fr;gap:8px;padding:8px 12px;background:var(--ws-surface)}
+.settingsrow .name{font-size:12px;color:var(--ws-muted)}
+.settingsrow .value{font-size:12px;color:var(--ws-ink);word-break:break-word}
+.settingshelp{border:1px solid var(--ws-line);border-radius:12px;padding:8px 12px;margin:4px 0;background:var(--ws-surface)}
+.settingshelp summary{cursor:pointer;font-size:13px;font-weight:550;color:var(--ws-ink)}
+.settingshelp p{margin:8px 0 4px;font-size:12px;color:var(--ws-muted);line-height:1.7}
+
+/* 卡片上的文件夹与阶段时间：中性信息，弱化处理，不与优先级标签抢注意力。 */
+.project .chip.folder,.project .chip.stage-since{background:var(--ws-paper);color:var(--ws-muted);font-weight:400}
+
+/* 看板卡片上的附加信息（等待原因 / 支撑交付项 / 截止）：小字，不抢标题。 */
+.kanban .tagline{margin:4px 0 0;font-size:12px;color:var(--ws-muted)}
+.kanban .tagline[data-blocked="1"]{color:var(--ws-warning)}
+
+/* 画布：框选后的批量操作条。舞台是 overflow:hidden 的绝对定位容器，
+   所以操作条也必须绝对定位（放在右下角，避开左下的缩放工具），否则会被裁掉。 */
+.canvasbar{
+  position:absolute;right:16px;bottom:16px;z-index:6;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:min(760px,calc(100% - 32px));
+  padding:8px 8px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);
+  box-shadow:0 3px 15px color-mix(in srgb, var(--ws-ink) 8%, transparent);
+}
+.canvasbar .count{font-size:12px;color:var(--ws-muted);margin-right:4px}
+.canvasbar .btn{padding:4px 12px;font-size:12px}
+#canvasselect.active{background:var(--ws-action-soft);color:var(--ws-action);border-color:var(--ws-action)}
+#spaceSvg .graphnode[data-selected="1"]{filter:drop-shadow(0 0 0 transparent)}
+#spaceSvg .graphgroup{cursor:pointer}
+#spaceSvg .graphgroup text{user-select:none}
+#spaceSvg #marquee{pointer-events:none}
+
+/* 画布内预览面板：停靠在舞台右侧，不遮挡左下缩放工具与右下批量操作条。 */
+.canvaspreview{
+  position:absolute;right:16px;top:16px;bottom:78px;width:min(520px,46%);
+  display:flex;flex-direction:column;z-index:6;
+  border:1px solid var(--ws-line);border-radius:14px;background:var(--ws-surface);box-shadow:0 8px 30px color-mix(in srgb, var(--ws-ink) 12%, transparent);
+  overflow:hidden;
+}
+.canvaspreview-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-bottom:1px solid var(--ws-line)}
+.canvaspreview-head strong{font-size:13px;color:var(--ws-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.canvaspreview-body{flex:1;overflow:auto;padding:8px 12px}
+.canvaspreview-body img{max-width:100%;border-radius:10px;display:block}
+.canvaspreview-body iframe{width:100%;height:100%;min-height:420px;border:0;border-radius:10px}
+.canvaspreview-body .reader{font-size:14px;line-height:22px;color:var(--ws-ink)}
+
+/* 画布节点上的预览入口与连线手柄。 */
+#spaceSvg .nodepreview{cursor:pointer;text-decoration:underline}
+#spaceSvg .nodehandle{cursor:crosshair;opacity:0;transition:opacity .15s}
+#spaceSvg .graphnode:hover .nodehandle,#spaceSvg .graphnode[data-selected="1"] .nodehandle{opacity:1}
+
+/* `hidden` 必须真的隐藏：这两个元素用了 display:flex，否则会覆盖 UA 的 [hidden]{display:none}
+   —— 实测后果是浮层一直挂在画布上挡住节点（连线的松手命中会被它接管）。 */
+.canvasbar[hidden],.canvaspreview[hidden]{display:none}
+
+/* 画布节点右键菜单：把增删改查放到画布上（与详情/编辑器同一套写入路径）。 */
+.nodemenu{
+  position:absolute;z-index:8;display:flex;flex-direction:column;gap:4px;min-width:180px;
+  padding:8px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);
+  box-shadow:0 10px 30px color-mix(in srgb, var(--ws-ink) 16%, transparent);
+}
+.nodemenu .btn{width:100%;text-align:left;padding:4px 8px;font-size:12px}
+.nodemenu .btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* 知识页的全类型查找：结果直接打开记录，不必先猜在哪个页签。 */
+.findbox{position:relative;display:flex;align-items:center;gap:8px;margin-left:auto}
+.findbox input{width:min(320px,38vw);padding:8px 12px}
+.findbox .findhint{font-size:12px;color:var(--ws-muted)}
+.findresults{
+  position:absolute;right:0;top:calc(100% + 6px);z-index:6;width:min(560px,70vw);max-height:52vh;overflow:auto;
+  display:flex;flex-direction:column;gap:4px;padding:8px;border:1px solid var(--ws-line);border-radius:12px;
+  background:var(--ws-surface);box-shadow:0 12px 28px color-mix(in srgb, var(--ws-ink) 14%, transparent);
+}
+.findresults[hidden]{display:none}
+.findrow{display:flex;align-items:center;gap:8px;width:100%;padding:8px 8px;border:0;border-radius:9px;background:transparent;text-align:left;cursor:pointer}
+.findrow:hover{background:var(--ws-action-soft)}
+.findkind{flex:0 0 auto;font-size:12px;color:var(--ws-action);background:var(--ws-action-soft);border-radius:7px;padding:4px 8px}
+.findtitle{flex:1;font-size:13px;color:var(--ws-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.findarch{font-size:12px;color:var(--ws-muted)}
+.findempty{margin:4px;font-size:12px;color:var(--ws-muted)}
+
+/* 手机端：项目路线图的时间轴列是有最小宽度的网格，窄屏会横向溢出。
+   在 700px 以下让时间线自己横向滚动，而不是把整页撑宽（页面本身不出现横向滚动条）。 */
+@media(max-width:700px){
+  #roadmap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  #roadmap .gantt{min-width:520px}
+}
+
+/* 苹果日历同步弹窗：日历多选网格（默认排除噪音日历）。 */
+.applegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px 12px;margin:8px 0 4px}
+.applecal{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ws-ink)}
+.applecal input{width:15px;height:15px}
+
+/* 日程行尾部的同步状态标签 */
+.scheduleline{align-items:center}
+.scheduleline .chip{margin-left:auto}
+
+/* 日历视图（月/周）：结构对齐苹果日历，配色与圆角走 VI tokens。 */
+.callayer{margin:0 0 4px}
+.calbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.calbar .calnav{display:flex;gap:4px}
+.calbar .calnav .btn{padding:4px 8px}
+.caltitle{font-size:14px;color:var(--ws-ink)}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--ws-line);border-radius:12px;overflow:hidden;background:var(--ws-surface)}
+.calhead{padding:8px 8px;font-size:12px;color:var(--ws-muted);text-align:center;border-bottom:1px solid var(--ws-line);background:var(--ws-action-soft)}
+.calhead.today{color:var(--ws-action);font-weight:600}
+.calcell{min-height:92px;padding:4px 4px 4px;border-right:1px solid var(--ws-line);border-bottom:1px solid var(--ws-line);display:flex;flex-direction:column;gap:4px}
+.calcell:nth-child(7n){border-right:0}
+.calcell.dim{opacity:.45}
+.caldate{font-size:12px__KEEP__;color:var(--ws-muted);text-align:right}
+.calcell.today .caldate{color:var(--ws-surface);background:var(--ws-action);border-radius:50%;width:19px;height:19px;line-height:19px;text-align:center;align-self:flex-end}
+.callist{display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.calchip{display:flex;align-items:center;gap:4px;width:100%;padding:4px 4px;border:0;border-left:3px solid var(--ws-action);border-radius:5px;background:var(--ws-action-soft);color:var(--ws-ink);font-size:12px;text-align:left;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.calchip.allday{border-left-color:var(--ws-muted)}
+.calchip.unsynced{background:var(--ws-surface);border-left-style:dashed}
+.calchip i{font-style:normal;color:var(--ws-muted);font-size:12px}
+.calmore{font-size:12px;color:var(--ws-muted)}
+.calweek{border:1px solid var(--ws-line);border-radius:12px;overflow:auto;background:var(--ws-surface);max-height:520px}
+.calweekhead{display:grid;grid-template-columns:56px repeat(7,1fr);border-bottom:1px solid var(--ws-line);background:var(--ws-action-soft)}
+.calhourhead{font-size:12px;color:var(--ws-muted);padding:4px 4px;text-align:right}
+.calalldayrow{display:grid;grid-template-columns:56px repeat(7,1fr);border-bottom:1px solid var(--ws-line);min-height:26px}
+.calallday{padding:4px 4px;display:flex;flex-direction:column;gap:4px;border-left:1px solid var(--ws-line)}
+.calweekbody{display:grid;grid-template-columns:56px repeat(7,1fr);position:relative}
+.calhours{display:flex;flex-direction:column}
+.calhour{height:34px;font-size:12px;color:var(--ws-muted);text-align:right;padding-right:4px;border-bottom:1px solid var(--ws-line)}
+.calcol{position:relative;height:816px;border-left:1px solid var(--ws-line)}
+.calcol.today{background:var(--ws-action-soft)}
+.calblock{position:absolute;left:2px;right:2px;display:flex;flex-direction:column;gap:4px;padding:4px 4px;border:0;border-left:3px solid var(--ws-action);border-radius:6px;background:var(--ws-action-soft);color:var(--ws-ink);font-size:12px;text-align:left;cursor:pointer;overflow:hidden}
+.calblock i{font-style:normal;color:var(--ws-muted)}
+/* 任务页的「负责人」筛选不再需要单独的外观：它现在是共用「筛选」面板里的一个字段槽
+   （.filterfield + VI 选择控件），与收件箱、项目页的下拉同高同宽同焦点环。 */
+
+/* 收件箱：人话改动清单 + 卡片上的同意/不同意。 */
+.inboxdecide{display:flex;gap:4px;margin:8px 0 4px}
+.inboxdecide .btn{padding:4px 12px;font-size:12px}
+.diff .diffpick{display:flex;align-items:flex-start;gap:8px;cursor:pointer}
+.diff .diffpick input{margin-top:4px}
+.diffhuman{font-size:13px;color:var(--ws-ink);line-height:1.5}
+.diff[data-kept="0"] .diffhuman{color:var(--ws-muted);text-decoration:line-through}
+.diffdetail{margin:4px 0 0 24px}
+.diffdetail summary{cursor:pointer;font-size:12px;color:var(--ws-muted)}
+.diffdetail .diffrow{margin-top:4px}
+
+/* 你自己做的事：直接生效，给一条可撤销的提示（不打断）。 */
+.undobar{position:fixed;left:24px;bottom:24px;z-index:60;display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);box-shadow:0 6px 20px color-mix(in srgb, var(--ws-ink) 8%, transparent);font-size:13px;color:var(--ws-ink)}
+.undobar[hidden]{display:none}
+
+/* 连线的就地问询框（类型 + 一句话依据）。 */
+.veil[data-linkask]{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--ws-ink) 28%, transparent);z-index:70}
+.veil[data-linkask][hidden]{display:none}
+.veil[data-linkask] .modal{width:min(520px,92vw);border-radius:12px;background:var(--ws-surface);border:1px solid var(--ws-line);overflow:hidden}
+.veil[data-linkask] .modalhead{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--ws-line)}
+.veil[data-linkask] .modalbody{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.veil[data-linkask] .modalactions{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--ws-line)}
+.veil[data-linkask] .field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ws-muted)}
+.veil[data-linkask] textarea,.veil[data-linkask] select{font:inherit;padding:8px 8px;border:1px solid var(--ws-line);border-radius:8px;background:var(--ws-surface);color:var(--ws-ink)}
+.noticeline{margin:0;font-size:13px;color:var(--ws-ink)}
+
+/* 画布「更多」面板：高频操作留在工具栏，其余收进来（原来一行 15 个按钮分不清）。 */
+.morepanel{position:absolute;z-index:9;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);box-shadow:0 8px 24px color-mix(in srgb, var(--ws-ink) 8%, transparent);max-width:520px}
+.morepanel[hidden]{display:none}
+.morepanel .noticeline{width:100%;margin:0 0 4px;font-size:12px;color:var(--ws-muted)}
+.spacebar{position:relative}
+
+/* 画布：能力长在画布上——悬停出连线圆点、指针变成可拖、选中给光圈。
+   用户 2026-10-12：操作应该在画布里，不该全靠上面的按钮。 */
+.graphnode{cursor:grab}
+.graphnode:active{cursor:grabbing}
+.graphnode .nodehandle{opacity:0;transition:opacity .12s ease,r .12s ease;r:6}
+.graphnode:hover .nodehandle,.graphnode:focus-within .nodehandle,.graphnode[data-selected="1"] .nodehandle{opacity:1;r:7.5}
+.graphnode:hover>rect:first-of-type{filter:drop-shadow(0 6px 14px color-mix(in srgb, var(--ws-ink) 16%, transparent))}
+.graphnode[data-selected="1"]>rect:first-of-type{filter:drop-shadow(0 4px 10px color-mix(in srgb, var(--ws-action) 18%, transparent))}
+.graphnode .nodespan{opacity:0;transition:opacity .12s ease}
+.graphnode:hover .nodespan,.graphnode[data-selected="1"] .nodespan{opacity:1}
+/* 画布内的浮动控制（缩放与新建）：不再占顶栏。 */
+.canvasfab{position:absolute;left:14px;bottom:14px;z-index:6;display:flex;gap:4px;align-items:center;padding:4px 8px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface)}
+.canvaszoom{position:absolute;right:14px;bottom:14px;z-index:6;display:flex;gap:4px;align-items:center;padding:4px 4px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface)}
+.canvaszoom button,.canvasfab button{border:0;background:transparent;color:var(--ws-ink);font:inherit;padding:4px 8px;border-radius:8px;cursor:pointer}
+.canvaszoom button:hover,.canvasfab button:hover{background:var(--ws-action-soft)}
+.canvasmenu{position:absolute;z-index:12;min-width:168px;padding:4px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);box-shadow:0 10px 30px color-mix(in srgb, var(--ws-ink) 12%, transparent);display:flex;flex-direction:column;gap:4px}
+.canvasmenu button{border:0;background:transparent;text-align:left;padding:8px 8px;border-radius:8px;color:var(--ws-ink);font:inherit;cursor:pointer}
+.canvasmenu button:hover{background:var(--ws-action-soft)}
+.canvasmenu button[data-danger="1"]{color:var(--ws-warning)}
+.spacestage{position:relative}
+
+/* 建议（宪章第四条 / VI V3）：依据与不确定性必须在卡上看得见；
+   改写与否决共用一行理由输入；否决后卡片转灰留在原位，不消失。 */
+.inboxproposal{display:flex;flex-direction:column;gap:4px;margin:8px 0 4px;padding:12px;border:1px solid var(--ws-line);border-radius:8px;background:var(--ws-paper)}
+.inboxproposal .uncertainty{margin:0;font-size:12px;color:var(--ws-warning)}
+.inboxproposal .why{margin-top:4px}
+.inboxproposal .why summary{cursor:pointer;font-size:12px;color:var(--ws-action)}
+.inboxproposal .whychain{margin-top:8px;font-size:12px;line-height:1.9;color:var(--ws-muted)}
+.inboxadvice{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0 4px}
+.inboxadvice .btn{padding:4px 12px;font-size:12px}
+.advisereason{display:flex;gap:8px;align-items:center;width:100%}
+.advisereason[hidden]{display:none}
+.advisereason input{flex:1;min-width:180px;padding:8px;font-size:12px;border:1px solid var(--ws-line);border-radius:8px;background:var(--ws-surface);color:var(--ws-ink)}
+.inboxitem.rejected .inboxcard{opacity:.72}
+.inboxitem.rejected [data-rejected="1"]{color:var(--ws-muted)}
+.proposalstats{margin:8px 0 4px;font-size:12px;color:var(--ws-muted)}
+.proposalstats summary{cursor:pointer;color:var(--ws-action)}
+.proposalstats [data-statsbody]{margin-top:8px;line-height:1.9}
+
+
+/* VI 收敛（2026-10-14）：用户点名「字体太大、整体显老」的收口。
+   ① 冻结原型残留的 10px 分组标签不在 VI 字阶（§3 唯一一套，最小 11px）→ 升到 11px；
+   ② 分组标签用「知识紫」当装饰色，违反 §2「颜色只表达真实状态或对象类型」→ 改用次级墨色。
+   注意：`--proto-font-*` / 内联 px 一律不许在这里再出现，只允许 VI 字阶与 token。 */
+.nav .group,.navfoot small{font-size:12px;color:var(--ws-muted)}
+
+/* VI §3 字阶：`.detailmetrics b` 走的是原型残留的 24px，字阶里没有 24（32/22/18/15/14/13/12/11）。
+   弹窗内的三项数字按「弹窗级数据」落到 22px —— 与 .drawer h2 同档，比首页 .metric b 的 32px 小一档。 */
+.detailmetrics b{font-size:22px;font-weight:550;font-variant-numeric:tabular-nums}
+
+/* ── 设置页改版（2026-10-14）──────────────────────────────────────────────
+   用户点名：「空间与设置信息太冗余、按钮不说人话、交互不符合直觉」，并追加
+   「最严重的是工作区授权极度混乱」。改法：入口改名「设置」（运行时改写，外壳仍与冻结原型一致）、
+   删掉与契约冲突的「工作区授权」、状态一律「已接上/未接上」文字 + 说明两段式、长解释折进 <details>。 */
+.settingslead{margin:0 0 var(--ws-space-16);color:var(--ws-muted);font-size:13px;line-height:1.7}
+.settingsgrid[data-settings-group="cap"] .settingsrow{padding:var(--ws-space-8) var(--ws-space-12)}
+.settingsgrid .settingsrow[data-state] .value b{font-weight:550}
+.settingsgrid .settingsrow[data-state="ok"] .value b{color:var(--ws-success)}
+.settingsgrid .settingsrow[data-state="off"] .value b{color:var(--ws-muted)}
+.settingsgrid .settingsrow .value em{display:block;font-style:normal;color:var(--ws-muted);font-size:12px;margin-top:var(--ws-space-4);line-height:1.6}
+/* 「配置声明的根 ≠ 实际用的工作区」这类必须说出来的话：warning 文字 + 句子本身说清楚，不靠颜色单独承担（VI §2）。 */
+.settingsgrid .settingsrow .value em.settingswarn{color:var(--ws-warning)}
+.settingsdesign{margin-top:var(--ws-space-16)}
+.grantpath{margin:0 0 var(--ws-space-8);color:var(--ws-muted);font-size:12px}
+
+/* 弹窗动作区常驻底部（用户点名「功能按键排列不对齐」）：正文再长也看得到动作，
+   不必先滚到底。圆角走 VI §4 的「内容容器 12」。 */
+.drawer .modalactions{position:sticky;bottom:0;z-index:2;border-radius:12px}
+
+/* 已授权文件夹一行：名称 + 一个动作；不要再把整个目录树铺满弹窗。 */
+.grantrow{display:flex;align-items:center;gap:var(--ws-space-8);padding:var(--ws-space-8) var(--ws-space-12);border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);margin-bottom:var(--ws-space-8)}
+.grantrow .grantname{flex:1;font-size:13px}
+.grantrow .grantsource{color:var(--ws-muted);font-size:12px}
+/* 弹窗底边不留白：否则正文会从常驻动作条下面露出来（用户点名"呈现不精致"）。 */
+.drawer:has(.modalactions){padding-bottom:0}
+
+/* 引用字段的「＋ 新建联系人 / 组织」：就地建、就地选。
+   下拉本身是全宽的，所以按钮挂在下拉右侧一行；未填时先给一句人话再给按钮。 */
+.formfield.hasrefnew{display:grid;grid-template-columns:1fr auto;gap:var(--ws-space-8);align-items:end}
+.formfield.hasrefnew .viselect,.formfield.hasrefnew .refchips{grid-column:1/-1}
+.formfield.hasrefnew .formhint{grid-column:1/-1;margin:0}
+.refnew{white-space:nowrap;min-height:36px}
+.refcreaterow{grid-column:1/-1;display:flex;gap:var(--ws-space-8);align-items:center;margin-top:var(--ws-space-4)}
+.refcreaterow input{flex:1;min-width:0}
+
+/* 新建菜单：三组分开，每组一行说明；卡片必须带图标（用户点名"选项没有图标了"）。 */
+.menugroup{margin:0 0 var(--ws-space-16)}
+.menugroup h3{font-size:12px;color:var(--ws-muted);font-weight:550;margin:0 0 var(--ws-space-8)}
+.menugroup .resourcegrid{gap:var(--ws-space-8)}
+/* 只作用于**新建菜单**里的卡片；.resource 是全站共用的卡片类，不许在这里改它的内部网格。 */
+.menugroup .resource{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:var(--ws-space-4) var(--ws-space-8);padding:var(--ws-space-16)}
+.menugroup .resource .icon{width:20px;height:20px;color:var(--ws-action);margin:0}
+.menugroup .resource h2{font-size:14px;font-weight:550;align-self:center}
+.menugroup .resource p{grid-column:1/-1;font-size:12px;color:var(--ws-muted);margin:0;line-height:1.6}
+
+/* ── 项目 · 名册（项目页第三段「项目组合 ｜ 时间路线图 ｜ 名册」，2026-10-15）────────
+   这份"分组 + 行"的看法原来长在关联空间（用户否掉了那个位置：「不是在做列表，是在项目模块做，
+   不然关联空间太乱了」），搬到这里当一个页签。为什么不做成表格：表头 + 网格线是另一种视觉语言
+   （会被读成"数据表"）；本产品的分层只用对齐、间距、字重与雾线（VI §4 / V4）。
+   行是 <button>：可 Tab、可回车，四态齐全（VI §6「没做状态就不算做完」），行高 48。
+   搜索框只做**前端**过滤（数据已经读进来了），所以它属于名册自己，不属于页面的筛选面板。 */
+.projectroster{display:grid;gap:var(--ws-space-24);padding:var(--ws-space-24) 0 0}
+.projectroster[hidden]{display:none}
+.rosterbar{display:flex;gap:var(--ws-space-8)}
+/* 字段与全站字段同一套外形（36 高 / 圆角 8 / 雾线描边 / 3px 焦点环，VI §6 输入唯一实现）。 */
+.rosterfield{display:flex;align-items:center;gap:var(--ws-space-8);width:min(320px,100%);
+  padding:var(--ws-space-8) var(--ws-space-12);border:1px solid var(--ws-line);border-radius:8px;
+  background:var(--ws-surface);color:var(--ws-muted)}
+.rosterfield:focus-within{border-color:var(--ws-action);outline:3px solid var(--ws-action);outline-offset:0}
+.rosterfield .icon{width:16px;height:16px}
+.rosterfield input{flex:1;min-width:0;border:0;background:none;padding:0;margin:0;
+  font:inherit;font-size:13px;line-height:1.5;color:var(--ws-ink)}
+/* 字段自己的焦点环由外层容器画（否则会出现两层环）。 */
+.rosterfield input:focus-visible{outline:none}
+.rostergroup>h3{font-size:12px;font-weight:550;color:var(--ws-muted);margin:0 0 var(--ws-space-8)}
+.rosterrows{border-top:1px solid var(--ws-line)}
+.rosterrow{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:var(--ws-space-12);
+  width:100%;min-height:48px;padding:var(--ws-space-4) var(--ws-space-12);margin:0;
+  border:0;border-bottom:1px solid var(--ws-line);border-radius:0;background:none;
+  font:inherit;color:inherit;text-align:left;cursor:pointer}
+/* 悬停底色用 --ws-surface（而不是行动色软底）：这是全站次级文字被量对比度时用的那层底，
+   换成别的底色，12px 的辅助文字就会掉到 4.5:1 以下。 */
+.rosterrow:hover{background:var(--ws-surface)}
+.rosterrow:focus-visible{outline:3px solid var(--ws-action);outline-offset:-2px}
+/* 图标底座的颜色与画布节点同一套语义：项目蓝、组织与联系人灰（VI §9）。
+   颜色只做辅助 —— 行里始终有名称与一句关键信息，不靠颜色单独承担判断（VI §2）。 */
+.rosterrow .symbol{width:29px;height:29px;background:var(--ws-paper);color:var(--ws-muted)}
+.rosterrow[data-kind="project"] .symbol{color:var(--ws-action)}
+.rosterrow .icon{color:inherit}
+.rostertext{display:grid;min-width:0}
+/* 长名称最多两行（VI §9 长名称规则）；全文进 aria-label，点开就是详情。
+   行高 20/18：两行内容 + 上下 4 的内距正好落在 VI §6「列表行 48」这一档。 */
+.rostertext>strong{font-size:13px;line-height:20px;font-weight:550;color:var(--ws-ink);word-break:break-word;
+  display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rostertext>small{font-size:12px;line-height:18px;color:var(--ws-muted)}
+.rostergroup>.notice{margin:0}
+.projectroster .v7-empty{padding:0}
+
+/* ── 圆角收口（VI §4：控件 8 · 内容容器 12 · 居中弹窗 20 · 标签 999）──────────
+   审计实测：发布界面里还有 3/4/5/6/10px 五档非规范圆角。它们分别来自原型的三层样式，
+   逐个改三层不现实；这里是"工作台修正层"，按组件语义一次收口。 */
+.seg{border-radius:12px}
+.seg button{border-radius:8px}
+button.btn,.btn{border-radius:8px}
+.viselect-button{border-radius:8px}
+.viselect-list{border-radius:12px}
+.tag{border-radius:999px}
+.calchip,.calblock{border-radius:8px}
+.steps i,.taskrail i,.phase span:before,.phase span:after{border-radius:999px}
+.sk,.skeleton{border-radius:999px}
+.track,.meter i,.meter em{border-radius:999px}
+
+/* 裸 <button> 用的是浏览器默认 padding（Chrome 为 1px 6px），两值都不在标尺内 —— 实测
+   `.gantt .name` 这类没写 padding 的按钮就是它。给一个标尺内的兜底；写了 padding 的
+   类选择器（.btn/.nav button/.seg button…）优先级更高，不受影响。 */
+button{padding:var(--ws-space-4) var(--ws-space-8);border-radius:8px}
+.chip{border-radius:999px}
+/* 看板卡是可点的内容容器，按 VI §4 走 12（原来 15/10 两档混用）。 */
+.column button,.column>button{border-radius:12px}
+.nav button{border-radius:8px}
+/* VI §2：蓝色承担行动与聚焦。页头那个「全部项目 ↗」是行动入口，原来被画成 knowledge 紫
+   （紫色在 VI 里只表达知识/记忆/AI 判断），实测渲染里它和 gantt 的项目色块都还是紫的。 */
+.sectionhead button,.panelhead button{color:var(--ws-action)}
+
+/* VI §12 V6「禁止用 !important 覆盖」+ §13 门禁 9「!important 覆盖色 = 0」：
+   外壳里那 3 处 `!important` 挂在这条规则上，而 `#globalCanvas` 元素**并没有内联样式**
+   （登记表写的是"必须压过原型内联色"，与事实不符）。`.btn.canvas-full` 的优先级本来就够，
+   所以按 VI 原文"实现层现有 3 处须清理"直接清掉。 */
+.btn.canvas-full{background:var(--ws-action-soft);color:var(--ws-action);border-color:var(--ws-line)}
+
+/* 画布底部：说明与缩放控件原来都在 bottom:16–20px，长句从右侧铺过来会撞上左侧控件、被裁成省略号。
+   把说明抬到控件上方（控件高约 40 + 标尺 16），两者不再争同一行。 */
+.view#space .spacecaption,.spacestage .spacecaption{bottom:64px;max-width:calc(100% - 32px);line-height:1.5}
+
+/* ── 弹窗内部收口（第 3 轮：门禁原先只扫 7 个页面，弹窗没扫，用户投诉的恰恰全在弹窗里）── */
+.close{border-radius:8px}
+.proof,.managerow,.detailmetrics div{border-radius:12px}
+/* .drawer 作用域下的 .proof 优先级更高（0,2,0），要按同一条规则写才压得住。 */
+.drawer .proof,.drawer .managerow{border-radius:12px}
+/* VI §2：阶段名（接触/需求/方案/验证/复盘）是**进度**，不是知识/记忆/AI 判断，不许用 knowledge 紫。 */
+.phase span{color:var(--ws-muted)}
+/* VI §11：焦点环 ≥3:1。外壳给的是 `outline:3px solid var(--ws-line)` —— 实测对纸底只有 1.25:1，
+   键盘用户基本看不见焦点在哪（画布搜索框量出来的就是这个值）。改成工作蓝（5.46:1）。 */
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline-color:var(--ws-action)}
+
+/* ── 字段唯一实现（VI §6：「输入、下拉、文本域 —— 统一高度、边框色、聚焦环 3px」）────────
+   审计实测（第 3 轮，弹窗内）：编辑器里的「名称」是**裸的浏览器默认 input** ——
+   高 27px、内距 1px 2px、边框 2px；textarea 内距 2px。它们只是在上面涂了 token 描边色，
+   真正的字段样式（高度/内距/圆角/聚焦环）一个都没落；而旁边由 .viselect 渲染的下拉是 36px 高，
+   两者并排就是用户说的「下拉框感觉土」。这里把三者收成同一套，与 .viselect-button 等高等宽。 */
+#detailbody .formfield input:not([type=hidden]),#detailbody .formfield textarea,#detailbody .formfield select,
+#detailbody .formrow input:not([type=hidden]),#detailbody .formrow textarea,#detailbody .formrow select{
+  width:100%;min-height:36px;padding:var(--ws-space-8) var(--ws-space-12);
+  border:1px solid var(--ws-line);border-radius:8px;background:var(--ws-surface);
+  color:var(--ws-ink);font-size:13px;line-height:1.5
+}
+#detailbody .formfield textarea,#detailbody .formrow textarea{min-height:96px;padding:var(--ws-space-8) var(--ws-space-12);resize:vertical}
+#detailbody .formfield input:focus-visible,#detailbody .formfield textarea:focus-visible,#detailbody .formfield select:focus-visible{
+  outline:3px solid var(--ws-action);outline-offset:0;border-color:var(--ws-action)
+}
+/* 文件夹那一行的输入与选择按钮并排，两者高度对齐。 */
+.folderrow input{min-height:36px}
+
+/* 工具栏在窄一点的宽度下会把标签挤成两行（实测：「新建项目」拆成"新建/项目"、「项目组合」拆成"项目/组合"、
+   「点击项目查看量化详情」也断行）——按钮文字不该折行（VI §9 收口：文字不截断、边缘不裁切）。
+   这里让工具栏自己换行，而不是把每个控件压到折行。 */
+.toolbar,.sectionhead{flex-wrap:wrap;row-gap:var(--ws-space-8)}
+.toolbar .btn,.toolbar .seg button,.toolbar .chip,.sectionhead .chip,.spacebar .btn{white-space:nowrap}
+
+/* 判断卡里有三条 <small>（状态与依据 / 不确定性 / 分享边界），<small> 是**行内**元素，
+   于是它们挤成一句话：「…复核 2026-11-11不确定性： 口径未确认…成本基准仅自己」。
+   按信息层级各占一行（VI §4 分层只用对齐/间距/字重）。 */
+.resource small{display:block}
+.resource small+small{margin-top:var(--ws-space-4)}
+
+/* ── 移动端点击区（VI §11：移动点击区 ≥ 44 × 44）─────────────────────────────
+   实测（390×844）：分段控件按钮 32px、VI 下拉 39px、纯文字按钮 26px —— 手指点不准。
+   外壳只给了 `.btn` 与侧栏按钮 44px，其余可点控件都没覆盖。这里是"移动端一次性收口"。
+   （宪章判据 2 就是「出差时手机上能独立完成一次完整的看→判断→决定」，点不准就等于做不到。） */
+@media(max-width:700px){
+  .seg button,.viselect-button,.view .btn,button:not(.close):not(.nav button),.toolbar .chip,
+  .view input:not([type=hidden]):not([type=checkbox]),.view select,
+  #detailbody .formfield input:not([type=hidden]),#detailbody .formfield select,.folderrow input{min-height:44px}
+  /* 短标签按钮（「计划」「全部」「Mini」「本机」「日程/行程/票据」）实测只有 38px 宽，手指点不准。 */
+  .seg button,.view .btn,.toolbar .chip,button.seg,.sectionhead button,
+  .canvaszoom button,.spacetools button,.canvasbar button,.calnav button{min-width:44px}
+  .seg{padding:4px}
+  .viselect-option{padding:var(--ws-space-8) var(--ws-space-12);min-height:44px;display:flex;align-items:center}
+  .span-actions a,.sectionhead button{min-height:44px;display:inline-flex;align-items:center}
+}
+
+/* ── 收件箱列表的版式（投诉 #2/#3：条目呈现不够精致）─────────────────────────
+   批次卡的内容比普通卡片多（状态点 + 操作计数 + 差异条 + 来源 + 名称 + 归属），
+   却和其它卡片共用 3 列网格 —— 实测只有 1 条时卡片宽 375px、右边两列整片空着。
+   批次是"一次要你决定的事"，按行排（宽屏 1–2 张）比塞进三列更好读。 */
+#inboxbody>.resourcegrid{grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),570px));justify-content:start}
+/* 卡内元信息：统一行距、标签与值之间留出可扫读的间距（原来是几行左对齐的散句）。 */
+.inboxmeta{margin:0;font-size:12px;line-height:1.7}
+.inboxnames{margin:0;font-size:12px;line-height:1.7}
+.inboxitem .inboxcard{gap:var(--ws-space-8)}
+
+/* 归属行原来挂在卡片**外面**（按钮不能嵌套按钮），视觉上像是另一个东西的点缀。
+   这里把「卡片 + 归属行」收成一张整卡：外层负责边框圆角，内层去边框，归属行当页脚。 */
+.inboxitem{background:var(--ws-surface);border:1px solid var(--ws-line);border-radius:12px;overflow:hidden}
+.inboxitem .inboxcard{border:0;border-radius:0;box-shadow:none}
+.inboxitem .inboxassign{border-top:1px solid var(--ws-line);padding:var(--ws-space-8) var(--ws-space-16);margin:0}
+.inboxitem .inboxassign .btn{padding:var(--ws-space-4) var(--ws-space-8);font-size:12px}
+
+/* ── 「交付与阻塞分布」那一行（真入口复验抓到的）──────────────────────────────
+   外壳把项目名写死在 70px、右侧数字写死在 32px。演示数据的名字是「技术适配」这种四个字，
+   真数据是「示例科技 · 3D 存算一体芯片技术适配与合作研判」—— 于是名字被挤成四行竖条，
+   右边「尚无交付项」也被挤成三行。改成三列栅格：名字最多两行（VI §9 长名称规则），
+   进度条自适应，右侧数字不折行。 */
+.meter{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr) auto;align-items:center;gap:var(--ws-space-12)}
+.meter span{width:auto;color:var(--ws-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;line-height:1.5}
+.meter b{width:auto;white-space:nowrap}
+/* 设置弹窗里"新建文件夹"的输入框不在 .formfield 里，漏在了字段统一规则之外
+   （真入口复验实测它的内距还是浏览器默认的 1px 2px）。 */
+#detailbody input:not([type=hidden]):not([type=checkbox]):not([type=radio]){
+  min-height:36px;padding:var(--ws-space-8) var(--ws-space-12);
+  border:1px solid var(--ws-line);border-radius:8px;background:var(--ws-surface);color:var(--ws-ink);font-size:13px
+}
+
+/* ── 任务看板的栏目数（真入口复验抓到的）──────────────────────────────────────
+   外壳把看板写死 3 列，但状态是**数据驱动**的：真实数据里 4 个状态（待办/等待中/运行中/已完成），
+   于是"待办 · 4"（唯一有内容的栏）被挤到第二行，上面三个空栏占着首屏。
+   改成按可用宽度自适应列数：宽屏一行放得下 4 栏，窄屏自动折。 */
+.kanban{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+
+/* ── 甘特表的项目名（真入口复验抓到的）────────────────────────────────────────
+   外壳把名字列写死 140px 且 `white-space:nowrap`：演示数据叫「技术适配」，真数据叫
+   「示例科技 · 3D 存算一体芯片技术适配与合作研判」—— 名字横着压到日期刻度上，和 10.05/10.12
+   叠成一团（真入口截图里一眼可见）。名字列加宽，名字最多两行（VI §9 长名称规则），
+   下面那行「5/10 项 · 50%」单行省略。 */
+.gantt{grid-template-columns:180px repeat(6,1fr)}
+.gantt .name{white-space:normal;overflow:hidden;max-height:60px;line-height:1.4;word-break:break-word}
+.gantt .name small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gantt .axis{overflow:hidden;text-overflow:ellipsis}
+
+/* 状态片上的色点：色 + 字，颜色只做辅助 —— VI §2 颜色不得单独承担判断。
+   尺寸与位置跟卡片状态点 .statusdot 同一套，颜色见上方那张共用的 data-state 变量表。
+   「全部」这种"根本不是一个状态"的片子不给色点（给了就是拿颜色当装饰）。 */
+.fdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:var(--ws-space-4);background:var(--ws-line);flex:none}
+
+/* 阶段条现在是可点的：给它控件的四态（VI §6 四态齐全），而不是原来的纯文字标签样子。 */
+.phase .phasechip{border:1px solid var(--ws-line);background:var(--ws-surface);border-radius:8px;
+  padding:var(--ws-space-4) var(--ws-space-12);font:inherit;font-size:13px;color:var(--ws-muted);cursor:pointer;
+  display:inline-flex;align-items:center;gap:var(--ws-space-4)}
+.phase .phasechip:hover{border-color:var(--ws-action);color:var(--ws-action)}
+.phase .phasechip:focus-visible{outline:3px solid var(--ws-action);outline-offset:2px}
+.phase .phasechip.done{color:var(--ws-ink)}
+.phase .phasechip.current{border-color:var(--ws-action);color:var(--ws-action);font-weight:600}
+.phase .phasechip:disabled{cursor:default;opacity:1}
+.phase .phasechip small{color:var(--ws-muted);font-weight:400}
+
+/* ── 详情正文不许被 sticky 动作条压住 ────────────────────────────────────────
+   独立走查实测：项目详情滚到底，最后一行「已完成 c 交付项 1」只露出 3px ——
+   动作条是 sticky 的，正文没有为它留高度。这是"内容读不到"，不是排版瑕疵。 */
+#detailbody{padding-bottom:var(--ws-space-64)}
+#detailbody .modalactions{margin-top:var(--ws-space-16)}
+
+/* ── VI §2：knowledge 紫只表达知识 / 记忆 / AI 判断 ───────────────────────────
+   冻结原型把 --ws-knowledge-soft 当成了通用底色，实测误用 32 处：
+   进度条底（.steps i）、阶段点（.phase span:after）、弹窗头（.drawerhead）—— 这些都不是知识。
+   按本仓库既定口径「VI 优先 + 登记偏差」在生成层纠正，而不是去改冻结原型。 */
+.steps i{background:var(--ws-line)}
+.phase span:after{border-color:var(--ws-line)}
+.drawerhead{background:var(--ws-paper)}
+
+/* VI §2：「执行视图」是跳到任务页的动作，不是知识 —— 冻结原型把它写成了 knowledge 紫。
+   （同样按「VI 优先 + 登记偏差」在生成层纠正。） */
+#home .panelhead button[data-goto="tasks"]{color:var(--ws-muted)}
+#home .panelhead button[data-goto="tasks"]:hover{color:var(--ws-action)}
+
+/* 总览指标卡从静态文本变成可点（交互律 04：数字是一组对象的汇总，点它要能看到那组对象）。
+   克制起见：不加底色、不加边框、不改排版 —— 只在悬停/聚焦时给出可点的反馈。 */
+.metric{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.metric:hover p{color:var(--ws-action)}
+.metric:focus-visible{outline:3px solid var(--ws-action);outline-offset:2px}
+.metric[data-goto]{text-decoration:none}
+
+/* 建议卡的「依据」：事实条目逐条列出，用弱化的行高与缩进，不抢标题（VI §4 安静靠秩序）。 */
+.inevidence{margin:var(--ws-space-4) 0 0}
+.inevidence .inboxmeta{margin:0}
+.inevidence .ineitem{margin:var(--ws-space-4) 0 0;padding-left:var(--ws-space-12);font-size:12px;color:var(--ws-ink);line-height:1.6}
+
+/* #22：「只看待核对 N」是个**筛选开关**，原来点亮时用主色（.btn.primary）—— 于是它看起来
+   像"下一步动作"，而同一排的「知识检索 / 导出判断」反而像次要动作。开关就用开关的样子：
+   选中态用描边 + 行动色文字（与 .seg 的选中态同一种语言），主色留给真正的动作。 */
+.sectionactions .btn.primary[data-know-filter],
+.knowactions .btn.primary[data-know-filter],
+button[data-know-filter].primary{background:var(--ws-surface);color:var(--ws-action);border-color:var(--ws-action)}
+
+/* 说明性文字（不是按钮，也不是标签）：弱化、无容器，一眼看出"这不是给你点的"。 */
+.hint{color:var(--ws-muted);font-size:12px;background:none;border:0;padding:0}
+
+/* ── 就地编辑（inline-edit.mjs）───────────────────────────────────────────────
+   这一套此前完全没有样式，一直在用浏览器默认外观。按 VI：
+   值是**可点的文字**（不是按钮样子 —— 免得一屏几十个按钮感），悬停才提示可编辑；
+   进入编辑后换成与全站一致的字段样式（36 高、圆角 8、焦点环 3px）。 */
+.inlinerefs{display:flex;flex-direction:column;gap:var(--ws-space-4);margin:0}
+.inlinefields{display:flex;flex-wrap:wrap;gap:var(--ws-space-8) var(--ws-space-24);align-items:center}
+.inlinefield{display:inline-flex;align-items:center;gap:var(--ws-space-8);min-width:0}
+.inlinefield>.name{color:var(--ws-muted);font-size:12px;flex:none}
+.inlinevalue{background:none;border:0;padding:var(--ws-space-4) var(--ws-space-8);margin:0;cursor:text;
+  font:inherit;font-size:13px;color:var(--ws-ink);border-radius:8px;text-align:left;
+  border-bottom:1px dashed var(--ws-line)}
+.inlinevalue:hover{border-bottom-color:var(--ws-action);color:var(--ws-action)}
+.inlinevalue:focus-visible{outline:3px solid var(--ws-action);outline-offset:2px}
+/* 空值要一眼看出"这里还没填"，而不是看着像已经写好了一个词。 */
+.inlinevalue[data-empty="1"]{color:var(--ws-muted);font-style:normal}
+.inlineeditor{display:inline-flex;align-items:center}
+.inlineeditor .viselect{display:inline-flex}
+.inlineinput{min-height:36px;padding:var(--ws-space-8) var(--ws-space-12);border:1px solid var(--ws-line);
+  border-radius:8px;background:var(--ws-surface);color:var(--ws-ink);font:inherit;font-size:13px;min-width:180px}
+.inlineinput:focus{outline:3px solid var(--ws-action);outline-offset:1px;border-color:var(--ws-action)}
+/* 长文本字段（目标）：值只占一行、超出就截断，点了才展开成多行输入 ——
+   否则一整段目标会把这一行撑成半屏，旁边那些短字段全被挤走。 */
+.inlinefield[data-wide="1"]{flex-basis:100%}
+.inlinefield[data-wide="1"] .inlinevalue{max-width:min(100%,720px);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;display:inline-block;vertical-align:bottom}
+.inlineinput[data-inline-textarea="1"]{width:min(100%,720px);min-height:72px;resize:vertical}
+/* 「＋ 新建」展开的输入行与编辑弹窗共用一套控件（.refcreaterow）；就地编辑这一格通常更窄，
+   给输入框一个写得下名字的下限并允许换行，别把按钮挤出弹窗。 */
+.inlineeditor .refcreaterow{margin-top:0;flex-wrap:wrap}
+.inlineeditor .refcreaterow input{flex:1;min-width:140px}
+/* 下拉里的「新建组织 / 新建联系人」：加号是登记在册的线性图标（V9：不拿符号当图标），
+   与记录项在列表里区分开 —— 否则用户仍然以为"只能从库里已有的里面选"。 */
+.viselect-option>.icon{margin-right:var(--ws-space-4);vertical-align:-3px}
+
+/* ── 信息简报（简报引擎的呈现）────────────────────────────────────────────────
+   每条三行：我认为什么 / 凭什么 / 你只需要回一句。依据用弱化小字，动作单独一行 ——
+   目的是"能一眼扫完并决定"，不是"读一篇报告"。 */
+.briefing{margin:0 0 var(--ws-space-24)}
+.briefsection{margin:var(--ws-space-12) 0 0}
+.briefsection h4{margin:0 0 var(--ws-space-4);font-size:12px;color:var(--ws-muted);font-weight:600}
+.briefitem{padding:var(--ws-space-12) var(--ws-space-16);border:1px solid var(--ws-line);border-radius:12px;margin:var(--ws-space-8) 0 0;background:var(--ws-surface)}
+.briefwhat{margin:0;font-size:13px;color:var(--ws-ink)}
+.briefwhy{margin:var(--ws-space-4) 0 0;font-size:12px;color:var(--ws-muted)}
+.briefev{margin:var(--ws-space-4) 0 0;padding-left:var(--ws-space-12);font-size:12px;color:var(--ws-muted)}
+.briefact{margin:var(--ws-space-8) 0 0;font-size:12px;color:var(--ws-action)}
+
+
+
+
+/* VI §13 门禁 5（2026-10-16）：`.btn` 的悬停/禁用态本来就有（v7-visual.css），
+   但**普通 `<button>`** 没有 —— 画布控件、列表行这类不带 .btn 的按钮被禁用时，
+   看上去和能用的一模一样，点下去没反应（宪章第六条「有重量」点名要拒绝的那种）。
+   只补这一个缺口，不重复实现已有样式（同一控件全站唯一实现）。 */
+button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55;cursor:not-allowed}
+
+
+/* ── VI §8 V1 · 来源三态（2026-10-16 补）──────────────────────────────────
+   规范要求"任何信息必须一眼可辨来源"：你说的 / AI 推的 / 原始材料。
+   实测实现里**一条都没有**（"AI 判断"四个字全站没出现过），颜色与形状都一样。
+   做法保持克制（VI §4）：只用左侧细边 + 底色区分，不加框、不加阴影；
+   并且**每一种都同时有文字**（颜色不得单独承担判断 —— VI §2 / 宪章第八条）。 */
+#detailbody .proof[data-source="said"]{border-left:2px solid var(--ws-ink);padding-left:var(--ws-space-12)}
+#detailbody .proof[data-source="material"]{border-left:2px solid var(--ws-line);background:var(--ws-paper);padding-left:var(--ws-space-12)}
+#detailbody .proof[data-source="ai"]{border-left:2px dashed var(--ws-knowledge);padding-left:var(--ws-space-12)}
+#detailbody .proof .proofsource{display:block;font-size:12px;margin-bottom:var(--ws-space-4)}
+#detailbody .proof[data-source="said"] .proofsource{color:var(--ws-ink)}
+#detailbody .proof[data-source="material"] .proofsource{color:var(--ws-muted)}
+#detailbody .proof[data-source="ai"] .proofsource{color:var(--ws-knowledge)}
+
+/* ── VI §8 V3 · 建议的四种状态（2026-10-16 补）────────────────────────────
+   规范：「待你决定（**左侧工作蓝细线**）/ 已采纳（success 点）/ 已改写（蓝点 + 显示改了什么）/
+   已否决（灰墨 + 你的理由 + 卡片不消失）」。
+   实测：建议卡**既没有左侧蓝线、也没有任何状态文字**，只有四个按钮 —— 分不出"这是 AI 提的还是你要确认的"。
+   做法保持克制（VI §4）：只用左侧细线 + 一行文字，不加框不加底色。*/
+#inboxbody .inboxcard[data-advice="1"][data-decision="undecided"]{border-left:2px solid var(--ws-action);padding-left:var(--ws-space-12)}
+#inboxbody .inboxcard[data-advice="1"][data-decision="accepted"]{border-left:2px solid var(--ws-success);padding-left:var(--ws-space-12)}
+#inboxbody .inboxcard[data-advice="1"][data-decision="rewritten"]{border-left:2px solid var(--ws-action);padding-left:var(--ws-space-12)}
+#inboxbody .inboxcard[data-advice="1"][data-decision="rejected"]{border-left:2px solid var(--ws-line);padding-left:var(--ws-space-12);color:var(--ws-muted)}
+#inboxbody .advicestate{margin:0 0 var(--ws-space-8);font-size:12px;font-weight:600;color:var(--ws-action)}
+#inboxbody .inboxcard[data-decision="rejected"] .advicestate{color:var(--ws-muted)}
+
+/* VI §3 字重补齐（2026-10-17）：浏览器给 h1–h6 的默认字重是 bold(700)，不在标尺 400/550/600 里。
+   冻结原型只写了字号、没写字重，所以渲染出来是 700 —— 门禁只扫源码里的字面量，一直没发现。
+   这里在本层显式收口；时间/日期类保留 11px（规范允许的唯一用法）。 */
+h1,h2,h3,h4,h5,h6{font-weight:600}
+time,.caldate{font-size:11px}
+
+/* VI §3 字号收口（2026-10-17，真实实例量出后补）：11px 只许用于「时间、坐标」。
+   外壳与 tokenizer 已按 9/10/11 → 12 收敛，但有几处是**运行时再渲染**的（首页提示、图例、
+   画布说明、指标标签），在夹具页面里仍以 11px 出现。本层最后加载，这里统一收口到辅助档 12。 */
+.group,.navfoot small,.sectionhead small,.chip,.metric p,.metric small,
+.spaceentry p,.legendrow,.legendrow span,.spacecaption,.canvasnotice{font-size:12px}
+/* 日历标题是"标题"级元素，但只写了字号没写字重 —— 浏览器默认 bold(700) 不在标尺里。 */
+.caltitle{font-weight:600}
+
+/* W1 P0-2 目录浏览器（编辑器「项目文件夹」与设置页「添加文件夹」共用同一份实现）。
+   只用现有 token，不新增颜色；按钮复用 .btn，尺寸落 8/12 标尺。 */
+.folderbrowser{display:flex;flex-direction:column;gap:var(--ws-space-8);margin-top:var(--ws-space-8);
+ padding:var(--ws-space-12);border:1px solid var(--ws-line);border-radius:8px;background:var(--ws-surface)}
+.folderbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--ws-space-8)}
+.foldercrumbs{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ws-space-4);min-width:0;overflow-wrap:anywhere}
+.crumbbutton{border:0;background:none;padding:0;color:var(--ws-action);font:inherit;cursor:pointer;text-decoration:underline}
+.crumbbutton:focus-visible{outline:2px solid var(--ws-action);outline-offset:2px;border-radius:4px}
+.crumbcurrent{color:var(--ws-muted)}
+.folderbuttons{display:flex;gap:var(--ws-space-8)}
+.folderlist{display:flex;flex-direction:column;gap:var(--ws-space-4);max-height:220px;overflow:auto}
+.folderitem{display:flex;align-items:center;justify-content:space-between;gap:var(--ws-space-8);width:100%;
+ border:1px solid var(--ws-line);background:var(--ws-paper);border-radius:8px;padding:var(--ws-space-8) var(--ws-space-12);
+ font:inherit;color:var(--ws-ink);text-align:left;cursor:pointer}
+.folderitem:hover{border-color:var(--ws-action)}
+.folderitem:focus-visible{outline:2px solid var(--ws-action);outline-offset:2px}
+.foldergo{color:var(--ws-muted)}
+.folderactions{display:flex;flex-wrap:wrap;gap:var(--ws-space-8);align-items:center}
+.foldercandidates{display:flex;flex-wrap:wrap;gap:var(--ws-space-8);align-items:center}
+.folderwarn{border-left:2px solid var(--ws-warning);padding-left:var(--ws-space-8);background:var(--ws-warning-soft)}
+.folderfix{display:flex;flex-direction:column;gap:var(--ws-space-8);margin-top:var(--ws-space-8);
+ padding:var(--ws-space-12);border-left:2px solid var(--ws-warning);background:var(--ws-warning-soft);border-radius:8px}
+.grantsentence{margin:0;font-weight:550}
+.grantbrowser{margin-top:var(--ws-space-8)}
+
+/* P0-3（2026-10-17）：真实数据里 5 条任务全是「待办」、其余三列全空，68px 空环 ×5 把首屏撑满
+   （46 审计 §1.2/§1.3）。空列不渲染是 task-view.mjs 的行为；本层只收紧指标卡与卡片节奏。 */
+#taskmetrics{margin-bottom:var(--ws-space-12)}
+#taskmetrics .metric{padding:var(--ws-space-12) var(--ws-space-16)}
+#taskmetrics:empty{display:none}
+.metricsnote{display:block;margin:var(--ws-space-8) 0 0;font-size:12px;color:var(--ws-muted)}
+#tasksbody .kanban{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));align-items:start}
+#tasksbody .column>button{padding:var(--ws-space-12);margin-bottom:var(--ws-space-8)}
+#tasksbody .column .tag{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tasksbody .kanbancollapsed{margin:var(--ws-space-12) 0 0;font-size:12px;color:var(--ws-muted)}
+@media(min-width:701px){#taskmetrics{grid-template-columns:repeat(auto-fit,minmax(180px,260px));justify-content:start}}
+
+/* W1 P0-1 设置页首屏：授权/助理状态/一个动作；版本与留痕进折叠。
+   只用既有 token，不新增颜色/字号（12/14 在字阶内）。 */
+[data-settings-firstscreen]{display:flex;flex-direction:column;gap:var(--ws-space-8)}
+.settingsrow .value .btn{min-height:32px;padding:var(--ws-space-4) var(--ws-space-12);font-size:12px;margin-left:var(--ws-space-8)}
+.settingsactions{display:flex;gap:var(--ws-space-8);flex-wrap:wrap;margin:var(--ws-space-12) 0 0}
+[data-settings-off="1"] .settingsrow{padding:var(--ws-space-4) 0}
+[data-settings-slot="integrations"] .settingshelp{margin:0}
+@media(max-width:700px){.settingsrow{grid-template-columns:96px 1fr}}
+/* IM 四层折叠：整宽块，不允许被 flex 挤成竖条（390/1440 都要能读）。 */
+[data-settings-slot="integrations"]{display:block}
+[data-settings-slot="integrations"]>details{width:100%}
+[data-settings-slot="integrations"] .settingsgrid{display:block}
+[data-settings-slot="integrations"] .settingsrow{grid-template-columns:96px 1fr}
+
+/* W1 P0-1 首屏预算（390）：紧到一屏内；信息不删，tips 收短、三个折叠并排一行。 */
+.settingsmore{display:flex;gap:var(--ws-space-8);align-items:flex-start}
+.settingsmore>details{flex:1;min-width:0}
+@media(max-width:700px){
+ #detailbody .sectionhead small{display:none}
+ #detailbody [data-settings-knowledge-note]{display:none}
+ [data-settings-firstscreen]{gap:var(--ws-space-4)}
+ [data-settings-firstscreen] .sectionhead{margin:var(--ws-space-4) 0 0}
+ .settingsmore>details>summary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .settingsmore>details[open]{flex:1 1 100%}
+}
+/* 设置首屏收紧：只压间距，不动字号/字重（17 §3.1 字阶不变）。 */
+#detailbody [data-settings-firstscreen] .sectionhead{margin:0;padding:0;min-height:0;align-items:baseline}
+#detailbody [data-settings-firstscreen] .sectionhead h2{margin:0}
+#detailbody [data-settings-firstscreen] .settingsgrid{gap:0}
+#detailbody [data-settings-firstscreen] .settingsrow{padding:var(--ws-space-8) 0}
+#detailbody [data-settings-firstscreen] .settingsactions{margin:var(--ws-space-8) 0 0}
+
+/* P0-3 首屏预算收紧（真实库 5 条待办、1440×940 要全在首屏）：只压间距，不动字号。 */
+#taskmetrics{margin-bottom:var(--ws-space-8)}
+#taskmetrics .metric{padding:var(--ws-space-8) var(--ws-space-12)}
+#tasksbody .column>h3{margin:0 0 var(--ws-space-4)}
+#tasksbody .column>button{padding:var(--ws-space-8) var(--ws-space-12);margin-bottom:var(--ws-space-8)}
+#tasksbody .column>button p{margin:var(--ws-space-4) 0 0}
+#tasksbody .column>button .taskrail{margin-top:var(--ws-space-4)}
+
+/* ══ W2-1 字阶回正（17 §3.1 / 17 C5 / 26 §5 W2-1）════════════════════════════
+   冻结外壳把 body 定在 13/1.5、h2=15、h3=13，11px 占可见文本 53–90%（46 号审计 §1.1）。
+   本层最后加载，把层级拉回唯一一套字阶：
+     页面标题 22/26（#title 仍是隐藏 h1，视觉上仍不出现页头大口号）
+     模块标题 18/26 · 卡片标题 15/24 · 正文 14/22 · 辅助 13/20 · 时间/坐标 11
+   字重只用 400/550/600；数字一律 tabular-nums。 */
+body{font-size:14px;line-height:22px;font-variant-numeric:tabular-nums}
+#title{font-size:22px;line-height:26px;font-weight:600;letter-spacing:0}
+#crumb{font-size:14px;line-height:20px;font-weight:600}
+#subtitle{font-size:12px;line-height:20px}
+h1{font-size:22px;line-height:26px;font-weight:600}
+h2{font-size:18px;line-height:26px;font-weight:600}
+h3{font-size:15px;line-height:24px;font-weight:600}
+h4{font-size:14px;line-height:22px;font-weight:600}
+.view p,.notice,.noticeline,.formhint,.tagline,.mdbody,.settingslead,
+#detailbody p,#detailbody .notice,#detailbody .formhint{font-size:14px;line-height:22px}
+.view small,.tagline small,.metricnote,.inboxmeta,.settingsrow .value em{font-size:13px;line-height:20px}
+/* W2-1 字阶（特异性层）：冻结外壳的内联样式在 head 末尾，用更高的选择器压过它，避免 !important。 */
+main .view h2,main .sectionhead h2,main .panelhead h2{font-size:18px;line-height:26px;font-weight:600}
+main .view h3{font-size:15px;line-height:24px;font-weight:600}
+main .view .v7-empty h3{font-size:15px;line-height:24px}
+main .view h4{font-size:14px;line-height:22px;font-weight:600}
+#detailtitle{font-size:22px;line-height:28px}
+
+/* W2-1 字阶放大后：任务页只有一个有内容的分组时，给该列更宽的版心，避免标题挤成多行把第 5 张卡推下首屏。 */
+@media(min-width:701px){#tasksbody .kanban.single{grid-template-columns:minmax(0,560px)}}
+
+/* 空态里的说明是正文，不再压成 12px（VI §3 正文 14/22；冻结外壳的 .v7-empty p 会被本层更高特异性覆盖）。 */
+main .view .v7-empty p{font-size:14px;line-height:22px}
+
+/* ══ W2-2 组件收敛（17 §3.2/§3.6 · 02-VI §6）══════════════════════════════════
+   目标：每页一个主色主动作；标签只有 .chip 一套；输入只有一种；图标 16/20/24、线宽 1.6。
+   冻结设计层把顶栏 #create 画成白底蓝字（class 仍是 primary），这里改回真主色。 */
+main .actions #create{background:var(--ws-action);color:var(--ws-surface);border-color:var(--ws-action)}
+main .actions #create:hover{background:var(--ws-tint-264dad);border-color:var(--ws-tint-264dad)}
+/* 图标：线宽统一 1.6（含导航选中态；选中用颜色表达，不再靠加粗线条） */
+svg.icon{stroke-width:1.6}
+.nav button.active svg.icon{stroke-width:1.6}
+/* 图标尺寸回到 16/20/24 */
+.symbol svg.icon{width:20px;height:20px}
+.viselect-button svg.icon{width:16px;height:16px}
+.resource svg.icon{width:24px;height:24px}
+/* 输入只有一种：画布检索、知识检索、原生 search 控件都是同一套（圆角 8、1px 边框、40 高） */
+#graphsearch,#findinput,input[type="search"]{
+ height:40px;box-sizing:border-box;padding:0 var(--ws-space-12);
+ border:1px solid var(--ws-line);border-radius:8px;background:var(--ws-surface);color:var(--ws-ink);
+ font:inherit;-webkit-appearance:none;appearance:none}
+#graphsearch::-webkit-search-decoration,#findinput::-webkit-search-decoration,
+#graphsearch::-webkit-search-cancel-button,#findinput::-webkit-search-cancel-button{-webkit-appearance:none}
+/* 任务卡的项目/执行端是元信息，不是 pill 标签（标签只有 .chip 一套） */
+.taskcontext{display:block;font-size:12px;line-height:22px;color:var(--ws-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* W2-6：危险操作（归档/删除）与主操作「保存」拉开距离——推到操作区右侧，不挨着主按钮。
+   门禁 S7 量的是「危险按钮左边 - 保存右边」的像素间距；右侧分组后间距来自可用空间，不再是 8px。 */
+#detailbody .modalactions #objarchive{margin-left:auto}
+#detailbody .modalactions [data-unsaved="1"]{align-self:center;margin-right:auto}
+
+/* W2-7 移动端：导航单行，不折两行（设计层的 flex-wrap:wrap 在 390 下折成 2 行 133px）；
+   放不下就横向滚动，仍是一次点击能到；底栏高度也压到 88 以内给内容留位置。 */
+@media(max-width:700px){
+ .nav{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;align-items:center;min-height:56px;padding:8px}
+ .nav button{flex:0 0 auto;white-space:nowrap;min-height:44px;padding:8px} /* VI-9：移动点击区 ≥44 */
+ .nav::-webkit-scrollbar{display:none}
+ #detailbody .modalactions{position:sticky;bottom:0;background:var(--ws-surface);padding:8px 0}
+}
+
+/* W3-C 待核对：收件箱里的一条「能执行的一问」（问谁/问什么/算完成/为什么现在）。 */
+.pendingchecks{margin:0 0 var(--ws-space-16);padding:var(--ws-space-12) var(--ws-space-16)}
+.pendingchecks .sectionhead{margin:0 0 var(--ws-space-8)}
+.pendingcheck{padding:var(--ws-space-8) 0;border-top:1px solid var(--ws-line);cursor:pointer;border-radius:8px}
+.pendingcheck:hover,.pendingcheck:focus-visible{background:var(--ws-action-soft)}
+.pendingcheck .checkhint{font-size:12px;color:var(--ws-action)}
+.pendingcheck:first-of-type{border-top:0}
+.pendingcheck h3{margin:0 0 var(--ws-space-4)}
+.pendingcheck p{margin:0 0 var(--ws-space-4)}
+.pendingcheck .btn{margin-top:var(--ws-space-4)}

@@ -1,0 +1,72 @@
+/* 「纸上秩序」深色层。
+   v7-visual.css 是硬编码浅色值，因此这里按同一语义角色逐项映射。
+   规则：只允许 VI 的 15 个深色 token 作为颜色来源；需要层次或透明度时用 color-mix 基于 token 表达，
+   不新增任何色值。v7-assets 测试会校验本文件不含 VI 调色板之外的十六进制色。
+   局限：VI 没有为应用层样式表提供深色变体（手册自身是 token 化的），这是按同一套 token 做的映射。 */
+
+[data-theme="dark"]{
+ --paper:#191C20;--surface:#22262B;--ink:#EEF1F5;--muted:#A5AFBB;--line:#414955;
+ --action:#A9BCFF;--action-soft:#2C3751;--success:#9AD2BC;--success-soft:#243D34;
+ --warning:#E4C18B;--warning-soft:#413727;--danger:#F0AFB2;--danger-soft:#482E32;
+ --knowledge:#C7B4EB;--knowledge-soft:#393148;
+}
+[data-theme="dark"] body{background:var(--paper);color:var(--ink)}
+[data-theme="dark"] .nav{background:var(--surface);border-right-color:var(--line)}
+[data-theme="dark"] .nav button{color:var(--muted)}
+[data-theme="dark"] .nav button.active{background:var(--action-soft);color:var(--ink)}
+[data-theme="dark"] .nav button:hover{background:var(--action-soft)}
+[data-theme="dark"] .nav .group,[data-theme="dark"] .navfoot small{color:var(--muted)}
+[data-theme="dark"] .breadcrumb,[data-theme="dark"] .breadcrumb b,[data-theme="dark"] .breadcrumb #subtitle{color:var(--muted)}
+[data-theme="dark"] .actions>.chip{color:var(--muted)}
+[data-theme="dark"] .btn,[data-theme="dark"] .chip{background:var(--surface);border-color:var(--line);color:var(--ink)}
+[data-theme="dark"] .btn:hover{background:var(--action-soft);border-color:var(--action)}
+[data-theme="dark"] .btn.primary{background:var(--action);border-color:var(--action);color:var(--surface)}
+[data-theme="dark"] .actions #create{background:var(--surface);color:var(--action);border-color:var(--action)}
+[data-theme="dark"] .seg{background:var(--paper)}
+[data-theme="dark"] .seg button{color:var(--muted)}
+[data-theme="dark"] .seg button.active{background:var(--action-soft);color:var(--ink);box-shadow:none}
+[data-theme="dark"] .surface,[data-theme="dark"] .metric{background:var(--surface);border-color:var(--line)}
+[data-theme="dark"] .project.surface:hover,[data-theme="dark"] .resource:hover{background:var(--action-soft);border-color:var(--action)}
+[data-theme="dark"] .sectionhead h2,[data-theme="dark"] .panelhead h2,[data-theme="dark"] .surface h2,[data-theme="dark"] .project h3,[data-theme="dark"] .news h3,[data-theme="dark"] .taskrow strong,[data-theme="dark"] .drawer h2,[data-theme="dark"] .drawer h3,[data-theme="dark"] .metric b,[data-theme="dark"] .projectnumbers b,[data-theme="dark"] .v7-empty h3{color:var(--ink)}
+[data-theme="dark"] .metric p,[data-theme="dark"] .metric small,[data-theme="dark"] .project p,[data-theme="dark"] .resource p,[data-theme="dark"] .sectionhead small,[data-theme="dark"] .scheduleline p,[data-theme="dark"] .news p,[data-theme="dark"] .chartfoot,[data-theme="dark"] .notice,[data-theme="dark"] .footer,[data-theme="dark"] .spaceentry p,[data-theme="dark"] .drawer p,[data-theme="dark"] .column>h3,[data-theme="dark"] .v7-empty{color:var(--muted)}
+[data-theme="dark"] .projectnumbers{border-color:var(--line);color:var(--muted)}
+[data-theme="dark"] .column{background:var(--paper);border-color:var(--line)}
+[data-theme="dark"] .column>button,[data-theme="dark"] .taskrow{background:var(--surface);border-color:var(--line)}
+[data-theme="dark"] .scheduleline{border-color:var(--line)}
+[data-theme="dark"] .scheduleline time{color:var(--action)}
+[data-theme="dark"] .tag{background:var(--paper);color:var(--muted)}
+[data-theme="dark"] .spaceentry{border-bottom-color:var(--line)}
+[data-theme="dark"] .view#space .spacebar{background:color-mix(in srgb,var(--paper) 95%,transparent)}
+[data-theme="dark"] .view#space .spacestage{background:var(--surface);border-color:var(--line)}
+[data-theme="dark"] .spacebar select,[data-theme="dark"] .spacebar input{background:var(--surface);border-color:var(--line);color:var(--ink)}
+[data-theme="dark"] .spacetools{background:var(--surface);border-color:var(--line);box-shadow:none}
+[data-theme="dark"] .spacetools button{color:var(--ink)}
+[data-theme="dark"] .spacecaption,[data-theme="dark"] .legendrow,[data-theme="dark"] .canvasnotice{color:var(--muted)}
+[data-theme="dark"] .veil{background:color-mix(in srgb,var(--paper) 72%,transparent)}
+[data-theme="dark"] .drawer{background:var(--surface);border-color:var(--line);box-shadow:0 24px 80px color-mix(in srgb,var(--paper) 70%,transparent)}
+[data-theme="dark"] .drawerhead{background:var(--paper);color:var(--muted);border-bottom-color:var(--line)}
+[data-theme="dark"] .drawer .proof{background:var(--paper);border-color:var(--line);color:var(--ink)}
+[data-theme="dark"] .drawer .modalactions,[data-theme="dark"] .editorbar{background:var(--action-soft);border-color:var(--action)}
+[data-theme="dark"] .drawer .btn{background:var(--surface);border-color:var(--action);color:var(--action)}
+[data-theme="dark"] .drawer .btn.primary{background:var(--action);color:var(--surface)}
+[data-theme="dark"] .drawer .notice{background:var(--warning-soft);color:var(--warning)}
+[data-theme="dark"] .drawer .taskrow{background:var(--paper);border-color:var(--line)}
+[data-theme="dark"] .drawer input:not([type=checkbox]):not([type=radio]),[data-theme="dark"] .drawer select,[data-theme="dark"] .drawer textarea{background:var(--paper);border-color:var(--line);color:var(--ink)}
+[data-theme="dark"] #textEditor{background:var(--paper);color:var(--ink)}
+[data-theme="dark"] .toast{background:var(--ink);color:var(--paper)}
+[data-theme="dark"] .phase .done{background:var(--success-soft);color:var(--success)}
+/* 手册的深色做法：简笔画反相，避免墨线与深底粘连。 */
+[data-theme="dark"] .v7-empty img,[data-theme="dark"] .spaceentry:before{filter:invert(.85) hue-rotate(180deg)}
+
+/* 图表与进度轨道：浅色轨道线在深底上会变成刺眼的白线，统一改为 VI 的 line。 */
+[data-theme="dark"] .spaceentry h3{color:var(--ink)}
+[data-theme="dark"] .steps i,[data-theme="dark"] .taskrail i,[data-theme="dark"] .meter i{background:var(--line)}
+[data-theme="dark"] .gantt .axis,[data-theme="dark"] .gantt .name small{color:var(--muted)}
+[data-theme="dark"] .gantt .name{color:var(--ink)}
+[data-theme="dark"] .gantt .lane{background:repeating-linear-gradient(to right,var(--line) 0,var(--line) 1px,transparent 1px,transparent 16.666%)}
+/* 进度环轨道由 project-render 用变量输出，深色下换成 VI 的 line。 */
+[data-theme="dark"]{--ring-track:#414955}
+
+/* 对象编码色在深色下压暗：色相仍来自 VI 的项目调色板，只把底色朝 surface 混合，不新增色值。 */
+[data-theme="dark"] .project .symbol,[data-theme="dark"] .gantt .bar{background:color-mix(in srgb,var(--pb) 22%,var(--surface))}
+[data-theme="dark"] .project .steps i{background:color-mix(in srgb,var(--line) 100%,transparent)}

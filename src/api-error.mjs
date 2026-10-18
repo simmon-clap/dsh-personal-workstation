@@ -1,0 +1,2 @@
+const statuses={INVALID:400,REFERENCE:400,UNAUTHORIZED:401,FORBIDDEN:403,NOT_FOUND:404,CONFLICT:409,IDEMPOTENCY:409,UNAVAILABLE:503,FS_STALE_VERSION:409,FS_TOO_LARGE:413};
+export function apiError(error){const code=error instanceof SyntaxError?'INVALID':error?.code;const status=typeof code==='string'&&Object.hasOwn(statuses,code)?statuses[code]:undefined;if(!status)return {status:500,body:{error:'INTERNAL',message:'服务错误'}};return {status,body:{error:code,message:error instanceof SyntaxError?'请求 JSON 格式无效':error.message}};}

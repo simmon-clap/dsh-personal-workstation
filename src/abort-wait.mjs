@@ -1,0 +1,2 @@
+/** Stop waiting without assuming the provider cooperates; observe late rejections. */
+export function abortableWait(promise,signal){return new Promise((resolve,reject)=>{const abort=()=>{signal.removeEventListener('abort',abort);reject(signal.reason)};Promise.resolve(promise).then(value=>{signal.removeEventListener('abort',abort);resolve(value)},error=>{signal.removeEventListener('abort',abort);reject(error)});if(signal.aborted)abort();else signal.addEventListener('abort',abort,{once:true});});}
