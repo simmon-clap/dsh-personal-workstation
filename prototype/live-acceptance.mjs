@@ -46,7 +46,13 @@ function discoverOrigins() {
   } catch {}
   return ['http://127.0.0.1:19387'];
 }
-const CANDIDATE_BASES = discoverOrigins();
+// 可选：宿主 token URL（`dsh web` 启动时打印）。桌面窗口的 token 不可得时，用临时 web 宿主验收。
+let TOKEN_COOKIE = null;
+const CANDIDATE_BASES = process.env.WORKSTATION_TOKEN_URL ? [new URL(process.env.WORKSTATION_TOKEN_URL).origin] : discoverOrigins();
+if (process.env.WORKSTATION_TOKEN_URL) {
+  const response = await fetch(process.env.WORKSTATION_TOKEN_URL, {redirect: 'manual'});
+  TOKEN_COOKIE = (response.headers.get('set-cookie') ?? '').split(';')[0];
+}
 let BASE = CANDIDATE_BASES[0];
 let PAGE = BASE + '/personal-workstation';   // 选完实例之后再定（原来在这里就固定了，于是多实例时会打开错的端口）
 const COOKIES = join(process.env.HOME ?? '', 'Library/Application Support/@deepseek-ai/dsh-desktop/Cookies');
@@ -79,7 +85,7 @@ async function cookieList() {
   } catch { return []; }
 }
 async function pickCookie() {
-  const list = await cookieList();
+  const list = TOKEN_COOKIE ? [{name: TOKEN_COOKIE.slice(0, TOKEN_COOKIE.indexOf('=')), value: TOKEN_COOKIE.slice(TOKEN_COOKIE.indexOf('=') + 1)}] : await cookieList();
   // 端口与 cookie 必须**配对**才有意义：多实例时"旧 cookie + 新端口"也是 401。
   for (const base of CANDIDATE_BASES) {
     for (const one of list) {
