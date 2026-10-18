@@ -116,8 +116,11 @@ export async function assembleContext({store, ctx, query, projectId, taskId, kno
   if (sessions && agentId) {
     const session = sessions.get(agentId);
     if (session && typeof session.deriveMessages === 'function') {
+      // 宿主每轮注入的 runtime context / 时间戳 / 记忆快照不是"会话要点"：用户没说过，不能当上下文。
+      const harnessInjected = textValue => /^(Current runtime context|Time sampled while preparing|MNEMON RUNTIME MEMORY SNAPSHOT|You are an AI agent)/.test(textValue.trim());
       const messages = session.deriveMessages()
         .filter(message => message.role === 'user' || message.role === 'assistant')
+        .filter(message => !harnessInjected((message.content ?? []).filter(block => block.type === 'text').map(block => block.text).join(' ')))
         .slice(-SESSION_MESSAGES)
         .map(message => ({
           role: message.role,
