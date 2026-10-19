@@ -1,0 +1,11 @@
+# 安装前必须改这里（工作台不猜你的目录和工作区）：
+#   1) dataDirectory：改成你自己的绝对路径。不要指向仓库目录；工作台数据库与运行时授权放这里。
+#   2) allowedWorkspaces：填 DSH 里已登记的工作区 ID（在 DSH 工作区列表里复制那串 UUID）。
+#      之后还可以在工作台「设置 → 能读写哪些文件夹」里授权具体目录，立即生效。
+- insert:
+    - id: personal-workstation
+      name: dsh-personal-workstation
+      config:
+        dataDirectory: /ABSOLUTE/PATH/TO/personal-workstation-data
+        allowedWorkspaces:
+          - YOUR-WORKSPACE-ID

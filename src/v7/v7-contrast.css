@@ -1,0 +1,26 @@
+/* 对比度修正层（工作台维护）。
+ *
+ * 历史：原型把三处颜色内联写死（#subtitle #8996aa、面板图标 #9faec5、看板轴标签 #A0A7B3/#7F91AA），
+ * 内联优先级高于主题层，导致 VI 验收第 9 条「正文对比度至少 4.5:1」在深色下不成立
+ * （实测 #subtitle 深色 3.2、11px 链接浅色 3.6 / 深色 4.22、面板图标浅色 2.25）。
+ * 当时只能在这里用 !important 去压内联值。
+ *
+ * 批次 5 · 第 14 轮：外壳改为**生成期收敛**后，这些内联值本身已经是主题感知的语义 token
+ * （见 prototype/shell-tokenize.mjs 的 CONTRAST_MAP：→ var(--ws-muted) / var(--ws-ink)），
+ * 内联值随主题变化，于是：
+ *   · 「内联压过主题层」这个根因消失 → 本层不再需要用 !important 去覆盖它；
+ *   · 规则只保留**原型静态样式里**仍写死、且对比度不达标的那几处（轴标签 / 标签 / 深色标题）。
+ * 颜色一律取 VI 调色板；对象类型仍由图标与芯片表达，不靠标题颜色单独承担。
+ *
+ * 层序：本层在 v7-visual.css **之后**加载，同优先级下后者胜；
+ * 深色规则用 `[data-theme="dark"]` 提高优先级，压过 visual 层写死的值。
+ * 删除 !important 后仍由 `style-check` 的「明暗两套逐文本节点 0 处不达标」守门 —— 不是放宽，是去掉多余的强制。
+ */
+
+/* 原型静态样式里仍写死的低对比度文本（明暗必须分开限定，一条规则覆盖不了两套主题）。 */
+html:not([data-theme="dark"]) body .view .gantt .axis{color:var(--ws-muted)}
+html:not([data-theme="dark"]) body .view .tag{color:var(--ws-muted)}
+[data-theme="dark"] body .view .gantt .axis{color:var(--ws-muted)}
+[data-theme="dark"] body .view .tag{color:var(--ws-muted)}
+[data-theme="dark"] body .view .taskrow small{color:var(--ws-muted)}
+[data-theme="dark"] body .view h3[style]{color:var(--ws-ink)}

@@ -1,0 +1,10 @@
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+const source=readFileSync(new URL('./frozen/workbench-v7.html',import.meta.url),'utf8');
+const expected='222a4471c32f0895c5912122bd0d10c8ac93298179bb07a5d99a79e47b8602f9';
+if(createHash('sha256').update(source).digest('hex')!==expected)throw Error('原型已变更，需重新核对基线');
+const directory=new URL('./replica/',import.meta.url);mkdirSync(directory,{recursive:true});
+const names=['core','space','files','layout-v5','intake','projects-v7'];let index=0;
+const html=source.replace(/<script>([\s\S]*?)<\/script>/g,(_,code)=>{const name=names[index++];if(!name)throw Error('unexpected script');writeFileSync(new URL(name+'.js',directory),code);return '<script src="./'+name+'.js"></script>';});
+if(index!==names.length)throw Error('missing script');writeFileSync(new URL('index.html',directory),html);
+console.log('Extracted six original scripts; all other source bytes preserved. Demo baseline only.');

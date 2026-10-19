@@ -1,0 +1,118 @@
+{
+  "name": "dsh-personal-workstation",
+  "version": "3.9.2",
+  "private": false,
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./package.json": "./package.json",
+    "./client": "./client/client.js"
+  },
+  "files": [
+    "src",
+    "!src/web-app.mjs",
+    "client",
+    "skills",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "!src/*-client.mjs",
+    "!src/files.mjs",
+    "!src/v7/projects-controller.mjs"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules --test --test-concurrency=4 --test-timeout=60000 test/*.test.mjs",
+    "build:v7": "node prototype/build-v7.mjs",
+    "verify:v7": "node prototype/verify-v7.mjs",
+    "verify:style": "node prototype/style-check.mjs",
+    "verify:preview": "node prototype/preview-check.mjs",
+    "verify:controls": "node prototype/control-audit.mjs",
+    "verify:visual": "node prototype/visual-check.mjs",
+    "verify": "node prototype/build-v7.mjs && node --experimental-vm-modules --test --test-concurrency=4 --test-timeout=60000 test/*.test.mjs && node prototype/verify-v7.mjs && node prototype/css-var-audit.mjs && node prototype/type-scale-audit.mjs && node prototype/motion-audit.mjs && node prototype/craft-audit.mjs && node prototype/mobile-audit.mjs && node prototype/field-relevance-audit.mjs && node prototype/style-check.mjs && node prototype/form-metrics.mjs && node prototype/field-propagation.mjs && node prototype/wording-audit.mjs && node prototype/wording-audit.mjs --self-test && node prototype/spec-coverage-audit.mjs && node prototype/private-data-guard.mjs && node prototype/charter-guard.mjs && node prototype/spec-coverage-audit.mjs && node prototype/charter-guard.mjs --self-test && node prototype/charter-ux-audit.mjs && node prototype/activation-replay.mjs && node prototype/judgment-browser-check.mjs && node prototype/advice-browser-check.mjs && node prototype/space-color-check.mjs && node prototype/canvas-suggestion-check.mjs && node prototype/export-browser-check.mjs && node prototype/heartbeat-browser-check.mjs && node prototype/status-audit.mjs && node prototype/layout-metrics.mjs && node prototype/preview-check.mjs && node prototype/control-state-audit.mjs && node prototype/control-audit.mjs && node prototype/dialog-audit.mjs && node prototype/geom-diff.mjs && node prototype/public-repo-check.mjs && npm pack --pack-destination releases >/dev/null 2>&1 && node prototype/release-check.mjs && node prototype/pixel-diff.mjs",
+    "verify:css-vars": "node prototype/css-var-audit.mjs",
+    "verify:type": "node prototype/type-scale-audit.mjs",
+    "verify:craft": "node prototype/craft-audit.mjs",
+    "verify:ux": "node prototype/charter-ux-audit.mjs",
+    "verify:mobile": "node prototype/mobile-audit.mjs",
+    "verify:relevance": "node prototype/field-relevance-audit.mjs",
+    "audit:user-view": "node prototype/user-view-audit.mjs",
+    "verify:package": "npm pack --pack-destination releases >/dev/null 2>&1 && node prototype/release-check.mjs",
+    "verify:geometry": "node prototype/geom-diff.mjs",
+    "verify:pixels": "node prototype/pixel-diff.mjs",
+    "verify:structure": "node prototype/structure-diff.mjs",
+    "verify:dialogs": "node prototype/dialog-audit.mjs",
+    "audit:interaction": "node prototype/interaction-audit.mjs",
+    "audit:craft": "node prototype/charter-guard.mjs",
+    "verify:judgment": "node prototype/judgment-browser-check.mjs",
+    "verify:advice": "node prototype/advice-browser-check.mjs",
+    "verify:space": "node prototype/space-color-check.mjs",
+    "verify:export": "node prototype/export-browser-check.mjs",
+    "verify:status": "node prototype/status-audit.mjs",
+    "plan:prototype": "node prototype/prototype-conversion-check.mjs",
+    "accept": "node prototype/accept.mjs",
+    "verify:coverage": "node prototype/spec-coverage-audit.mjs",
+    "verify:motion": "node prototype/motion-audit.mjs",
+    "install:local": "node prototype/build-v7.mjs && npm pack --pack-destination releases >/dev/null && node -e \"const fs=require('fs'),p=require('path');const v=require('./package.json').version;const src='releases/dsh-personal-workstation-'+v+'.tgz';const stamp=new Date().toISOString().replace(/[-:T.]/g,'').slice(0,14);const dst='releases/dsh-personal-workstation-'+v+'-b'+stamp+'.tgz';if(!fs.existsSync(src)){console.error('没找到 '+src+'（npm pack 的产物名与版本不一致？）');process.exit(1)}fs.copyFileSync(src,dst);const home=process.env.HOME, pf=home+'/.dsh/profiles/desktop/package.json';const d=JSON.parse(fs.readFileSync(pf,'utf8'));d.dependencies['dsh-personal-workstation']='file:'+p.resolve(dst);fs.writeFileSync(pf,JSON.stringify(d,null,2)+'\\n');console.log('版本 '+v+' → 指向 '+dst)\" && yes | pnpm --dir ~/.dsh/profiles/desktop install",
+    "accept:no-instance": "node prototype/accept.mjs real-data-check mobile-real-check audio-seek-check agent-swap-check",
+    "sync:check": "node sync-engine.mjs --check",
+    "sync": "node sync-engine.mjs --apply",
+    "gate:semantic": "node prototype/semantic-gates.mjs",
+    "gate:semantic:canary": "node prototype/semantic-gates.mjs --canary",
+    "verify:public": "node prototype/public-repo-check.mjs",
+    "verify:clean-install": "node prototype/clean-install-check.mjs",
+    "verify:c7": "node prototype/c7-simulation.mjs",
+    "verify:paths": "node prototype/w5-real-paths.mjs",
+    "release": "node scripts/release.mjs",
+    "release:check": "node scripts/release.mjs --dry-run"
+  },
+  "engines": {
+    "node": ">=22.12",
+    "dsh": ">=0.2.1-rc.2"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": ">=0.1.0"
+  },
+  "description": "DSH 个人工作台插件：把项目、任务、材料、日程与判断收在同一个本地页面，数据存本机 SQLite，默认不经过第三方服务器。",
+  "license": "MIT",
+  "devDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.5",
+    "jsdom": "^29.1.1",
+    "puppeteer-core": "^25.12.0"
+  },
+  "author": {
+    "name": "simmon-clap",
+    "email": "131585527+simmon-clap@users.noreply.github.com",
+    "url": "https://github.com/simmon-clap"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/simmon-clap/dsh-personal-workstation.git"
+  },
+  "homepage": "https://github.com/deepseek-ai/deepseek-harness",
+  "bugs": {
+    "url": "https://github.com/simmon-clap/dsh-personal-workstation/issues"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "personal-workstation",
+    "local-first",
+    "sqlite",
+    "productivity"
+  ],
+  "packageManager": "npm@10.9.2"
+}

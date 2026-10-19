@@ -1,0 +1,904 @@
+{
+  "_readme": "个人工作台登记表。任何新增的颜色、图标、入口、对象类型、界面词汇、组件实现都必须先登记在这里；未登记即视为违规。守卫脚本 prototype/charter-guard.mjs 据此扫描。修改本文件需走宪章第九条流程。",
+  "version": "1.2.0",
+  "frozenAt": "2026-10-13",
+  "entries": {
+    "note": "信息架构冻结。不新增、不删除、不重排。改动须先讨论。",
+    "items": [
+      {
+        "id": "home",
+        "label": "总览"
+      },
+      {
+        "id": "inbox",
+        "label": "收件箱"
+      },
+      {
+        "id": "space",
+        "label": "关联空间"
+      },
+      {
+        "id": "projects",
+        "label": "项目"
+      },
+      {
+        "id": "tasks",
+        "label": "任务"
+      },
+      {
+        "id": "knowledge",
+        "label": "知识"
+      },
+      {
+        "id": "personal",
+        "label": "日程与事务"
+      },
+      {
+        "id": "settings",
+        "label": "空间与设置",
+        "kind": "utility"
+      }
+    ]
+  },
+  "colors": {
+    "note": "唯一色值来源 design-system/tokens.json。代码内不得出现字面色值。新增颜色必须对应一个全新的真实状态，且必须同时有文字与符号。 允许写字面值的定义层见 literalValueLayers。",
+    "tokens": [
+      "--ws-paper",
+      "--ws-surface",
+      "--ws-ink",
+      "--ws-muted",
+      "--ws-line",
+      "--ws-action",
+      "--ws-action-soft",
+      "--ws-success",
+      "--ws-success-soft",
+      "--ws-warning",
+      "--ws-warning-soft",
+      "--ws-danger",
+      "--ws-danger-soft",
+      "--ws-knowledge",
+      "--ws-knowledge-soft"
+    ],
+    "literalValueLayers": {
+      "note": "允许出现字面色值/标尺外像素的变量定义层（与 tokens.css 同一结构：只在 :root 里定义，其余一律 var()）。这不是放宽门禁，而是把唯一色值来源从一个文件改成一小组登记在册的定义层：每条都必须先在这里登记，未登记即违规。",
+      "items": [
+        {
+          "path": "src/v7/tokens.css",
+          "kind": "colors",
+          "reason": "VI 调色板定义层（design-system/tokens.css 的生成物）"
+        },
+        {
+          "path": "src/v7/v7-dark.css",
+          "kind": "colors",
+          "reason": "深色 token 定义层，与 tokens.css 结构相同"
+        },
+        {
+          "path": "src/v7/v7-visual.css",
+          "kind": "colors",
+          "reason": "纸上秩序覆盖层的自定色（--ws-tint-*）：不在 15 色调色板里；实测映射到最近 token 会让六页位移 0.58-0.85%（最大单通道差 35），故按值不变、只换写法处理，统一登记在此。"
+        },
+        {
+          "path": "src/v7/v7-visual.css",
+          "kind": "scale",
+          "reason": "同值间距/字号变量（--ws-space-N / --ws-font-N）：值与原实现逐字节相同，零重排"
+        },
+        {
+          "path": "src/v7/v7-data.css",
+          "kind": "colors",
+          "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）。由 prototype/data-palette.mjs 生成，唯一来源是那份表；登记在 dataPalette。"
+        },
+        {
+          "path": "src/v7/v7-host-theme.css",
+          "kind": "colors",
+          "reason": "宿主主题映射层（VI §12）：`--ws-x: var(--dsw-alias-y, <兜底值>)` —— 兜底字面值是这一层**存在的意义**（宿主不在时保持原值，例如独立预览页与门禁夹具）。与 tokens.css 同属定义层，不是界面里随手写的颜色。"
+        },
+        {
+          "path": "src/v7/paper-glass-tokens.css",
+          "kind": "colors",
+          "reason": "纸上玻璃 Paper Glass 的材质/扩展色 token 定义层（design-system/paper-glass/tokens.css 的发布副本）"
+        }
+      ]
+    },
+    "registeredLiterals": {
+      "note": "**逐个值登记**（2026-10-16 起）：这两个文件里的字面色值不再是\"整份文件豁免\"，而是一个一个登记在下面。任何**新增**的字面色值都会因为不在本表里而判失败 —— 这是把\"登记即合法\"从文件级收到值级的做法。新增一条时必须写清理由（它对应哪个真实状态、为什么不能用已有调色板的值）。",
+      "items": {
+        "src/v7/v7-visual.css": [
+          {
+            "value": "#264DAD",
+            "name": "ws-tint-264dad",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#505A66",
+            "name": "ws-tint-505a66",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#657066",
+            "name": "ws-tint-657066",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#9CADD3",
+            "name": "ws-tint-9cadd3",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#AFBFE8",
+            "name": "ws-tint-afbfe8",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#B6BEC7",
+            "name": "ws-tint-b6bec7",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#B9C8EC",
+            "name": "ws-tint-b9c8ec",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#BCCAE6",
+            "name": "ws-tint-bccae6",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#D0DBF7",
+            "name": "ws-tint-d0dbf7",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#E0E5E1",
+            "name": "ws-tint-e0e5e1",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#E1E5E1",
+            "name": "ws-tint-e1e5e1",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#E2E6E2",
+            "name": "ws-tint-e2e6e2",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#E3E7E4",
+            "name": "ws-tint-e3e7e4",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#E4E8E4",
+            "name": "ws-tint-e4e8e4",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#E5EBE9",
+            "name": "ws-tint-e5ebe9",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#E9EEEB",
+            "name": "ws-tint-e9eeeb",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#EEF0ED",
+            "name": "ws-tint-eef0ed",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#F0F2EE",
+            "name": "ws-tint-f0f2ee",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#F1F3F0",
+            "name": "ws-tint-f1f3f0",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#F1F3F1",
+            "name": "ws-tint-f1f3f1",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#F4F6F2",
+            "name": "ws-tint-f4f6f2",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#F5F6F3",
+            "name": "ws-tint-f5f6f3",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          },
+          {
+            "value": "#FDFEFE",
+            "name": "ws-tint-fdfefe",
+            "reason": "VI 覆盖层的自有色：映射到最近调色板会让六页位移 0.58–0.85%（最大单通道差 35），故按值登记"
+          }
+        ],
+        "src/v7/v7-data.css": [
+          {
+            "value": "#9DB2CF",
+            "name": "ws-data-relation-confirmed",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#A28CC5",
+            "name": "ws-data-relation-suggested",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#B6A17C",
+            "name": "ws-data-relation-stale",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#345074",
+            "name": "ws-data-node-project",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#417FE8",
+            "name": "ws-data-node-focus",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#F8FBFF",
+            "name": "ws-data-node-surface",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#E1E8F2",
+            "name": "ws-data-node-track",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#BCCDE5",
+            "name": "ws-data-node-line",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#899BB3",
+            "name": "ws-data-node-muted",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#5276A6",
+            "name": "ws-data-node-accent",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#EEF3FF",
+            "name": "ws-data-node-soft",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#DDE6F2",
+            "name": "ws-data-node-frame",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#7595C2",
+            "name": "ws-data-gantt-pending",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#739BE2",
+            "name": "ws-data-gantt-bar",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#DCE4EF",
+            "name": "ws-data-gantt-line",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#E8EDF5",
+            "name": "ws-data-gantt-track",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#6488D6",
+            "name": "ws-data-partner-1",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#EDF2FF",
+            "name": "ws-data-partner-1-soft",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#54A38B",
+            "name": "ws-data-partner-2",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#EAF5F0",
+            "name": "ws-data-partner-2-soft",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#9981C3",
+            "name": "ws-data-partner-3",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#F2EEF9",
+            "name": "ws-data-partner-3-soft",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#BC985D",
+            "name": "ws-data-partner-4",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#F8F2E7",
+            "name": "ws-data-partner-4-soft",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#EDF0F5",
+            "name": "ws-data-progress-track",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#BCC8DC",
+            "name": "ws-data-progress-rest",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#596C8B",
+            "name": "ws-data-progress-label",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#4B9B84",
+            "name": "ws-data-metric-done",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#8493A9",
+            "name": "ws-data-metric-open",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#9AA6B6",
+            "name": "ws-data-metric-muted",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#476C9D",
+            "name": "ws-data-metric-value",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#D3DDEB",
+            "name": "ws-data-form-hint",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          },
+          {
+            "value": "#8C3B3B",
+            "name": "ws-data-alert",
+            "reason": "数据调色板（逐项目/伙伴配色，算数据不算界面配色）：唯一来源是 prototype/data-palette.mjs 的那张表"
+          }
+        ]
+      }
+    }
+  },
+  "icons": {
+    "note": "24x24 网格 / 1.6px 线宽。新增必须证明现有图标无法表达。禁止 emoji 当图标。person / organization 于 2026-10-14 新增：现有 32 个图标没有一个能表达「人」或「机构」，而负责人/合作机构是工作台的一等归属字段（不能拿云端/芯片等无关图形凑数）。",
+    "items": [
+      "overview",
+      "space",
+      "project",
+      "task",
+      "knowledge",
+      "calendar",
+      "settings",
+      "assistant",
+      "file",
+      "link",
+      "plus",
+      "close",
+      "arrow",
+      "search",
+      "inbox",
+      "upload",
+      "download",
+      "edit",
+      "check",
+      "warning",
+      "pause",
+      "play",
+      "clock",
+      "retry",
+      "device",
+      "mini",
+      "lock",
+      "focus",
+      "filter",
+      "memory",
+      "cloud",
+      "chip",
+      "person",
+      "organization",
+      "minus"
+    ]
+  },
+  "illustrations": {
+    "note": "240x160 母版 / 2px 线宽 / 墨色 + 1 个蓝色强调 / 留白 >= 50%。功能页每屏最多一幅。",
+    "items": [
+      "connections",
+      "projects",
+      "knowledge",
+      "focus",
+      "empty",
+      "waiting",
+      "offline",
+      "complete"
+    ]
+  },
+  "objectTypes": {
+    "note": "judgment 已于 2026-10-13 落地（批次 1）：校验 + 存储白名单 + 知识页「研究议题」列表与详情 + editor 表单 + SKILL 说明。批次 6（2026-10-13）给判断加了 share（「仅自己 / 可以给同事看」，**缺省=仅自己**）：卡片逐条可见、详情一键切换、编辑器可选、导出只含 team。实体新增 author/at 两列（谁写的、什么时候写的），供导出如实写明「谁在何时判断」。新增对象类型仍须先讨论。",
+    "existing": [
+      "project",
+      "task",
+      "artifact",
+      "topic",
+      "brief",
+      "event",
+      "organization",
+      "person",
+      "relation",
+      "proposal",
+      "memoryRef",
+      "layout",
+      "judgment",
+      "view"
+    ],
+    "planned": []
+  },
+  "uiVocabulary": {
+    "note": "界面允许出现的动作与名词。禁造词表见 spec/03 §7。新词必须先登记并过四道直觉测试（一句话/母语/不解释/十年）。",
+    "actions": [
+      "看",
+      "改",
+      "删",
+      "新建",
+      "归档",
+      "恢复",
+      "采纳",
+      "改写",
+      "否决",
+      "稍后",
+      "导出",
+      "重试",
+      "撤销",
+      "确认",
+      "忽略",
+      "推进",
+      "关联",
+      "转写",
+      "补资料",
+      "标记"
+    ],
+    "nouns": [
+      "项目",
+      "任务",
+      "资料",
+      "材料",
+      "议题",
+      "简报",
+      "日程",
+      "事务",
+      "组织",
+      "联系人",
+      "关系",
+      "记忆",
+      "判断",
+      "依据",
+      "理由",
+      "建议",
+      "待核对",
+      "不确定性",
+      "收件箱",
+      "关联空间",
+      "总览",
+      "对话",
+      "分析视图",
+      "AI 解读"
+    ],
+    "scope": "本表只约束**界面层与宿主提示**；标注（文档用词）的可在文档中引用。全表以 03 文档 §7 为准。",
+    "forbidden": [
+      "批次",
+      "草稿",
+      "提交",
+      "差异",
+      "回执",
+      "幂等",
+      "落库",
+      "校验",
+      "快照",
+      "收录",
+      "核验",
+      "倒推链",
+      "可倒推",
+      "契合度",
+      "时效",
+      "能力域",
+      "结论流",
+      "生命周期",
+      "分享边界",
+      "乐观 UI"
+    ],
+    "share": {
+      "field": "share",
+      "label": "谁能看",
+      "values": [
+        "仅自己",
+        "可以给同事看"
+      ],
+      "default": "仅自己",
+      "note": "导出只含「可以给同事看」；剔除项在导出前明示数量（F17）"
+    }
+  },
+  "components": {
+    "note": "每个控件全站只有一个实现。数量 > 1 即门禁失败。",
+    "items": [
+      {
+        "id": "button",
+        "variants": [
+          "primary",
+          "secondary",
+          "text"
+        ],
+        "states": [
+          "default",
+          "hover",
+          "focus",
+          "disabled"
+        ]
+      },
+      {
+        "id": "field",
+        "variants": [
+          "text",
+          "select",
+          "textarea",
+          "checkbox"
+        ],
+        "states": [
+          "default",
+          "hover",
+          "focus",
+          "disabled",
+          "invalid"
+        ]
+      },
+      {
+        "id": "dialog",
+        "variants": [
+          "centered"
+        ],
+        "requirement": "Escape / 焦点锁定与恢复 / 背景不可操作 / 未保存保护 / 动作区<=2"
+      },
+      {
+        "id": "card",
+        "variants": [
+          "record",
+          "advice",
+          "judgment"
+        ],
+        "states": [
+          "default",
+          "hover",
+          "focus",
+          "disabled"
+        ]
+      },
+      {
+        "id": "row",
+        "variants": [
+          "regular48",
+          "compact40"
+        ]
+      },
+      {
+        "id": "empty",
+        "requirement": "简笔画 + 一句状态 + 一个下一步"
+      },
+      {
+        "id": "feedback",
+        "variants": [
+          "success",
+          "waiting",
+          "failed",
+          "notConnected"
+        ]
+      },
+      {
+        "id": "tag",
+        "variants": [
+          "neutral",
+          "action",
+          "success",
+          "warning",
+          "danger",
+          "knowledge"
+        ]
+      },
+      {
+        "id": "undo",
+        "requirement": "左下常驻「已保存 · 撤销」"
+      },
+      {
+        "id": "generated-view",
+        "variants": [
+          "risk-matrix",
+          "timeline",
+          "compare-table",
+          "blocker"
+        ],
+        "states": [
+          "loading",
+          "ready",
+          "empty",
+          "error",
+          "stale"
+        ],
+        "requirement": "view v1：模板白名单；basis>=1；dataRefs<=50；顶部出处条；保存走 draft；不新增页面/入口"
+      }
+    ]
+  },
+  "spacingScale": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48,
+    64,
+    96
+  ],
+  "typeScale": [
+    11,
+    12,
+    13,
+    14,
+    15,
+    18,
+    22,
+    32
+  ],
+  "radius": {
+    "control": 8,
+    "card": 12,
+    "dialog": 20,
+    "pill": 999
+  },
+  "motion": {
+    "hover": 120,
+    "switch": 180,
+    "dialog": 220,
+    "maxDisplacement": 8
+  },
+  "gates": [
+    "色值：代码内字面色值 = 0",
+    "间距：标尺外像素值 = 0",
+    "字号：字阶外字号 = 0",
+    "组件唯一：同类实现个数 <= 1（脚本 charter-guard.mjs 的 componentOwners，构造点声明在 controlOwners）",
+    "四态：每个控件四态齐全",
+    "对比度：明暗两套逐文本节点 0 处不达标",
+    "页面溢出：1440 / 390 两档无横向溢出",
+    "弹窗：居中 / Escape / 焦点恢复 / 背景不可操作 / 未保存保护",
+    "硬编码覆盖：!important 覆盖色 = 0",
+    "图标与简笔画：全部在册，无 emoji 图标",
+    "状态文字：绿点/赭色/虚线旁必须有对应文字（脚本 status-audit.mjs，只扫可见视图，含\"裸色点会被抓到\"自检）",
+    "精确重建：冻结原型切片与基线一致",
+    "生成视图：模板白名单 / basis / dataRefs / stale 门禁（沿 18 §8）",
+    "生成视图：view 落库走 draft、不直接 commit（沿 18 §8 G4）",
+    "生成视图：模板白名单/依据/dataRefs/stale 由 view-spec 单点校验"
+  ],
+  "controlOwners": {
+    "note": "门禁 4（组件唯一）：每个控件全站只有一个构造点。这里声明唯一允许构造它的模块；其他模块匹配到 signature 即失败。",
+    "items": [
+      {
+        "id": "select",
+        "owner": "src/v7/vi-select.mjs",
+        "signature": "createElement\\('select'\\)|<select\\b",
+        "hint": "下拉一律用 selectHtml()，不要手搓原生 <select>"
+      },
+      {
+        "id": "dialog",
+        "owner": "src/v7/modal.mjs",
+        "signature": "className\\s*=\\s*['\"]veil",
+        "hint": "弹窗外壳一律走 modal.mjs，不要手搓 veil"
+      }
+    ]
+  },
+  "dataPalette": {
+    "note": "逐项目/伙伴配色（数据标识，不是 UI 语义色）。用户 2026-10-13 拍板：这类颜色算数据。唯一来源 prototype/data-palette.mjs，生成 src/v7/v7-data.css；守卫逐条核对登记与引用。",
+    "source": "prototype/data-palette.mjs",
+    "generated": "src/v7/v7-data.css",
+    "policy": "界面语义色一律用 --ws-*（VI 调色板）；对象标识色一律用 --ws-data-*（本表）。模块里不得出现任何字面色值。"
+  },
+  "contractValues": {
+    "note": "界面度量**契约值**：被验收测试或 VI 几何门禁直接以字面量断言的像素值。它们保留字面量（不是收进变量），因为变量化会把验收从「断言真实值」降级成「断言变量名」。守卫把它们单列计数，不再算作标尺外债务；任何一项消失即意味着对应验收失效，故也会被守卫核对。 **2026-10-16 撤掉 22px 那条**：它不是\"被测试断言的契约值\"，而是原型的纵向节奏（`.sectionhead`/`.footer`/`.drawer h2`/任务区 4 处 `margin:22px`）。实测**确实渲染**，但 VI §4 的间距标尺没有 22 —— 已在生成期收敛到 24px（差 2px），那条登记随之删除。间距门禁同时补上了 `margin`（此前只查 padding/gap，所以 22px 从来没被看见）。",
+    "items": [
+      {
+        "value": 204,
+        "kind": "spacing",
+        "owner": ".nav 侧栏宽度",
+        "assertedBy": "test/acceptance-evidence.test.mjs（.nav{width:204px / main{margin-left:204px）",
+        "reason": "信息架构度量：VI-2 几何"
+      },
+      {
+        "value": 175,
+        "kind": "spacing",
+        "owner": "独立应用页的窄版 main",
+        "assertedBy": "VI-2 同族断言（1024 档布局）",
+        "reason": "与 204 同一组度量，窄档取值"
+      },
+      {
+        "value": 180,
+        "kind": "spacing",
+        "owner": "空态插画宽度",
+        "assertedBy": "test/acceptance-evidence.test.mjs（.v7-empty img{width:180px）",
+        "reason": "插画尺寸上限，防止盖住数据"
+      }
+    ]
+  },
+  "importantAllowed": {
+    "note": "允许保留的 !important：每一条都必须在这里登记并写明「要压的对象」。判据是——它压的是不是**优先级更高的东西**（内联样式、用户代理偏好、或本层加载顺序之前写死的值）。压同层里已经写过的属性属于多余，不算在内（第 14 轮已删掉 6 处这类）。 2026-10-14：清掉 .canvas-full 上那 3 处 —— 实测 #globalCanvas 元素没有内联样式，登记表里\"必须压过原型内联色\"的理由与事实不符；类选择器优先级本来就够。 **2026-10-16 又清掉 2 处颜色覆盖**（`v7-visual.css` 与 `v7-dark.css` 各一处 `border-color:…!important`）：VI §12 明令禁止用 !important 覆盖颜色。实测把 !important 去掉后，几何锚点（geom-diff）、整页与弹窗对比度（style-check / craft-audit）全部照旧通过 —— 说明登记表写的\"必须压过原型内联色\"与事实不符（那些抽屉里的表单控件并没有原型内联描边），类选择器优先级本来就够。与 2026-10-14 清掉的 `.canvas-full` 三处是同一类问题。",
+    "items": [
+      {
+        "file": "src/v7-shell.html",
+        "declaration": "display:none!important",
+        "overrides": "原型内联 display",
+        "reason": "画布全屏态下的隐藏；原型用内联样式写死，只有 !important 能压"
+      },
+      {
+        "file": "src/v7-shell.html",
+        "declaration": "transition:none!important",
+        "overrides": "原型内联 transition",
+        "reason": "同上"
+      },
+      {
+        "file": "src/v7/v7-visual.css",
+        "declaration": "border-radius:8px!important",
+        "overrides": "原型内联圆角",
+        "reason": "同上，几何一致（VI 控件唯一实现）"
+      },
+      {
+        "file": "src/v7/v7-visual.css",
+        "declaration": "animation:none!important",
+        "overrides": "用户代理偏好",
+        "reason": "@media (prefers-reduced-motion) 无障碍标准做法"
+      },
+      {
+        "file": "src/v7/v7-visual.css",
+        "declaration": "transition:none!important",
+        "overrides": "用户代理偏好",
+        "reason": "同上"
+      },
+      {
+        "file": "src/v7/v7-visual.css",
+        "declaration": "scroll-behavior:auto!important",
+        "overrides": "用户代理偏好",
+        "reason": "同上"
+      },
+      {
+        "file": "src/v7/v7-visual.css",
+        "declaration": "letter-spacing:0!important",
+        "overrides": "原型内联字距",
+        "reason": "汉字排版基线；原型多处内联 letter-spacing 需要统一归零"
+      }
+    ]
+  },
+  "identicalAliases": {
+    "note": "同一份内容存在多处路径（**逐字节相同**）。这不是「哪个版本对」的争议：组内 md5 必须一致，守卫每次核对；一旦有人只改其中一份，守卫立刻报「别名组不再逐字节相同」，必须重新确认。登记表中每组必须指定一个 canonical（当前版本），其余路径视为别名，读哪份都得到同一内容。",
+    "items": [
+      {
+        "name": "杭州示例-会议纪要.md",
+        "canonical": "会议/杭州示例-会议纪要.md",
+        "paths": [
+          "会议/杭州示例-会议纪要.md",
+          "会议/示例项目-示例产品/杭州示例-会议纪要.md",
+          "voice/transcripts/杭州示例-会议纪要.md"
+        ],
+        "reason": "会议材料按其归属项目放置是刻意的（同一份纪要同时是语音转写产物与项目材料）；三份内容逐字节相同，改名或移动会破坏既有引用。"
+      },
+      {
+        "name": "工作台体检报告.md",
+        "canonical": "workstation/工作台体检报告.md",
+        "paths": [
+          "workstation/工作台体检报告.md",
+          "工作台体检报告.md"
+        ],
+        "reason": "工程文档随插件目录（workstation/）走；根目录那份是早期副本。内容逐字节相同。"
+      }
+    ]
+  },
+  "heartbeat": {
+    "note": "主动做事（F19–F22 判定 + F24 留痕）。**不是对象类型**：记录落在独立表 heartbeat_runs，与 executions 同类，不进实体表、不进画布与收件箱的对象列表。界面放在既有的「空间与设置」里，**不新增任何入口**。本批只支持手动触发；真定时需要常驻节点，接入前不得声称已在定时运行。",
+    "rules": [
+      "守承诺",
+      "盯依赖",
+      "做简报",
+      "复核旧判断"
+    ],
+    "trigger": "manual",
+    "scheduled": false,
+    "failureAlertAfter": 2,
+    "ui": {
+      "section": "它替你做过的",
+      "labels": [
+        "它替你做过的",
+        "现在做一次",
+        "上次跑成",
+        "这次看了",
+        "值得找你的",
+        "没打扰你的原因"
+      ]
+    },
+    "honesty": [
+      "每次留痕必须写出看到什么、为什么没打扰",
+      "外部连接器未接入必须每次写明看不到什么",
+      "简报必须带真实来源与时间，不产出没有来源的判断"
+    ]
+  },
+  "speak": {
+    "note": "出声（F23）。判断与计量在插件内，发送不在：还没有核实怎么往飞书发消息，所以二级一律降级为一级，任何地方不得声称已能推送。你的回应存在独立表 speak_feedback，与心跳记录分开。",
+    "levels": {
+      "2": "二级：会打断你（三条件齐 + 通道已核实）",
+      "1": "一级：排在最前，不推送",
+      "0": "零级：只进收件箱存档",
+      "never": "永不出声：无来源 / 兴趣类 / 重复 / 已否决"
+    },
+    "budget": {
+      "initial": 40,
+      "range": [
+        0,
+        100
+      ],
+      "deltas": {
+        "followed": 8,
+        "noted": 2,
+        "unnecessary": -10,
+        "ignored": -3,
+        "missed": 0
+      },
+      "note": "由你的反馈决定；长时间不出声不涨（missed 改的是门槛，不是额度）"
+    },
+    "stages": {
+      "lt30": "陌生期：只允许已经错过的事",
+      "30to69": "试用期：允许承诺到期与依赖解锁，同类每周一次",
+      "gte70": "信任期：允许更早提醒"
+    },
+    "weeklySecondaryLimit": "1 + 额度 // 25",
+    "quietWindow": {
+      "hours": "22:00-08:00",
+      "weekend": true,
+      "effect": "窗口内一律降为一级/零级"
+    },
+    "threeConditions": [
+      "与你明确承诺过的事直接相关且到期/被阻塞",
+      "有新的可核对事实",
+      "同类此前没出过声"
+    ],
+    "missed": "标记「该说没说」后，该类条件的门槛下调一档（不做无限放宽）",
+    "delegation": {
+      "implemented": false,
+      "note": "「你让我盯的」这一扇门的判定已实现（不受额度限制），但界面入口本轮未做，所以现在没有委托。"
+    },
+    "channel": {
+      "ready": false,
+      "note": "还没核实怎么往飞书发消息"
+    }
+  }
+}

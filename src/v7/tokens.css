@@ -1,0 +1,49 @@
+:root{
+  --ws-paper:#F8F9F7;
+  --ws-surface:#FFFFFF;
+  --ws-ink:#252A31;
+  --ws-muted:#626C78;
+  --ws-line:#DCE1E5;
+  --ws-action:#315ED0;
+  --ws-action-soft:#EDF2FF;
+  --ws-success:#28735B;
+  --ws-success-soft:#EDF6F1;
+  --ws-warning:#8A601D;
+  --ws-warning-soft:#FBF4E6;
+  --ws-danger:#B33F44;
+  --ws-danger-soft:#FBEFF0;
+  --ws-knowledge:#7555A1;
+  --ws-knowledge-soft:#F3EFF8;
+  --ws-space-4:4px;
+  --ws-space-8:8px;
+  --ws-space-12:12px;
+  --ws-space-16:16px;
+  --ws-space-24:24px;
+  --ws-space-32:32px;
+  --ws-space-48:48px;
+  --ws-space-64:64px;
+  --ws-space-96:96px;
+  --ws-radius-control:8px;
+  --ws-radius-card:12px;
+  --ws-radius-dialog:20px;
+  --ws-radius-pill:999px;
+  --ws-font:-apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+[data-theme="dark"]{
+  --ws-paper:#191C20;
+  --ws-surface:#22262B;
+  --ws-ink:#EEF1F5;
+  --ws-muted:#A5AFBB;
+  --ws-line:#414955;
+  --ws-action:#A9BCFF;
+  --ws-action-soft:#2C3751;
+  --ws-success:#9AD2BC;
+  --ws-success-soft:#243D34;
+  --ws-warning:#E4C18B;
+  --ws-warning-soft:#413727;
+  --ws-danger:#F0AFB2;
+  --ws-danger-soft:#482E32;
+  --ws-knowledge:#C7B4EB;
+  --ws-knowledge-soft:#393148;
+}
+  --ws-motion-displacement:8px;

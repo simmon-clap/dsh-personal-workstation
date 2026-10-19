@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build generated V7 tree
+        run: npm run build:v7
+
+      - name: Build must be reproducible
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "构建后工作树不干净：生成物与源码不一致，请重新执行 npm run build:v7 并提交。"
+            git status --porcelain
+            exit 1
+          fi
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Public repo hygiene
+        run: node prototype/public-repo-check.mjs
+
+      - name: No business data in package
+        run: node prototype/private-data-guard.mjs

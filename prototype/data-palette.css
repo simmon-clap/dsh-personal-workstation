@@ -1,0 +1,38 @@
+/* 数据调色板（由 prototype/data-palette.mjs 生成，勿手改）。
+   逐项目/伙伴配色是**数据标识**，不是 UI 语义色：值取自现行实现的原值（零位移），
+   登记在 spec/registry.json 的 dataPalette，守卫逐条核对。 */
+:root{
+  --ws-data-relation-confirmed:#9db2cf;
+  --ws-data-relation-suggested:#a28cc5;
+  --ws-data-relation-stale:#b6a17c;
+  --ws-data-node-project:#345074;
+  --ws-data-node-focus:#417fe8;
+  --ws-data-node-surface:#f8fbff;
+  --ws-data-node-track:#e1e8f2;
+  --ws-data-node-line:#bccde5;
+  --ws-data-node-muted:#899bb3;
+  --ws-data-node-accent:#5276a6;
+  --ws-data-node-soft:#eef3ff;
+  --ws-data-node-frame:#dde6f2;
+  --ws-data-gantt-pending:#7595c2;
+  --ws-data-gantt-bar:#739be2;
+  --ws-data-gantt-line:#dce4ef;
+  --ws-data-gantt-track:#e8edf5;
+  --ws-data-partner-1:#6488d6;
+  --ws-data-partner-1-soft:#edf2ff;
+  --ws-data-partner-2:#54a38b;
+  --ws-data-partner-2-soft:#eaf5f0;
+  --ws-data-partner-3:#9981c3;
+  --ws-data-partner-3-soft:#f2eef9;
+  --ws-data-partner-4:#bc985d;
+  --ws-data-partner-4-soft:#f8f2e7;
+  --ws-data-progress-track:#edf0f5;
+  --ws-data-progress-rest:#bcc8dc;
+  --ws-data-progress-label:#596c8b;
+  --ws-data-metric-done:#4b9b84;
+  --ws-data-metric-open:#8493a9;
+  --ws-data-metric-muted:#9aa6b6;
+  --ws-data-metric-value:#476c9d;
+  --ws-data-form-hint:#d3ddeb;
+  --ws-data-alert:#8c3b3b;
+}

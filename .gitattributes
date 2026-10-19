@@ -1,0 +1,17 @@
+* text=auto eol=lf
+
+# 二进制/生成资产按原样处理
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.tgz binary
+
+# 生成物：diff 只用于确认是否重新构建过
+src/v7/** linguist-generated=true
+src/v7-shell.html linguist-generated=true
+design-system/assets/** linguist-vendored=true

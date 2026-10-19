@@ -1,0 +1,4 @@
+export const unsavedClient=`
+function protectSelection(isDirty,host=window){const leaving=event=>{if(!isDirty())return;event.preventDefault();event.returnValue='';};host.addEventListener('beforeunload',leaving);return {dirty:isDirty,dispose:()=>host.removeEventListener('beforeunload',leaving)};}
+function protectUnsaved(root,host=window){let revision=0,saved=0;const changed=()=>{revision++};const leaving=event=>{if(revision===saved)return;event.preventDefault();event.returnValue='';};root.addEventListener('input',changed);root.addEventListener('change',changed);host.addEventListener('beforeunload',leaving);return {dirty:()=>revision!==saved,version:()=>revision,saved:version=>{saved=version},dispose(){root.removeEventListener('input',changed);root.removeEventListener('change',changed);host.removeEventListener('beforeunload',leaving)}};}
+`;

@@ -1,0 +1,59 @@
+/* ── 宿主主题映射层（VI §12 · V6）───────────────────────────────────────────
+ *
+ *  规范原文：「插件**必须消费宿主主题语义变量**，不自行发明一套主题映射。
+ *  目标前缀 `--dsw-alias-*`……**具体变量名必须在宿主实现中核实后写入本节**。
+ *  迁移期允许保留 `--ws-*` 作为变量层，但最终色值来源必须是宿主语义变量 + tokens。」
+ *
+ *  实测（2026-10-16）：`grep -- '--dsw-' src/` = **0 命中** —— 工作台从来没有消费过宿主主题。
+ *  变量名**已在宿主中核实**（Cordis Inspect 的 client Theme `listTokens` 枚举出 14 个），已回写 spec/02 §12。
+ *
+ *  写法：`var(--dsw-xxx, <兜底值>)` ——
+ *   · 宿主在（跑在 DSH 里）→ 跟随宿主主题（含深色）；
+ *   · 宿主不在（独立预览页、门禁夹具）→ 兜底值与 tokens.css **逐字相同**，视觉零漂移。
+ *
+ *  ⚠ **必须同时写浅色与深色两段**。原因是我踩过的坑：
+ *  `tokens.css` 里 `--ws-*` 有 `:root{}`（浅色）与 `[data-theme="dark"]{}`（深色）两段，
+ *  两者优先级相同、靠"后出现者赢"。这一层加载在 tokens 之后，如果只写 `:root{}`，
+ *  就会把深色段整个盖掉 —— 深色页立刻变成浅色底上的深色字。
+ *  实测后果：深色对比度门禁从通过变成 **50 个节点不达标**。
+ *  所以下面两段的兜底值分别与 tokens.css 的浅色段、深色段**逐字对应**。
+ *
+ *  只映射**语义明确对应**的那几个：底、面、文字、边框、品牌蓝、三个语义色。
+ *  工作台自己的知识紫、数据配色、以及各种 -soft 派生色**不属宿主语义**，保持自有来源
+ *  （登记在 spec/registry.json 的 colors 一节）。
+ */
+:root {
+  /* 底与面 */
+  --ws-paper: var(--dsw-alias-bg-base, #f8f9f7);
+  --ws-surface: var(--dsw-alias-bg-layer-1, #ffffff);
+  /* 文字 */
+  --ws-ink: var(--dsw-alias-label-primary, #252a31);
+  --ws-muted: var(--dsw-alias-label-secondary, #626c78);
+  /* 线 */
+  --ws-line: var(--dsw-alias-border-l1, #dce1e5);
+  /* 品牌与语义色 */
+  --ws-action: var(--dsw-alias-brand-primary, #315ed0);
+  --ws-danger: var(--dsw-alias-state-error-primary, #b33f44);
+  --ws-success: var(--dsw-alias-state-success-primary, #28735b);
+  --ws-warning: var(--dsw-alias-state-warn-primary, #8a601d);
+}
+
+/* 深色段：兜底值 = tokens.css 深色段（逐字相同）。缺了这一段就会盖掉深色。 */
+
+
+[data-theme="dark"] {
+  --ws-paper: var(--dsw-alias-bg-base, #191c20);
+  --ws-surface: var(--dsw-alias-bg-layer-1, #22262b);
+  --ws-ink: var(--dsw-alias-label-primary, #eef1f5);
+  --ws-muted: var(--dsw-alias-label-secondary, #a5afbb);
+  --ws-line: var(--dsw-alias-border-l1, #414955);
+  --ws-action: var(--dsw-alias-brand-primary, #a9bcff);
+  --ws-danger: var(--dsw-alias-state-error-primary, #f0afb2);
+  --ws-success: var(--dsw-alias-state-success-primary, #9ad2bc);
+  --ws-warning: var(--dsw-alias-state-warn-primary, #e4c18b);
+}
+
+/* 注意：**不要**在这一层顺手把别处也接上宿主。
+   我第一版把侧栏底与弹窗底也接了过去，深色下取色又变了，对比度不达标从 43 涨到 50。
+   §12 要求的是"消费宿主主题语义变量"，不是"把宿主变量到处套"；
+   凡是会改变既有渲染的，都要单独评估，不能夹带。 */

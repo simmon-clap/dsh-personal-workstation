@@ -1,0 +1,41 @@
+name: 问题反馈
+description: 报告可复现的缺陷（请勿粘贴真实业务数据或个人路径）
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请使用合成数据复现；**不要**粘贴真实会议纪要、录音、客户名或本机绝对路径。
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: package.json 里的版本或 DSH 侧栏显示的版本
+      placeholder: 3.9.2
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响区域
+      options: [总览, 收件箱, 项目, 任务, 知识, 关联空间, 日程与事务, 设置, 安装/升级, 其他]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 入口 → 操作 → 结果；能稳定复现的最短路径。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望与实际
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      description: 操作系统、DSH 版本、Node 版本、是否干净安装
