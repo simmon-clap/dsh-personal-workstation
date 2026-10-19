@@ -25,7 +25,7 @@ const riskView = {
  params: {horizonDays: 90},
  dataRefs: ['p-a@7', 'j-1@3'],
  basis,
- generatedAt: '2026-10-18T13:40:00+08:00',
+ generatedAt: '2026-10-18T13:40:00',
  origin: 'ai',
  state: 'fresh',
  actions: ['open-subject', 'save-as-judgment', 'save-as-brief'],

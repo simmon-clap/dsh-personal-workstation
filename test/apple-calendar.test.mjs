@@ -161,10 +161,14 @@ test('同步结果都能按记录编号撤销（走的是 draft → commit，不
 
 test('定时事务没有结束时间时，推送到日历默认给 1 小时（不能是零长度事件）',async()=>{
  const apple=fakeApple();
+ const start=new Date('2026-10-12T18:00+08:00');
+ // 推送到苹果日历时按**本机本地时间**写回；期望值从同一个时刻推导，CI（UTC）与本地（东八区）都成立。
+ const pad=n=>String(n).padStart(2,'0');
+ const local=(instant,offsetMs=0)=>{const date=new Date(instant.getTime()+offsetMs);return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`};
  const {store,ctx}=await seed({records:[{id:'e1',data:{title:'与示例客户董事长会面',startDate:'2026-10-12T18:00+08:00',eventType:'meeting'}}]});
  await runAppleSync({store,ctx,apple,config:{},mode:'push'});
  const pushed=apple.store.events[0];
- assert.equal(pushed.start,'2026-10-12T18:00:00');
- assert.equal(pushed.end,'2026-10-12T19:00:00','没有结束时间时默认 +1 小时');
+ assert.equal(pushed.start,local(start));
+ assert.equal(pushed.end,local(start,3600000),'没有结束时间时默认 +1 小时');
  assert.equal((await import('../src/apple-sync.mjs')).addHour('2026-10-12T23:30:00'),'2026-10-13T00:30:00','跨天也要对');
 });
