@@ -81,7 +81,10 @@ const sqlite = (db, sql) => execFileSync('sqlite3', ['-json', db, sql], {encodin
 // 引擎的远程分支（拼命令、走 stdin、解析 JSON、写回）原样跑，只是不跨网络。
 // 换成真机时什么都不用改。
 const SSH_BIN = process.env.SYNC_SSH || 'ssh';
-const SSH_OPTS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8'];
+// ConnectTimeout 只管"连上之前"；连上之后隧道断掉（Tailscale 中继切换）会**永远等**。
+// 2026-10-21 实测：一次同步挂住 6 分钟不退出，SSH 早已 100% 丢包而进程还在等。
+// 加 ServerAlive：45 秒没回应就自己断，交给上层重试。
+const SSH_OPTS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3'];
 const sshSqlite = (sql) => {
   if (REMOTE_LOCAL) { const t = sqlite(REMOTE_LOCAL, sql).trim(); return t ? JSON.parse(t) : []; }
   const out = execFileSync(SSH_BIN, [...SSH_OPTS, REMOTE, 'sqlite3', '-json', REMOTE_TARGET], {input: sql, encoding: 'utf8', maxBuffer: 1 << 28});
@@ -360,7 +363,10 @@ const FILES = flag('files');
 const LOCAL_ROOT = opt('local-root');   // REMOTE_ROOT 已在上面（可来自 sync.json）
 if (FILES) {
   if (!LOCAL_ROOT || !REMOTE_ROOT) { console.error('--files 需要同时给 --local-root 与 --remote-root'); process.exit(2); }
-  const rsyncArgs = ['-a', '--update', '--exclude', '.DS_Store', '--exclude', 'workstation-data'];
+  // 代码**不走文件同步**（2026-10-21 实测事故）：`workstation/` 是 git 仓库，两端必须从同一个 commit
+  // 出发；用 `rsync --update` 搬代码只会按文件 mtime 互相覆盖，长出两套不一致的树
+  // （当时 Mini 的 HEAD 在笔记本上根本不存在，两边各有一版画布）。代码只走 git。
+  const rsyncArgs = ['-a', '--update', '--exclude', '.DS_Store', '--exclude', 'workstation-data', '--exclude', 'workstation', '--exclude', '.git'];
   const runRsync = (from, to) => execFileSync('rsync', [...rsyncArgs, from, to], {encoding: 'utf8', maxBuffer: 1 << 28});
   const remoteSpec = REMOTE + ':' + REMOTE_ROOT.replace(/ /g, '\\ ');
   console.log('\n=== 材料文件 ===');
@@ -370,9 +376,9 @@ if (FILES) {
   // 前一版把前缀剥离交给 sed，而 root 里带引号和斜杠，剥不掉 → 两边全部"对不上"（5190/5190 全假报）。
   // 改成在 Node 里剥：先取 size\t绝对路径，再砍掉根本身。
   const listing = (root, viaSsh) => {
-    const cmd = `find ${JSON.stringify(root)} -type f -not -path '*/.git/*' -not -path '*/workstation-data/*' -not -name 'workstation-data' -not -name '.DS_Store' -not -name '*.syncbak-*' -exec stat -f '%z\t%N' {} + 2>/dev/null`;
+    const cmd = `find ${JSON.stringify(root)} -type f -not -path '*/.git/*' -not -path '*/workstation-data/*' -not -path '*/workstation/*' -not -name 'workstation-data' -not -name '.DS_Store' -not -name '*.syncbak-*' -exec stat -f '%z\t%N' {} + 2>/dev/null`;
     const out = viaSsh
-      ? execFileSync('ssh', ['-o', 'BatchMode=yes', REMOTE, cmd], {encoding: 'utf8', maxBuffer: 1 << 28})
+      ? execFileSync('ssh', [...SSH_OPTS, REMOTE, cmd], {encoding: 'utf8', maxBuffer: 1 << 28})
       : execFileSync('bash', ['-c', cmd], {encoding: 'utf8', maxBuffer: 1 << 28});
     const map = new Map();
     for (const line of out.trim().split('\n')) {
