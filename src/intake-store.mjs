@@ -99,6 +99,24 @@ export class IntakeStore {
   return this.get(ctx, id);
  }
 
+ /** 回一句话：把「需要你一句话」的单子结掉。
+  *  answer 只有两种人话：'知道了'（处理过了）/ '不用管'（判断为不需要你处理）。
+  *  结掉之后不再出现在「等你一句话」里 —— 这就是"事事有回应"的收口。 */
+ resolve(ctx, id, {answer, note = null, at = new Date().toISOString()} = {}) {
+  const s = this.store;
+  s.context(ctx, true);
+  const row = this.get(ctx, id);
+  if (!row) throw new DomainError('NOT_FOUND', '收件本里没有这一条');
+  if (row.state !== 'needs_you') throw new DomainError('CONFLICT', '这一条不在「等你一句话」里，不用再回');
+  if (!['知道了', '不用管'].includes(answer)) throw new DomainError('INVALID', '收件本：只能回「知道了」或「不用管」');
+  const state = answer === '知道了' ? 'captured' : 'not_mine';
+  const reason = answer === '知道了' ? (note?.trim() || '你说处理过了') : (note?.trim() || '你说不用管');
+  s.db.prepare('UPDATE intake SET state=?, reason=?, closed_at=? WHERE workspace=? AND id=?')
+   .run(state, reason, at, ROOT_SCOPE, id);
+  s.log(ctx, 'intake_resolved', {id, answer});
+  return this.get(ctx, id);
+ }
+
  get(ctx, id) {
   this.store.context(ctx);
   const row = this.store.db.prepare('SELECT * FROM intake WHERE workspace=? AND id=?').get(ROOT_SCOPE, id);

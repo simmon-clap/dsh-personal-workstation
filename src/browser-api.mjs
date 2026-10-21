@@ -120,6 +120,7 @@ export function browserRoute({store,connection,workspaceRegistry,allowedWorkspac
      case 'intake_open':return output(intake?{items:intake.open(ctx,{waitingHours:body.waitingHours})}:{available:false,items:[]});
      case 'intake_assign':{if(!intake)throw new DomainError('UNAVAILABLE','收件本未接入');return output(intake.assign(ctx,body.id,{subjectKind:body.kind,subjectId:body.subjectId}));}
      // 着落本（spec/55 P2）：每件挂起的事写清终态。界面在 P4 接，这里先给 API。
+     case 'intake_resolve':{if(!intake)throw new DomainError('UNAVAILABLE','收件本未接入');return output(intake.resolve(ctx,body.id,{answer:body.answer,note:body.note}));}
      case 'loop_close':{if(!loop)throw new DomainError('UNAVAILABLE','着落本未接入');return output(loop.close(ctx,{subjectKind:body.subjectKind,subjectId:body.subjectId,state:body.state,waitingFor:body.waitingFor,waitingUntil:body.waitingUntil,note:body.note}));}
      case 'loop_list':return output(loop?{items:loop.list(ctx,{state:body.state,limit:body.limit})}:{available:false,items:[]});
      case 'loop_sweep':return output(loop?loop.sweep(ctx,{subjects:store.list(ctx,{kind:'task',limit:1000}).map(t=>({kind:'task',id:t.id,title:t.data?.title??t.id,dueDate:t.data?.dueDate}))}):{available:false,overdue:[],unlanded:[]});

@@ -348,7 +348,7 @@ export function createInbox(document,send,batch,{notify=()=>{},openLogin,project
   return node.outerHTML;
  }
 
-  function listHtml(rows,total,blockedCount=0,checks=[],assistant=null){
+  function listHtml(rows,total,blockedCount=0,checks=[],assistant=null,waitingIntake=[]){
   const cards=rows.map(({item,blocked})=>{const counts=new Map();for(const change of item.changes??[])counts.set(change.op,(counts.get(change.op)??0)+1);
    const names=(item.changes??[]).slice(0,3).map(change=>change.data?.title||change.id).join('、');
    const state=blocked?'需补充/冲突':(statusNames[item.status]||item.status);
@@ -425,13 +425,38 @@ export function createInbox(document,send,batch,{notify=()=>{},openLogin,project
   const statsBlock=`<details class="proposalstats" data-proposalstats="1"><summary>最近的建议你采纳了多少</summary><div data-statsbody="1">展开后先生成</div></details>`;
   // 助理后台（spec/55 P4）：今天收了多少、多少在等你、多少还没归属。
   // 一行纯文字，不新增组件/颜色/图标 —— 这四条数字回答的是"它有没有接住"，不是新功能入口。
+  // 等你一句话（spec/55 P4）：收件本里挂着等回应的那几条，就地给两个回应。
+  // 复用「待核对」那套 surface/pad/pendingcheck 结构 —— 不新增样式，也不再造第二种卡片。
+  const intakeBlock=Array.isArray(waitingIntake)&&waitingIntake.length
+   ?`<section class="surface pad pendingchecks" data-intakepending="1"><p class="inboxmeta">等你一句话</p>`
+     +waitingIntake.slice(0,3).map(item=>`<div class="pendingcheck" data-intakeitem="${esc(item.id)}"><h3>${esc(item.summary)}</h3>`
+      +`<p class="inboxmeta">${esc(item.reason||'')}${item.overdue?' · 已经挂了一阵子':''}</p>`
+      +`<div class="inboxdecide"><button class="btn primary" data-intakeresolve="${esc(item.id)}" data-answer="知道了" type="button">知道了</button>`
+      +`<button class="btn txt" data-intakeresolve="${esc(item.id)}" data-answer="不用管" type="button">不用管</button></div></div>`).join('')
+     +`</section>`
+   :'';
   const assistantLine=assistant&&Number.isFinite(assistant.today)
    ?`<p class="inboxmeta" data-assistant="1">今天收了 ${assistant.today} 件${assistant.needsYou?` · ${assistant.needsYou} 件等你一句话`:''}${assistant.unassigned?` · ${assistant.unassigned} 件还没归属`:''}</p>`
    :'';
-  return heading+statsBlock+assistantLine+filterBar+`<p class="notice">材料入库和项目修改都会汇总成一条改动，等你同意；来源与项目筛选只影响当前列表。</p>${pendingChecksHtml(checks)}${note}<div class="resourcegrid" data-inboxgrid="1">${cards||emptyMarkup(blockedCount)}</div>`;
+  return heading+statsBlock+assistantLine+intakeBlock+filterBar+`<p class="notice">材料入库和项目修改都会汇总成一条改动，等你同意；来源与项目筛选只影响当前列表。</p>${pendingChecksHtml(checks)}${note}<div class="resourcegrid" data-inboxgrid="1">${cards||emptyMarkup(blockedCount)}</div>`;
  }
  function wireList(root){
   wireSelects(root,{document});
+  // 「等你一句话」的两个回应：回完就地重画，不再出现在这一栏（收口）。
+  for(const node of root.querySelectorAll('[data-intakeresolve]')){
+   node.onclick=async()=>{
+    const answer=node.dataset.answer;
+    node.disabled=true;
+    try{
+     await send('intake_resolve',{id:node.dataset.intakeresolve,answer});
+     notify(answer==='知道了'?'记下了':'好，以后不再提这件事');
+     if(root.isConnected)await render(root);
+    }catch(error){
+     node.disabled=false;
+     notify(String(error?.message??error),true);
+    }
+   };
+  }
   // 整张待核对卡就是入口：里面的数字/状态因此都能「点回原因」（charter-ux C7/D8），
   // 也不再出现同屏三个同名按钮（C7 重复动作）。
   for(const node of root.querySelectorAll('[data-check]')){
@@ -607,11 +632,14 @@ export function createInbox(document,send,batch,{notify=()=>{},openLogin,project
   // 助理后台的四个数（失败就不显示这一行，不编一个 0 —— 0 会被读成"今天什么都没有"）。
   let assistant=null;
   try{const summary=await send('intake_summary');if(summary&&summary.available!==false)assistant=summary}catch{assistant=null}
+  // 等你一句话：读失败就不显示这一块（不编造"没有在等你的"）。
+  let waitingIntake=[];
+  try{const opened=await send('intake_open');waitingIntake=Array.isArray(opened?.items)?opened.items.filter(item=>item.state==='needs_you'):[]}catch{waitingIntake=[]}
   const decorated=(await decorate(items)).filter(row=>matches(row.item));
   const rows=status==='pending'?decorated.filter(row=>!row.blocked):status==='blocked'?decorated.filter(row=>row.blocked):decorated;
   rendered=rows;
   if(!root?.isConnected)return rows;
-  root.innerHTML=listHtml(rows,items.length,decorated.filter(row=>row.blocked).length,checks,assistant);wireList(root);
+  root.innerHTML=listHtml(rows,items.length,decorated.filter(row=>row.blocked).length,checks,assistant,waitingIntake);wireList(root);
   return rows;
  }
  // 接入状态：只呈现工作台自己观测得到的结论；观测不到的一律交给用户确认，不猜。

@@ -167,3 +167,16 @@ test('语音转写：记一条"接住了"，但摘要只写一句话、不抄全
   assert.equal(recordIntakeSafely({intake: null, ctx, source: 'voice', summary: 'x'}), null);
  } finally { store.close(); }
 });
+
+test('回一句话：知道了 / 不用管 都能收口，且只能回一次', () => {
+ const {store, intake} = setup();
+ try {
+  const id = intake.append(ctx, {source: 'im', summary: '要不要接这个活', state: 'needs_you', reason: '等你决定'}).id;
+  assert.throws(() => intake.resolve(ctx, id, {answer: '随便'}), /只能回/);
+  const done = intake.resolve(ctx, id, {answer: '知道了'});
+  assert.equal(done.state, 'captured');
+  assert.equal(done.reason, '你说处理过了');
+  assert.throws(() => intake.resolve(ctx, id, {answer: '知道了'}), /不用再回/);
+  assert.equal(intake.open(ctx).length, 0, '收口后不该再出现在「等你一句话」里');
+ } finally { store.close(); }
+});
