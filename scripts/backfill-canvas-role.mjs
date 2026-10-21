@@ -9,13 +9,13 @@
  *
  *  用法：
  *    node scripts/backfill-canvas-role.mjs [--db <path>] [--json]
- *  默认库：/Users/simmon/DSH/飞书工作区/workstation-data/workstation.sqlite
+ *  默认库：~/DSH/飞书工作区/workstation-data/workstation.sqlite
  *  --apply 一律拒绝（exit 2）：D5 只做 dry-run，本批不写真实业务数据。
  */
 import {DatabaseSync} from 'node:sqlite';
 import {existsSync} from 'node:fs';
 
-const DEFAULT_DB='/Users/simmon/DSH/飞书工作区/workstation-data/workstation.sqlite';
+const DEFAULT_DB='~/DSH/飞书工作区/workstation-data/workstation.sqlite';
 const USAGE='用法：node scripts/backfill-canvas-role.mjs [--db <path>] [--json]';
 
 const args=process.argv.slice(2);
