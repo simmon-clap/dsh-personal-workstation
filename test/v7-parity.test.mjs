@@ -16,6 +16,10 @@ const intentional=new Map([
  ['intake_list','同上：P1 后台已就绪，界面在 P4'],
  ['intake_open','同上：P1 后台已就绪，界面在 P4'],
  ['intake_assign','同上：P1 后台已就绪，界面在 P4'],
+ // P2 着落本同样先后台，界面在 P4（收件箱里"这件事去哪了"的分组）接。
+ ['loop_close','P2 只做后台：着落本已能记终态，界面排在 P4；P4 接线后删掉本条'],
+ ['loop_list','同上：P2 后台已就绪，界面在 P4'],
+ ['loop_sweep','同上：P2 后台已就绪，界面在 P4'],
 ]);
 test('every server action the legacy UI used has a V7 entry or a recorded reason',()=>{
  const api=readFileSync(new URL('../src/browser-api.mjs',import.meta.url),'utf8');

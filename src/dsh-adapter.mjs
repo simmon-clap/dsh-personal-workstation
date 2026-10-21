@@ -18,8 +18,8 @@ import {buildViewPreview,previewAndSaveView} from './view-spec.mjs';
 
 /** Only host-owned dependencies and configuration are accepted here. */
 export class DshAdapter {
-  constructor({store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat=null,speak=null,intake=null,runner,executionConfig,speech,office,audio=createAudioInput(),transcribeWithoutApproval=false,allowedWorkspaces=[],integrations={},appleCalendar=null,appleConfig={},heartbeatTiming={scheduled:false,intervalMinutes:0},imHealth=null}){
-    Object.assign(this,{store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat,speak,intake,runner,executionConfig,speech,office,audio,transcribeWithoutApproval,integrations,appleCalendar,appleConfig,heartbeatTiming,imHealth});
+  constructor({store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat=null,speak=null,intake=null,loop=null,runner,executionConfig,speech,office,audio=createAudioInput(),transcribeWithoutApproval=false,allowedWorkspaces=[],integrations={},appleCalendar=null,appleConfig={},heartbeatTiming={scheduled:false,intervalMinutes:0},imHealth=null}){
+    Object.assign(this,{store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat,speak,intake,loop,runner,executionConfig,speech,office,audio,transcribeWithoutApproval,integrations,appleCalendar,appleConfig,heartbeatTiming,imHealth});
     // 允许列表可能来自配置文件，也可能来自界面里的运行时授权；不缓存集合，界面刚授权的要立刻可用。
     this.allowedSource=allowedWorkspaces;
   }
@@ -164,7 +164,7 @@ export class DshAdapter {
     if(args.action==='heartbeat_run'){
      if(!this.heartbeat)throw new DomainError('UNAVAILABLE','主动做事的记录尚未接入');
      const previous=this.heartbeat.status(fresh,this.heartbeatTiming);
-     const record=runHeartbeat({store:this.store,ctx:fresh,now:new Date(),since:previous.lastSuccessAt,
+     const record=runHeartbeat({store:this.store,ctx:fresh,now:new Date(),since:previous.lastSuccessAt,loop:this.loop,
       scheduled:false,intervalMinutes:this.heartbeatTiming.intervalMinutes,
       speak:candidate=>decideLevel(candidate,{budget:this.speak?this.speak.state(fresh).budget:40,now:new Date(),
        spokenThisWeek:spokenThisWeek(this.heartbeat.list(fresh,{limit:50}).items),channelReady:false})});

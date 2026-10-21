@@ -22,7 +22,7 @@ import {readLayout,saveLayout} from './layout.mjs';
 import {buildViewPreview,saveViewDraft} from './view-spec.mjs';
 const output=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 /** Installed on the authenticated DSH connection; no standalone server. */
-export function browserRoute({store,connection,workspaceRegistry,allowedWorkspaces,rootWorkspaceId,rootStatus,files,knowledge,schedule,heartbeatTiming={scheduled:false,intervalMinutes:0},executions,heartbeat,speak,beat=null,intake=null,runner,office,speech,sessionQuery,grants,workspaceFs,workspaces,configuredWorkspaces=[],integrations={},apple=null,appleConfig={},audio:audio_input=createAudioInput(),transcribeWithoutApproval=false,executionEnabled=false,imHealth=null}){
+export function browserRoute({store,connection,workspaceRegistry,allowedWorkspaces,rootWorkspaceId,rootStatus,files,knowledge,schedule,heartbeatTiming={scheduled:false,intervalMinutes:0},executions,heartbeat,speak,beat=null,intake=null,loop=null,runner,office,speech,sessionQuery,grants,workspaceFs,workspaces,configuredWorkspaces=[],integrations={},apple=null,appleConfig={},audio:audio_input=createAudioInput(),transcribeWithoutApproval=false,executionEnabled=false,imHealth=null}){
  // 允许列表可能是配置数组，也可能是"配置 ∪ 界面运行时授权"的取函数；不缓存，界面刚授权的要立刻生效。
  const allowedSet=()=>new Set(typeof allowedWorkspaces==='function'?allowedWorkspaces():allowedWorkspaces??[]);
  // 工作区清单来自 DSH 工作区注册表（不允许手填 id）。configured 表示来自配置文件、界面不能撤销。
@@ -98,7 +98,7 @@ export function browserRoute({store,connection,workspaceRegistry,allowedWorkspac
       // 等你决定，不占用"每周出声预算"，也不会替你改任何东西。
       const advice=buildAdvice({store,ctx,now:new Date()});
       const previous=heartbeat.status(ctx,heartbeatTiming);
-      const record=runHeartbeat({store,ctx,now:new Date(),since:previous.lastSuccessAt,
+      const record=runHeartbeat({store,ctx,now:new Date(),since:previous.lastSuccessAt,loop,
         // 手动触发：这一次不是定时唤醒；intervalMinutes 让留痕能写明"定时开着，每 N 分钟也会醒"。
         scheduled:false,intervalMinutes:heartbeatTiming.intervalMinutes,
        speak:candidate=>decideLevel(candidate,{budget:speak?speak.state(ctx).budget:40,now:new Date(),
@@ -119,6 +119,10 @@ export function browserRoute({store,connection,workspaceRegistry,allowedWorkspac
      case 'intake_list':return output(intake?{items:intake.list(ctx,{state:body.state,source:body.source,unassigned:body.unassigned,limit:body.limit})}:{available:false,items:[]});
      case 'intake_open':return output(intake?{items:intake.open(ctx,{waitingHours:body.waitingHours})}:{available:false,items:[]});
      case 'intake_assign':{if(!intake)throw new DomainError('UNAVAILABLE','收件本未接入');return output(intake.assign(ctx,body.id,{subjectKind:body.kind,subjectId:body.subjectId}));}
+     // 着落本（spec/55 P2）：每件挂起的事写清终态。界面在 P4 接，这里先给 API。
+     case 'loop_close':{if(!loop)throw new DomainError('UNAVAILABLE','着落本未接入');return output(loop.close(ctx,{subjectKind:body.subjectKind,subjectId:body.subjectId,state:body.state,waitingFor:body.waitingFor,waitingUntil:body.waitingUntil,note:body.note}));}
+     case 'loop_list':return output(loop?{items:loop.list(ctx,{state:body.state,limit:body.limit})}:{available:false,items:[]});
+     case 'loop_sweep':return output(loop?loop.sweep(ctx,{subjects:store.list(ctx,{kind:'task',limit:1000}).map(t=>({kind:'task',id:t.id,title:t.data?.title??t.id,dueDate:t.data?.dueDate}))}):{available:false,overdue:[],unlanded:[]});
      case 'node_search':return output(searchNodes(store,ctx,{query:body.query,limit:body.limit}));
      case 'file_grants':return output({items:files?.grants.filter(g=>g.workspace===ctx.workspace).map(({id,label,read,write})=>({id,label,read,write}))??[]});
      // 目录浏览 / 新建 / 授权：让用户在工作台里完成，不必改配置文件再重启。
