@@ -21,7 +21,7 @@ import {readLayout,saveLayout} from './layout.mjs';
 import {buildViewPreview,saveViewDraft} from './view-spec.mjs';
 const output=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 /** Installed on the authenticated DSH connection; no standalone server. */
-export function browserRoute({store,connection,workspaceRegistry,allowedWorkspaces,rootWorkspaceId,rootStatus,files,knowledge,schedule,heartbeatTiming={scheduled:false,intervalMinutes:0},executions,heartbeat,speak,runner,office,speech,sessionQuery,grants,workspaceFs,workspaces,configuredWorkspaces=[],integrations={},apple=null,appleConfig={},audio:audio_input=createAudioInput(),transcribeWithoutApproval=false,executionEnabled=false,imHealth=null}){
+export function browserRoute({store,connection,workspaceRegistry,allowedWorkspaces,rootWorkspaceId,rootStatus,files,knowledge,schedule,heartbeatTiming={scheduled:false,intervalMinutes:0},executions,heartbeat,speak,beat=null,runner,office,speech,sessionQuery,grants,workspaceFs,workspaces,configuredWorkspaces=[],integrations={},apple=null,appleConfig={},audio:audio_input=createAudioInput(),transcribeWithoutApproval=false,executionEnabled=false,imHealth=null}){
  // 允许列表可能是配置数组，也可能是"配置 ∪ 界面运行时授权"的取函数；不缓存，界面刚授权的要立刻生效。
  const allowedSet=()=>new Set(typeof allowedWorkspaces==='function'?allowedWorkspaces():allowedWorkspaces??[]);
  // 工作区清单来自 DSH 工作区注册表（不允许手填 id）。configured 表示来自配置文件、界面不能撤销。
@@ -110,7 +110,7 @@ export function browserRoute({store,connection,workspaceRegistry,allowedWorkspac
       return output({status:heartbeat.status(ctx,heartbeatTiming),latest:heartbeat.latest(ctx),items:heartbeat.list(ctx,{limit:body.limit??20,offset:body.offset??0}).items});
      }
      // 与 Agent 工具同源：浏览器设置面板也必须看到真实加载情况，否则会误报未接入。
-    case 'runtime_status':return output({...runtimeStatus(files,ctx.workspace,knowledge,runner,{office:Boolean(office),apple:Boolean(apple),speech,transcribeWithoutApproval:transcribeWithoutApproval===true,config:{integrations}}),imHealth:typeof imHealth==='function'?await imHealth():null,workspace:{id:ctx.workspace,title:workspaceRegistry.get?.(ctx.workspace)?.title??null},writeRequiresApproval:true});
+    case 'runtime_status':return output({...runtimeStatus(files,ctx.workspace,knowledge,runner,{office:Boolean(office),apple:Boolean(apple),speech,transcribeWithoutApproval:transcribeWithoutApproval===true,assistant:beat?beat.state(ctx,{residentSide:'resident'}):null,config:{integrations}}),imHealth:typeof imHealth==='function'?await imHealth():null,workspace:{id:ctx.workspace,title:workspaceRegistry.get?.(ctx.workspace)?.title??null},writeRequiresApproval:true});
      case 'calendar_export':return output(exportCalendar(store,ctx,{ids:body.ids}));
      case 'node_search':return output(searchNodes(store,ctx,{query:body.query,limit:body.limit}));
      case 'file_grants':return output({items:files?.grants.filter(g=>g.workspace===ctx.workspace).map(({id,label,read,write})=>({id,label,read,write}))??[]});

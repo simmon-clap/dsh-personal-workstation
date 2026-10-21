@@ -61,6 +61,7 @@
     "verify:space": "node prototype/space-color-check.mjs",
     "verify:export": "node prototype/export-browser-check.mjs",
     "verify:status": "node prototype/status-audit.mjs",
+    "verify:liveness": "node prototype/sync-liveness-audit.mjs --self-test && node prototype/sync-liveness-audit.mjs",
     "plan:prototype": "node prototype/prototype-conversion-check.mjs",
     "accept": "node prototype/accept.mjs",
     "verify:coverage": "node prototype/spec-coverage-audit.mjs",

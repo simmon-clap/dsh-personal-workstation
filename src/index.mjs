@@ -3,6 +3,7 @@ import {ExecutionRunner} from './execution-runner.mjs';
 import {SubagentExecutor} from './subagent-executor.mjs';
 import {ExecutionStore} from './execution-store.mjs';
 import {HeartbeatStore} from './heartbeat-store.mjs';
+import {BeatStore} from './beat-store.mjs';
 import {runHeartbeat} from './heartbeat.mjs';
 import {SpeakStore} from './speak-store.mjs';
 import {readFileSync,mkdirSync,chmodSync} from 'node:fs';
@@ -27,7 +28,7 @@ export const inject=['tools','skills','sessions','workspaceRegistry','approval']
 
 export function resolveConfig(config={}){
  if(!config||typeof config!=='object'||Array.isArray(config))throw new Error('工作台配置必须为对象');
- if(Object.keys(config).some(k=>!['dataDirectory','rootDirectory','allowedWorkspaces','fileGrants','knowledgeGrants','execution','transcribeWithoutApproval','mini','calendar','feishu','dingtalk','ticket','appleCalendar','heartbeat'].includes(k)))throw new Error('未知工作台配置项');
+ if(Object.keys(config).some(k=>!['dataDirectory','rootDirectory','allowedWorkspaces','fileGrants','knowledgeGrants','execution','transcribeWithoutApproval','mini','calendar','feishu','dingtalk','ticket','appleCalendar','heartbeat','assistant'].includes(k)))throw new Error('未知工作台配置项');
  // 语音转写的审批策略由用户决定，默认保守（每次都要批准一次）。
  // 说明：Agent 侧 transcribe 是唯一的文件内容读取路径，所以默认保留闸门；
  // 授权目录（fileGrants）本身才是数据边界，本项只影响"是否每次都要走一次审批"。
@@ -54,6 +55,15 @@ export function resolveConfig(config={}){
  const heartbeatRaw=unwrap(config.heartbeat)??{};
  const heartbeatValue=unwrap(heartbeatRaw.intervalMinutes);
  const heartbeatMinutes=Number.isFinite(Number(heartbeatValue))&&Number(heartbeatValue)>0?Math.floor(Number(heartbeatValue)):0;
+ // 助理后台：常驻节点判活（宪章 v1.4 第七条）。同样要 unwrap：嵌套 volatile 会被物化成 {get(){}}。
+ // 缺省一律 false —— 宁可"这台不判活"，也不要在笔记本上凭空报"常驻节点停了"。
+ const assistantRaw=unwrap(config.assistant)??{};
+ const assistantResident=unwrap(assistantRaw.residentNode);
+ const assistantBeatRaw=Number(unwrap(assistantRaw.beatMinutes));
+ const assistant={
+  residentNode:assistantResident===true,
+  beatMinutes:Number.isFinite(assistantBeatRaw)&&assistantBeatRaw>0?Math.min(120,Math.floor(assistantBeatRaw)):15,
+ };
  for(const key of Object.keys(integrations)){
   const value=unwrap(config[key]);
   if(value===undefined)continue;
@@ -94,7 +104,7 @@ export function resolveConfig(config={}){
  // 而门禁没抓到（测试喂的是普通字符串，不是物化后的值）。与 integrations 同一套做法。
  const rootDirectoryValue=unwrap(config.rootDirectory);
  const rootDirectory=typeof rootDirectoryValue==='string'?rootDirectoryValue.trim():'';
- return {rootDirectory,heartbeatMinutes,transcribeWithoutApproval,execution:{...execution,...(execution.tools?{tools:[...execution.tools]}:{})},integrations,appleCalendar,knowledgeGrants:knowledgeGrants.map(g=>({...g})),dataDirectory:config.dataDirectory,allowedWorkspaces:[...new Set(config.allowedWorkspaces)],fileGrants:fileGrants.map(g=>({...g}))};
+ return {rootDirectory,heartbeatMinutes,assistant,transcribeWithoutApproval,execution:{...execution,...(execution.tools?{tools:[...execution.tools]}:{})},integrations,appleCalendar,knowledgeGrants:knowledgeGrants.map(g=>({...g})),dataDirectory:config.dataDirectory,allowedWorkspaces:[...new Set(config.allowedWorkspaces)],fileGrants:fileGrants.map(g=>({...g}))};
 }
 export function apply(ctx,config){
  const resolved=resolveConfig(config);
@@ -107,6 +117,8 @@ export function apply(ctx,config){
    const executions=new ExecutionStore(store);
    // 主动做事的记录表（F24）：系统运行记录，不是业务对象 —— 不进实体表、不参与批次治理。
    const heartbeat=new HeartbeatStore(store);
+   // 常驻节点心跳（宪章 v1.4 第七条 · 13 §10）：判活靠记账，不靠 ssh 探活。
+   const beat=new BeatStore(store);
    // 出声反馈表（F23 双向计量）：你的回应，与它做了什么分开存。
    const speak=new SpeakStore(store);
    const fs=ctx.get?.('fs');
@@ -168,6 +180,16 @@ export function apply(ctx,config){
       }catch{/* 定时这一跑失败不该影响插件本身；下一次还会醒，失败也会留在心跳留痕的"连续失败"里 */}
      },heartbeatMinutes*60*1000));
     }
+   // 助理后台 · 常驻节点心跳（宪章 v1.4 第七条 · 13 §10）：
+   // **只有被标成常驻的机器才记**。笔记本若也记，会在常驻节点真故障时掩盖问题；
+   // 笔记本若去判别人的心跳，会把"我看不到它"误报成"它停了"（2026-10-21 的原始事故）。
+   // 这里不碰网络、不调模型，只是"我还在按时醒"这一个事实，0 token。
+   if(resolved.assistant.residentNode&&timer){
+    const beatCtx=()=>({workspace:rootWorkspaceId??store.batchScopes()[0],actor:'beat',canWrite:true});
+    const beatOnce=source=>{try{beat.append(beatCtx(),{side:'resident',source})}catch{/* 记不上一笔不该影响插件本身 */}};
+    beatOnce('load');
+    disposers.push(timer.interval(()=>beatOnce('timer'),resolved.assistant.beatMinutes*60*1000));
+   }
    disposers.push(()=>knowledge.close());
    if(resolved.execution.enabled)runner=new ExecutionRunner(executions,new SubagentExecutor(ctx.get?.('subagents'),resolved.execution));
    // 语音转写复用宿主能力；未加载时适配层会如实报告未接入，不伪造。
@@ -192,7 +214,7 @@ export function apply(ctx,config){
    const connection=ctx.get?.('connection');
    const webServer=ctx.get?.('webServer');
    if(connection&&webServer)disposers.push(webServer.register(browserLoginRoute(connection)));
-   if(connection&&webServer)disposers.push(webServer.register(httpRoute({schedule,heartbeatTiming,rootWorkspaceId,rootStatus,config:resolved,apple:appleCalendar,store,connection,files,knowledge,executions,heartbeat,speak,runner,office:ctx.get?.('officeToPdf'),speech:ctx.get?.('speechToText'),sessionQuery:ctx.get?.('sessionQuery'),audio,grants:grantStore,workspaceFs,transcribeWithoutApproval:resolved.transcribeWithoutApproval,workspaceRegistry:ctx.workspaceRegistry,allowedWorkspaces,workspaces:workspaceStore,configuredWorkspaces:resolved.allowedWorkspaces,executionEnabled:Boolean(resolved.execution?.enabled),imHealth})));
+   if(connection&&webServer)disposers.push(webServer.register(httpRoute({schedule,heartbeatTiming,rootWorkspaceId,rootStatus,config:resolved,apple:appleCalendar,store,connection,files,knowledge,executions,heartbeat,speak,beat,runner,office:ctx.get?.('officeToPdf'),speech:ctx.get?.('speechToText'),sessionQuery:ctx.get?.('sessionQuery'),audio,grants:grantStore,workspaceFs,transcribeWithoutApproval:resolved.transcribeWithoutApproval,workspaceRegistry:ctx.workspaceRegistry,allowedWorkspaces,workspaces:workspaceStore,configuredWorkspaces:resolved.allowedWorkspaces,executionEnabled:Boolean(resolved.execution?.enabled),imHealth})));
   }catch(e){try{const pending=cleanup();if(pending)return pending.then(()=>{throw e},cleanupError=>{throw new AggregateError([e,cleanupError],'工作台注册及清理失败')})}catch(cleanupError){throw new AggregateError([e,cleanupError],'工作台注册及清理失败')}throw e;}
   return cleanup;
  },'personal workstation: store, tools and skill');

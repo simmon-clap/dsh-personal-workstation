@@ -38,6 +38,9 @@ export function runtimeStatus(files,workspace,knowledge,runner,extra={}){
  // 真正的成败在用时由日历页如实报（首次需要系统授权）。写死 false 是反方向的不诚实：
  // 真实库里的日程带着 externalSource=apple-calendar 与同步时间戳，说明它确实同步成功过。
  calendarSync:Boolean(extra.apple),calendarSyncNote:extra.apple?'本机能力；首次使用需要在系统设置里允许自动化→日历':'没接上，日历同步不可用',deviceSync:false,
+ // 常驻节点判活（宪章 v1.4 第七条 · 17 C8 v1.1）：与"定时开了没"是两件事 ——
+ // 定时回答"它会不会自己醒"，心跳回答"它最近确实醒着吗"。缺后者时，停了 55 小时也看不出来。
+ assistant:extra.assistant??null,
  // 定时状态只有**一个来源**：heartbeat_status（heartbeat-store.status）。
  // 这里不再输出 capabilities.heartbeat —— 46 审计实测它结构性恒 false，与设置页并排出现就是"同一页两种相反说法"。
  officePreview:Boolean(extra.office),speechToText:Boolean(extra.speech),

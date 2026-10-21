@@ -81,6 +81,12 @@ export const Config=schema.object({
  heartbeat:schema.object({
   intervalMinutes:schema.number().default(0).volatile().description('多久自己醒一次（分钟；0 = 不自动醒，只有手动触发）'),
  }).description('主动做事的定时（0 = 关闭；开启后按间隔自动跑一次留痕，是否出声仍按出声规则判断）'),
+ // 助理后台：常驻节点判活（宪章 v1.4 第七条 · spec/13 §10）。
+ // 为什么默认 false：只有**常驻节点**承担"必须在线"的承诺；笔记本/手机打开它只会制造假告警。
+ assistant:schema.object({
+  residentNode:schema.boolean().default(false).volatile().description('这台机器是不是常驻节点（承担"必须在线"；笔记本/手机保持关闭）'),
+  beatMinutes:schema.number().default(15).volatile().description('常驻节点多久记一次心跳（分钟）'),
+ }).description('助理后台：只有常驻节点记心跳，用来判断"它还在不在"，与是否出声无关'),
 });
 
 /** 判断 schema 是否来自宿主的真实现（供运行时状态如实说明）。 */
