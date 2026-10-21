@@ -107,3 +107,59 @@ test('关掉开口：仍然不注册（关掉就是关掉，不许偷偷开）',
   assert.equal(booted.captured.filter(item => item.delay === 5 * 60 * 1000).length, 0);
  } finally { booted.cleanup(); }
 });
+
+/** 审计与心跳本的行数（"定时真的跑通了"必须能从这里读出来）。 */
+const countOf = (directory, sql) => {
+ const db = new DatabaseSync(join(directory, 'workstation.sqlite'), {readOnly: true});
+ try {
+  const exists = db.prepare("SELECT count(*) c FROM sqlite_master WHERE name=?").get(sql.table).c;
+  if (!exists) return 0;
+  return db.prepare(sql.query).get().c;
+ } finally { db.close(); }
+};
+
+test('定时跑一次必须留下审计（这正是"传函数当工作区"那个 bug 的回归守卫）', () => {
+ const safeDirectory = mkdtempSync(join(tmpdir(), 'assistant-timer-'));
+ const materialised = unwrap(new Config({}));
+ const config = {...materialised, dataDirectory: safeDirectory, allowedWorkspaces: ['w'], heartbeat: {intervalMinutes: 30}, assistant: {residentNode: false, anchors: false}};
+ resolveConfig(config);
+ const captured = [], disposers = [];
+ const ctx = {
+  effect(fn) { const dispose = fn(); if (typeof dispose === 'function') disposers.push(dispose); },
+  get(name) {
+   if (name === 'timer') return {timeout(){return()=>{}},interval(cb,delay){captured.push({callback:cb,delay});return()=>{}},throttle(fn){return fn},debounce(fn){return fn}};
+   return undefined;
+  },
+  tools: {register() { return () => {} }}, skills: {register() { return () => {} }},
+  sessions: {get: () => ({header: {cwd: safeDirectory}})},
+  workspaceRegistry: {list: () => [{id: 'w', title: '测试', path: safeDirectory}], get: () => ({id: 'w'})},
+  approval: {request: async () => 'denied'},
+ };
+ apply(ctx, config);
+ try {
+  const timer = captured.find(item => item.delay === 30 * 60 * 1000);
+  assert(timer, '应当注册 30 分钟的心跳定时');
+  const before = countOf(safeDirectory, {table: 'audit', query: "SELECT count(*) c FROM audit WHERE event='heartbeat_recorded'"});
+  timer.callback();
+  const after = countOf(safeDirectory, {table: 'audit', query: "SELECT count(*) c FROM audit WHERE event='heartbeat_recorded'"});
+  assert.equal(after, before + 1,
+   '定时跑完必须有一条审计；没有审计就说明 ctx.workspace 又传错了（2026-10-22 实测 158 次定时零审计）');
+ } finally {
+  for (const dispose of disposers) { try { dispose() } catch {} }
+  rmSync(safeDirectory, {recursive: true, force: true});
+ }
+});
+
+test('常驻节点：心跳本按 15 分钟记一笔，且真的写进库', () => {
+ const booted = bootPlugin({assistant: {residentNode: true, anchors: false}});
+ try {
+  const beatTimer = booted.captured.find(item => item.delay === 15 * 60 * 1000);
+  assert(beatTimer, '常驻节点应当注册 15 分钟的心跳本');
+  // 插件加载时先记一笔（'load'），所以这里只看"触发一次有没有多一笔"。
+  const before = countOf(booted.safeDirectory, {table: 'beat', query: 'SELECT count(*) c FROM beat'});
+  assert.equal(before, 1, '加载时应当先记一笔，证明心跳本真的接上了');
+  beatTimer.callback();
+  const after = countOf(booted.safeDirectory, {table: 'beat', query: 'SELECT count(*) c FROM beat'});
+  assert.equal(after, before + 1, '触发一次应当多一条心跳本记录');
+ } finally { booted.cleanup(); }
+});
