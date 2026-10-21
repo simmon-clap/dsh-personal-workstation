@@ -35,7 +35,7 @@ test('no pending work means no badge at all, and a reload cannot stack badges',(
 });
 test('the badge uses the VI palette instead of inventing colours',()=>{
  const css=readFileSync(new URL('../prototype/v7-workbench.css',import.meta.url),'utf8');
- const tokens=JSON.parse(readFileSync(new URL('../../design-system/tokens.json',import.meta.url),'utf8'));
+ const tokens=JSON.parse(readFileSync(new URL('../design-system/tokens.json',import.meta.url),'utf8'));
  const allowed=new Set([...Object.values(tokens.color),...Object.values(tokens.dark)].map(value=>value.toUpperCase()));
  const block=css.slice(css.indexOf('.ws-badge'),css.indexOf('.ws-badge')+400);
  for(const match of block.matchAll(/#[0-9A-Fa-f]{6}/g))assert(allowed.has(match[0].toUpperCase()),'徽标用了 VI 之外的色值：'+match[0]);

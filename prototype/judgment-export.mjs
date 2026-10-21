@@ -34,7 +34,7 @@ export function humanTime(value) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/** 出处翻译：`art-3dcim-minutes-20261011` 这种内部编号对读者毫无意义。
+/** 出处翻译：`art-example-minutes-20261011` 这种内部编号对读者毫无意义。
  *  `resolve(ref)` 由调用方提供（它才拿得到对象标题）；解析不到就说"这条判断引用的资料"，
  *  **不退回裸 id** —— 把编号摆给读者等于什么都没说。 */
 export function humanRef(ref, resolve, kind = null) {

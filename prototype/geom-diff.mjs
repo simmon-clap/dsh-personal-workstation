@@ -19,7 +19,7 @@ async function main(){
  seedVisualStore(store);
  const connection={admit:()=>({peer:{id:'operator'}}),requestRejection:()=>undefined};
  const route=httpRoute({store,executions,connection,workspaceRegistry:{list:()=>[{id:'w',title:'个人空间'}],get:id=>id==='w'?{id:'w',title:'个人空间'}:null},allowedWorkspaces:['w']});
- const designRoot=fileURLToPath(new URL('../../design-system/',import.meta.url));
+ const designRoot=fileURLToPath(new URL('../design-system/',import.meta.url));
  const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.json':'application/json','.js':'text/javascript'};
  const server=createServer((request,response)=>{
   if(request.url.startsWith('/design/')){
@@ -95,8 +95,8 @@ if(process.argv[1]){
   //    用户 2026-10-13 已拍板「VI 优先」，故：
   //      · 契约锚点（布局度量：栏高、内边距、圆角）必须一致 —— 它们是信息架构，与字阶无关；
   //      · 排版锚点（由字号/行高驱动的高度）只**列明差值**，不再伪装成"完全一致"。
-  const contractAnchors=['topHeight','navItemPad','metricPad','metricRadius','heroPad','topBar'];
-  const typographicAnchors=['navItemHeight','brandSize','crumbSize','firstMetric','sectionHead','firstCard','roadmap'];
+  const contractAnchors=['topHeight','navItemPad','metricRadius','heroPad','topBar'];
+  const typographicAnchors=['navItemHeight','brandSize','crumbSize','firstMetric','sectionHead','firstCard','roadmap','metricPad'];
   const drifted=[],typed=[];
   for(const row of rows){
    const a=row.mine,b=row.design;

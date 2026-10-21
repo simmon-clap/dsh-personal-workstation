@@ -2,7 +2,7 @@ import {whenText, spanText} from './human-time.mjs';
 import {sharedModal} from './modal.mjs';
 import {escapeHtml as esc} from './project-render.mjs';
 import {downloadFile} from './download.mjs';
-import {verifyLabel} from './knowledge-view.mjs';
+import {verifyLabel} from './knowledge-view-v2.mjs';
 import {refLabels} from './ref-labels.mjs';
 import {readerHtml} from './markdown.mjs';
 export const knowledgePhaseLabels={processing:'正在处理',pending:'排队中',downloading:'下载中',validating:'正在检查',ready:'已存好',failed:'失败',unknown:'无法确认','not-found':'知识库中已不存在'};
@@ -92,7 +92,7 @@ export function createRecordDetail(document,send,{onOpenFile,onEdit,onEditFile,o
   ['不确定性',d.uncertainty||'未标不确定性'],
   ['何时复核',d.reviewBy||'未排'],
   ['推翻依据',d.overturnedBy?(String(d.overturnedBy.reason||'')+(d.overturnedBy.at?'（'+String(d.overturnedBy.at).slice(0,10)+'）':'')):''],
- ]:item.kind==='person'?[['所属组织',d.organizationId?(await refs.line('organization',[d.organizationId],'')).replace(/^：/,'')||'已删除或不可见':'未填'],['邮箱',d.email],['备注',d.note]]:item.kind==='organization'?[['网站',d.website],['主要联系人',d.contactId?(await refs.line('person',[d.contactId],'')).replace(/^：/,'')||'已删除或不可见':'未填'],['备注',d.note]]:[];
+ ]:item.kind==='person'?[['所属组织',d.organizationId?(await refs.line('organization',[d.organizationId],'')).replace(/^：/,'')||'已删除或不可见':'未填'],['邮箱',d.email],['备注',d.note]]:item.kind==='organization'?[['分类',d.defaultRole||'未分类'],['网站',d.website],['主要联系人',d.contactId?(await refs.line('person',[d.contactId],'')).replace(/^：/,'')||'已删除或不可见':'未填'],['备注',d.note]]:[];
  // 账目信息（默认收起）：日程的同步账目、资料的授权与版本。
  if(item.kind==='event'){
   if(d.externalSource)bookkeeping.push(['外部来源',d.externalSource==='apple-calendar'?'苹果日历':d.externalSource]);

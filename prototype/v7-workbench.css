@@ -428,16 +428,27 @@
 .undobar{position:fixed;left:24px;bottom:24px;z-index:60;display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);box-shadow:0 6px 20px color-mix(in srgb, var(--ws-ink) 8%, transparent);font-size:13px;color:var(--ws-ink)}
 .undobar[hidden]{display:none}
 
-/* 连线的就地问询框（类型 + 一句话依据）。 */
-.veil[data-linkask]{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--ws-ink) 28%, transparent);z-index:70}
-.veil[data-linkask][hidden]{display:none}
-.veil[data-linkask] .modal{width:min(520px,92vw);border-radius:12px;background:var(--ws-surface);border:1px solid var(--ws-line);overflow:hidden}
-.veil[data-linkask] .modalhead{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--ws-line)}
-.veil[data-linkask] .modalbody{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
-.veil[data-linkask] .modalactions{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--ws-line)}
-.veil[data-linkask] .field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ws-muted)}
-.veil[data-linkask] textarea,.veil[data-linkask] select{font:inherit;padding:8px 8px;border:1px solid var(--ws-line);border-radius:8px;background:var(--ws-surface);color:var(--ws-ink)}
 .noticeline{margin:0;font-size:13px;color:var(--ws-ink)}
+
+/* 画布内操作条（CV-08）：点 AI 虚线就地确认，不强制弹窗。浮层用 surface + 边线，位置由 JS 算。 */
+.canvasactionbar{position:absolute;z-index:6;display:flex;align-items:center;gap:var(--ws-space-8);flex-wrap:wrap;max-width:min(520px,92%);padding:var(--ws-space-8) var(--ws-space-12);background:var(--ws-surface);border:1px solid var(--ws-line);border-radius:12px;box-shadow:0 6px 20px color-mix(in srgb,var(--ws-ink) 12%,transparent)}
+.canvasactionbar-title{font-size:13px;font-weight:550;color:var(--ws-ink)}
+.canvasactionbar-state{font-size:12px;color:var(--ws-muted)}
+
+/* 任务页指标：从四张 29px 大数字卡收成一行小字（spec/54 §3.3「去掉占半屏的单个大数字」）。
+   列头已经写着每个状态的数量；这里只留一条能一眼扫完的总览，把首屏还给任务卡（手机首屏 ≥1 条）。 */
+#taskmetrics{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--ws-space-16)}
+#taskmetrics .metric{display:block;padding:0;min-height:0;background:none;border:0;box-shadow:none;border-radius:0}
+#taskmetrics .metric>div{display:flex;align-items:baseline;gap:var(--ws-space-4)}
+#taskmetrics .metric p{margin:0;font-size:12px;color:var(--ws-muted)}
+#taskmetrics .metric b{font-size:15px;font-weight:550;letter-spacing:0}
+#taskmetrics .metricsnote{display:block;width:100%}
+
+/* 详情正文里的次要动作行（执行历史 / 画布关联 / 关联材料）：动作区只留一个主操作。 */
+.detailtools{display:flex;flex-wrap:wrap;gap:var(--ws-space-8);margin:var(--ws-space-16) 0 var(--ws-space-8)}
+
+/* 项目卡第三个信息行（负责人 / 截止 / 任务数）：与卡片小字同一档 12px，沿用 muted token。 */
+.projectmeta{margin:0;font-size:12px;color:var(--ws-muted);min-height:16px}
 
 /* 画布「更多」面板：高频操作留在工具栏，其余收进来（原来一行 15 个按钮分不清）。 */
 .morepanel{position:absolute;z-index:9;margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border:1px solid var(--ws-line);border-radius:12px;background:var(--ws-surface);box-shadow:0 8px 24px color-mix(in srgb, var(--ws-ink) 8%, transparent);max-width:520px}
@@ -695,7 +706,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 /* ── 「交付与阻塞分布」那一行（真入口复验抓到的）──────────────────────────────
    外壳把项目名写死在 70px、右侧数字写死在 32px。演示数据的名字是「技术适配」这种四个字，
-   真数据是「示例科技 · 3D 存算一体芯片技术适配与合作研判」—— 于是名字被挤成四行竖条，
+   真数据是「示例科技 · 示例产品技术适配与合作研判」—— 于是名字被挤成四行竖条，
    右边「尚无交付项」也被挤成三行。改成三列栅格：名字最多两行（VI §9 长名称规则），
    进度条自适应，右侧数字不折行。 */
 .meter{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr) auto;align-items:center;gap:var(--ws-space-12)}
@@ -716,7 +727,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 /* ── 甘特表的项目名（真入口复验抓到的）────────────────────────────────────────
    外壳把名字列写死 140px 且 `white-space:nowrap`：演示数据叫「技术适配」，真数据叫
-   「示例科技 · 3D 存算一体芯片技术适配与合作研判」—— 名字横着压到日期刻度上，和 10.05/10.12
+   「示例科技 · 示例产品技术适配与合作研判」—— 名字横着压到日期刻度上，和 10.05/10.12
    叠成一团（真入口截图里一眼可见）。名字列加宽，名字最多两行（VI §9 长名称规则），
    下面那行「5/10 项 · 50%」单行省略。 */
 .gantt{grid-template-columns:180px repeat(6,1fr)}
@@ -1029,3 +1040,116 @@ svg.icon{stroke-width:1.6}
 .pendingcheck h3{margin:0 0 var(--ws-space-4)}
 .pendingcheck p{margin:0 0 var(--ws-space-4)}
 .pendingcheck .btn{margin-top:var(--ws-space-4)}
+
+/* ── 生成视图（view v1）· 18-生成视图规范 §4 渲染规则 ─────────────────────────
+   只看真实数据：每个值都来自服务端返回的 view；缺字段写「未记录」，不补数。
+   组件只用已登记的一套（容器/表格/标签/按钮三档/空态），字阶只走 11/12/13/14/15/18/22/32，
+   颜色只走 --ws-* token；不加装饰动效（加载态是静态骨架）。 */
+.gv-block{background:var(--ws-surface);border:1px solid var(--ws-line);border-radius:var(--ws-radius-card);padding:var(--ws-space-16);margin:0 0 var(--ws-space-16)}
+/* 详情弹窗里已经在卡片层内：区块不再套第二层容器，只用一条分隔线（VI §4 最多两层嵌套）。 */
+.drawer .gv-block{background:none;border:0;border-top:1px solid var(--ws-line);border-radius:0;padding:var(--ws-space-16) 0 0;margin:var(--ws-space-24) 0 0}
+.gv-head{display:flex;flex-direction:column;gap:var(--ws-space-4)}
+.gv-title{margin:0;font-size:var(--ws-font-15);line-height:1.6;color:var(--ws-ink);font-weight:600}
+.gv-summary{margin:0;font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-muted);overflow-wrap:anywhere}
+.gv-generate{display:flex;flex-wrap:wrap;gap:var(--ws-space-8);margin-top:var(--ws-space-12)}
+.gv-preview{margin-top:var(--ws-space-12);min-width:0}
+/* 出处条（18 §4）：AI 生成 · 依据 N 条 · 数据截至 YYYY-MM-DD HH:MM */
+.gv-viewhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--ws-space-8);margin-bottom:var(--ws-space-8);min-width:0}
+.gv-viewtitle{font-size:var(--ws-font-14);font-weight:600;color:var(--ws-ink);overflow-wrap:anywhere}
+.gv-bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ws-space-8);padding-bottom:var(--ws-space-8);border-bottom:1px solid var(--ws-line);font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-muted);min-width:0}
+.gv-aichip{border:1px dashed var(--ws-knowledge);color:var(--ws-knowledge);border-radius:var(--ws-radius-pill);padding:0 var(--ws-space-8);font-size:var(--ws-font-12);line-height:1.6;white-space:nowrap}
+.gv-basissummary{cursor:pointer;color:var(--ws-action);font-size:var(--ws-font-12);line-height:1.5}
+.gv-basislist{margin:var(--ws-space-8) 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--ws-space-4);max-width:100%}
+.gv-basis[open]{flex:1 1 100%}
+.gv-basisitem{font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-ink);overflow-wrap:anywhere}
+.gv-basisopen{padding:0;border:0;background:none;color:var(--ws-action);font-family:inherit;font-size:var(--ws-font-12);line-height:1.5;text-align:left;text-decoration:underline;cursor:pointer;overflow-wrap:anywhere}
+.gv-basismissing{color:var(--ws-warning)}
+.gv-asof{white-space:nowrap}
+/* 四态：空 / 加载 / 失败 / 未接入（外加拒绝渲染）；颜色从不单独承担判断，文案总是说出来。 */
+.gv-state{display:flex;flex-direction:column;align-items:flex-start;gap:var(--ws-space-4);margin-top:var(--ws-space-8);padding:var(--ws-space-12) var(--ws-space-16);border:1px solid var(--ws-line);border-radius:var(--ws-radius-control);background:var(--ws-paper);min-width:0}
+.gv-state-title{font-size:var(--ws-font-14);font-weight:600;color:var(--ws-ink)}
+.gv-state[data-state="error"]{border-color:var(--ws-danger)}
+.gv-state[data-state="error"] .gv-state-title{color:var(--ws-danger)}
+.gv-state-note{margin:0;font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-muted);overflow-wrap:anywhere}
+.gv-state-action{margin-top:var(--ws-space-4)}
+.gv-loading{gap:var(--ws-space-8)}
+.gv-skeleton{display:flex;flex-direction:column;gap:var(--ws-space-8);width:100%}
+.gv-skel{display:block;height:var(--ws-space-12);border-radius:var(--ws-radius-control);background:var(--ws-surface);border:1px solid var(--ws-line)}
+/* 表格：对比表与风险矩阵共用一套；窄屏在容器里横向滚动，页面本身不溢出。 */
+.gv-tablewrap{max-width:100%;overflow-x:auto}
+.gv-table{width:100%;border-collapse:collapse;font-size:var(--ws-font-14);line-height:1.5}
+.gv-caption{caption-side:top;text-align:left;padding:0 0 var(--ws-space-8);font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-muted)}
+.gv-th{padding:var(--ws-space-8);border-bottom:1px solid var(--ws-line);font-size:var(--ws-font-12);font-weight:600;color:var(--ws-muted);text-align:left;vertical-align:top;white-space:nowrap}
+.gv-rowhead{font-size:var(--ws-font-14);color:var(--ws-ink);white-space:normal}
+.gv-rowtitle{display:block;font-weight:600;overflow-wrap:anywhere}
+.gv-kind{display:block;font-size:var(--ws-font-12);font-weight:400;color:var(--ws-muted)}
+.gv-td{padding:var(--ws-space-8);border-top:1px solid var(--ws-line);vertical-align:top;overflow-wrap:anywhere}
+.gv-celltext{display:block;font-size:var(--ws-font-14);line-height:1.5;color:var(--ws-ink)}
+.gv-celltext.gv-missing{color:var(--ws-muted)}
+.gv-td .gv-chip{margin-top:var(--ws-space-4)}
+/* 标签：颜色 + 文字一起表达状态。 */
+.gv-chip{display:inline-block;padding:0 var(--ws-space-8);border-radius:var(--ws-radius-pill);font-size:var(--ws-font-12);line-height:1.6;white-space:nowrap;color:var(--ws-muted);background:var(--ws-paper)}
+.gv-chip[data-tone="ok"]{color:var(--ws-success);background:var(--ws-success-soft)}
+.gv-chip[data-tone="warn"]{color:var(--ws-warning);background:var(--ws-warning-soft)}
+.gv-chip[data-tone="danger"]{color:var(--ws-danger);background:var(--ws-danger-soft)}
+.gv-note{display:block;margin-top:var(--ws-space-4);font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-muted);overflow-wrap:anywhere}
+.gv-metrics{margin:var(--ws-space-8) 0 0;display:flex;flex-wrap:wrap;gap:var(--ws-space-8) var(--ws-space-16);font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-muted)}
+.gv-metrics b{font-size:var(--ws-font-14);font-weight:600;color:var(--ws-ink);font-variant-numeric:tabular-nums}
+/* 时间线：横向排列，窄屏在容器内横滚（18 §4 表格可横滚口径）。 */
+.gv-timelinewrap{max-width:100%;overflow-x:auto;padding:var(--ws-space-4) 0}
+.gv-timeline{display:flex;gap:var(--ws-space-12);min-width:max-content;margin:0;padding:0;list-style:none}
+.gv-timelineitem{flex:0 0 180px;display:flex;flex-direction:column;gap:var(--ws-space-4);border-left:2px solid var(--ws-line);padding:var(--ws-space-4) 0 var(--ws-space-4) var(--ws-space-12)}
+.gv-timelineitem[data-state="done"]{border-left-color:var(--ws-success)}
+.gv-timelineitem[data-state="waiting"]{border-left-color:var(--ws-warning)}
+.gv-timelineitem[data-state="overdue"]{border-left-color:var(--ws-danger)}
+.gv-timelinedate{font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-muted);font-variant-numeric:tabular-nums}
+.gv-timelinetitle{font-size:var(--ws-font-14);font-weight:600;color:var(--ws-ink);overflow-wrap:anywhere}
+/* 阻塞说明：卡在哪 / 等谁 / 下一步；三步并排，窄屏单列。 */
+.gv-chain{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ws-space-12)}
+.gv-chainstep{min-width:0;padding:var(--ws-space-12);border:1px solid var(--ws-line);border-radius:var(--ws-radius-control)}
+.gv-chainstep small{display:block;font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-muted)}
+.gv-chainstep strong{display:block;margin-top:var(--ws-space-4);font-size:var(--ws-font-14);font-weight:600;color:var(--ws-ink);overflow-wrap:anywhere}
+.gv-chainstep p{margin:var(--ws-space-4) 0 0;font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-muted);overflow-wrap:anywhere}
+.gv-chainlist,.gv-steplist{margin:var(--ws-space-12) 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--ws-space-8)}
+.gv-chainitem{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--ws-space-8);padding-top:var(--ws-space-8);border-top:1px solid var(--ws-line);font-size:var(--ws-font-14);line-height:1.5}
+.gv-chaintitle{font-weight:600;color:var(--ws-ink);overflow-wrap:anywhere}
+.gv-step{padding-top:var(--ws-space-8);border-top:1px solid var(--ws-line);font-size:var(--ws-font-14);line-height:1.5;color:var(--ws-ink)}
+.gv-step b{font-weight:600}
+/* stale：与关系失效同一口径（18 §5.4），重新生成是显式动作，不静默刷新。 */
+.gv-stale{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ws-space-8);margin-top:var(--ws-space-8);padding:var(--ws-space-8) var(--ws-space-12);border-radius:var(--ws-radius-control);background:var(--ws-warning-soft);color:var(--ws-warning);font-size:var(--ws-font-12);line-height:1.5}
+.gv-stale strong{font-weight:600}
+.gv-staleaction{margin-left:auto}
+/* 动作：只做 open-subject / save-as-judgment / save-as-brief；保存一律走 view_save→收件箱确认。 */
+.gv-actions{display:flex;flex-wrap:wrap;gap:var(--ws-space-8);margin-top:var(--ws-space-12)}
+.gv-saveerror{margin:var(--ws-space-8) 0 0;color:var(--ws-danger)}
+.gv-closepreview{align-self:flex-start;margin-top:var(--ws-space-8);padding:0;border:0;background:none;color:var(--ws-muted);font-family:inherit;font-size:var(--ws-font-12);line-height:1.5;text-decoration:underline;cursor:pointer}
+.gv-closepreview:hover{color:var(--ws-action)}
+@media(max-width:700px){
+ .gv-chain{grid-template-columns:1fr}
+ .gv-block{margin-bottom:var(--ws-space-12)}
+ .drawer .gv-block{margin-top:var(--ws-space-16);padding-top:var(--ws-space-12)}
+ .gv-timelineitem{flex-basis:160px}
+}
+@media(prefers-reduced-motion:reduce){
+ .gv-block,.gv-block *{animation:none!important;transition:none!important}
+}
+
+/* 已保存的分析视图（18 §5/§6）：定义可重开，按当前数据重算。 */
+.gv-saved{border-top:1px solid var(--ws-line);margin-top:var(--ws-space-12);padding-top:var(--ws-space-8)}
+.gv-savedtitle{cursor:pointer;font-size:12px;line-height:18px;color:var(--ws-muted);padding:var(--ws-space-4) 0}
+.gv-savedlist{display:flex;flex-wrap:wrap;gap:var(--ws-space-8);margin-top:var(--ws-space-4)}
+.gv-savedopen{border:1px solid var(--ws-line);background:var(--ws-surface);border-radius:8px;padding:4px 8px;font-size:12px;line-height:18px;color:var(--ws-ink);cursor:pointer}
+.gv-savedopen:hover{background:var(--ws-action-soft)}
+.gv-savedopen:focus-visible{outline:3px solid var(--ws-action);outline-offset:2px}
+
+
+/* AI 解读（spec/18 v1.1）：只展示模型写的结论与逐条依据；引用键可见，不替代表格。 */
+.gv-analysis{margin-top:var(--ws-space-12);padding:var(--ws-space-12);border:1px solid var(--ws-line);border-radius:var(--ws-radius-control);background:var(--ws-paper)}
+.gv-analysishead{display:flex;align-items:center;gap:var(--ws-space-8)}
+.gv-analysistitle{font-size:var(--ws-font-14);line-height:1.5;font-weight:600;color:var(--ws-ink)}
+.gv-analysissummary{margin:var(--ws-space-8) 0 0;font-size:var(--ws-font-14);line-height:1.6;color:var(--ws-ink)}
+.gv-findings{margin:var(--ws-space-8) 0 0;padding-left:16px;display:flex;flex-direction:column;gap:var(--ws-space-4)}
+.gv-finding{font-size:var(--ws-font-13);line-height:1.5;color:var(--ws-ink)}
+.gv-findingref{display:inline-block;margin-left:var(--ws-space-8);font-size:var(--ws-font-11);color:var(--ws-muted);font-family:var(--ws-font-mono);overflow-wrap:anywhere}
+.gv-analysisuncertainty{margin:var(--ws-space-8) 0 0;font-size:var(--ws-font-12);line-height:1.5;color:var(--ws-warning)}
+.gv-askassistant{border-style:dashed}

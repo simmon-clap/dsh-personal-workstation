@@ -4,10 +4,10 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from '../dev-deps.mjs';
 import {WorkstationStore} from '../src/store.mjs';
 import {buildShell} from '../prototype/build-shell.mjs';
-import {mountKnowledge,verifyLabel} from '../prototype/knowledge-view.mjs';
+import {mountKnowledge,verifyLabel} from '../prototype/knowledge-view-v2.mjs';
 
 // PRD v1.0 §长期记忆 / v1.3 CH-05：记忆引用与 AI 推断单独更新，不得让未核对来源的引用看起来已经核实。
-const shell=()=>new JSDOM(buildShell(readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8')));
+const shell=()=>new JSDOM(buildShell(readFileSync(new URL('../prototype/frozen/workbench-v7.html',import.meta.url),'utf8')));
 function store(){
  const instance=new WorkstationStore(':memory:'),ctx={workspace:'w',actor:'t',canWrite:true};
  const commit=(id,data,revision)=>{const changes=[revision?{op:'update',id,expectedRevision:revision,data}:{op:'create',id,kind:'memoryRef',data}];const batch=instance.draft(ctx,{title:'记忆',changes});return instance.commit(ctx,{batchId:batch.id,revision:1,key:'k'+Math.random()})};

@@ -4,24 +4,27 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from '../dev-deps.mjs';
 import {WorkstationStore} from '../src/store.mjs';
 import {browserRoute} from '../src/browser-api.mjs';
-import {mountSpace,spaceLayout,scopeNodes,relationData,nodeSubtitle,kindLabels,statusLabels} from '../prototype/space-view.mjs';
+import {mountSpace,spaceLayout,scopeNodes,relationData,nodeSubtitle,kindLabels,statusLabels} from '../prototype/space-view-v5.mjs';
 
 const shell=()=>new JSDOM(readFileSync(new URL('../prototype/replica/index.html',import.meta.url),'utf8'));
 function bridge(store){
  const route=browserRoute({store,connection:{admit:()=>({peer:{id:'operator'}})},workspaceRegistry:{get:id=>id==='w'?{id}:null,list:()=>[{id:'w',title:'W'}]},allowedWorkspaces:['w']});
  return async(action,data={})=>{const response=await route.fetch(new Request('http://localhost/personal-workstation/api',{method:'POST',headers:{'content-type':'application/json','x-workstation-client':'1'},body:JSON.stringify({...data,action,workspace:'w'})}));const value=await response.json();if(!response.ok)throw Error(value.message||value.error);return value};
 }
+/** 画布默认范围是结构态（D8）；要测关系态行为就把范围选择器切到「全部关系」。 */
+function useRelationScope(document){const input=document.querySelector('#scopefilter');input.value='all';input.onchange()}
+
 const seed=store=>{const ctx={workspace:'w',actor:'t',canWrite:true};const commit=(changes,key)=>{const b=store.draft(ctx,{title:key,changes});return store.commit(ctx,{batchId:b.id,revision:1,key})};
  commit([{op:'create',id:'p1',kind:'project',data:{title:'项目一',deliverables:[{id:'d1',title:'交付',done:true}]}},{op:'create',id:'p2',kind:'project',data:{title:'项目二'}},{op:'create',id:'a1',kind:'artifact',data:{title:'共享资料',projectId:'p1'}},{op:'create',id:'r1',kind:'relation',data:{title:'可能复用',from:'a1',to:'p2',status:'suggested',evidence:'两处引用同一份资料'}}],'seed')};
 test('canvas captions never leak internal enums to the user',()=>{
- assert.equal(nodeSubtitle({kind:'task',progress:{done:3,total:5},businessStatus:'in_progress'}),'3/5 项 · 运行中');
- assert.equal(nodeSubtitle({kind:'task',progress:{done:1,total:4},businessStatus:'waiting'}),'1/4 项 · 等待中');
- assert.equal(nodeSubtitle({kind:'project',progress:{done:6,total:8},businessStatus:'验证'}),'6/8 项 · 验证');
+ assert.equal(nodeSubtitle({kind:'task',progress:{done:3,total:5},businessStatus:'in_progress'}),'任务 · 3/5 项 · 进行中');
+ assert.equal(nodeSubtitle({kind:'task',progress:{done:1,total:4},businessStatus:'waiting'}),'任务 · 1/4 项 · 等待中');
+ assert.equal(nodeSubtitle({kind:'project',progress:{done:6,total:8},businessStatus:'验证'}),'项目 · 6/8 项 · 验证');
  assert.equal(nodeSubtitle({kind:'artifact'}),'资料');assert.equal(nodeSubtitle({kind:'topic'}),'研究议题');
  assert.equal(nodeSubtitle({kind:'memoryRef'}),'记忆引用');assert.equal(nodeSubtitle({kind:'event'}),'事务');
  for(const label of Object.values(kindLabels))assert.doesNotMatch(label,/[a-z_]+/,label+' 不应是内部枚举');
  for(const label of Object.values(statusLabels))assert.doesNotMatch(label,/[a-z_]+/,label+' 不应是内部枚举');
- assert.equal(nodeSubtitle({kind:'task',progress:{done:0,total:0}}),'0/0 项 · 任务','未知状态回退到类型名而不是英文枚举');
+ assert.equal(nodeSubtitle({kind:'task',progress:{done:0,total:0}}),'任务 · 尚无步骤','0/0 不画成指标（S4）：只说尚无步骤');
 });
 test('space layout is deterministic and scope filters follow the prototype semantics',()=>{
  const nodes=[{id:'b',kind:'task'},{id:'a',kind:'task'},{id:'p',kind:'project'}];assert.deepEqual(spaceLayout(nodes),spaceLayout([...nodes].reverse()));
@@ -37,7 +40,7 @@ test('showing the canvas page re-fits a layout measured while the page was hidde
  const store=new WorkstationStore(':memory:'),dom=shell(),document=dom.window.document,send=bridge(store);seed(store);
  const view=mountSpace(document,{send,batch:{draft:async()=>{}},open:()=>{},notify:()=>{},projects:[],key:()=>'layout:test'});
  try{
-  await view.load();
+  await view.load();useRelationScope(document);
   const svg=document.querySelector('#spaceSvg'),world=()=>svg.querySelector('#spaceworld').getAttribute('transform');
   assert.match(world(),/scale\(1\)/,'页面隐藏时按 0 尺寸回退为 1:1');
   svg.getBoundingClientRect=()=>({width:390,height:600,left:0,top:0,right:390,bottom:600});
@@ -56,7 +59,7 @@ test('V7 canvas renders real graph nodes, edges and persists layout',async()=>{
  const store=new WorkstationStore(':memory:'),dom=shell(),document=dom.window.document,send=bridge(store);seed(store);
  const outlines=[];const notes=[];const view=mountSpace(document,{send,batch:{draft:async()=>{}},open:id=>outlines.push(id),notify:(text,error)=>notes.push([text,error]),projects:[{id:'p1',title:'项目一'},{id:'p2',title:'项目二'}],key:(()=>{let n=0;return()=>'layout:'+(++n)})()});
  try{
-  await view.load();
+  await view.load();useRelationScope(document);
   const svg=document.querySelector('#spaceSvg');
   assert.equal(svg.querySelectorAll('[data-node]').length,3,'应渲染全部真实对象，关系记录不作为节点');
   assert.equal(svg.querySelectorAll('[data-edge]').length,2);
@@ -69,15 +72,22 @@ test('V7 canvas renders real graph nodes, edges and persists layout',async()=>{
  assert.equal(document.querySelectorAll('.spacebar select').length,0,'关联空间不许再有原生 <select>（与 .viselect 并存算第二套实现）');
   document.querySelector('#scopefilter').value='suggestions';document.querySelector('#scopefilter').onchange();
   assert.equal(svg.querySelectorAll('[data-node]').length,2,'AI 建议范围只显示被建议触及的对象');
+  // A4（17 C9）：缩放/平移**不写库**；只有点「保存布局」才落一次。
   document.querySelector('#fitspace').click();for(let i=0;i<6;i++)await new Promise(r=>setImmediate(r));
+  assert.equal(store.list({workspace:'w',actor:'t'},{kind:'layout'}).length,0,'缩放/全图不得偷偷写布局');
+  assert.equal(document.querySelector('#savelayout').dataset.dirty,'1','改过视图后保存按钮应标出未保存');
+  document.querySelector('#savelayout').click();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
   const layout=store.list({workspace:'w',actor:'t'},{kind:'layout'});
-  assert.equal(layout.length,1,'缩放后应保存画布布局');
+  assert.equal(layout.length,1,'点「保存布局」才落库');
   assert.equal(Object.keys(layout[0].data.positions).length,3);
+  assert.equal(document.querySelector('#savelayout').dataset.dirty,'0','保存后脏标记清掉');
   document.querySelector('#more').click();for(let i=0;i<6;i++)await new Promise(r=>setImmediate(r));
+  assert.equal(store.list({workspace:'w',actor:'t'},{kind:'layout'}).length,1,'再缩放仍不写库');
+  document.querySelector('#savelayout').click();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
   const again=store.list({workspace:'w',actor:'t'},{kind:'layout'});
   assert.equal(again.length,1,'连续保存应更新同一布局对象');
   assert.equal(again[0].revision,2,'连续保存不得因修订冲突而失败');
-  assert.deepEqual(notes,[]);
+  assert.ok(notes.every(([text])=>text==='已保存画布布局'),'保存布局要给一次如实反馈，且不得出现别的提示：'+JSON.stringify(notes));
   assert.equal(document.querySelector('#zoomlabel').textContent.endsWith('%'),true);
  }finally{view.dispose();store.close();dom.window.close()}
 });
@@ -86,11 +96,15 @@ test('V7 canvas opens details and turns a pending suggestion into a reviewable d
  const view=mountSpace(document,{send,batch:{draft:async(title,changes)=>{drafts.push({title,changes})}},open:id=>opened.push(id),notify:()=>{},projects:[{id:'p1',title:'项目一'},{id:'p2',title:'项目二'}],key:()=>'layout:test'});
  const pointer=(target,type)=>{const event=new dom.window.MouseEvent(type,{bubbles:true,button:0,clientX:0,clientY:0});Object.defineProperty(event,'pointerId',{value:1});target.dispatchEvent(event)};
  try{
-  await view.load();
+  await view.load();useRelationScope(document);
   // CV-02 键盘访问：聚焦的连线用 Enter 激活，与点击同一条路径。
   const edge=document.querySelector('#spaceSvg [data-edge="r1"]');
   edge.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
-  assert.equal(document.querySelector('#detailtitle').textContent,'可能复用','键盘激活连线应打开关联证据');
+  // 键盘激活连线与点击同一条通路：先出画布内操作条（CV-08），「看依据」再开证据弹窗。
+  assert(document.querySelector('#canvasactionbar'),'键盘激活连线应出现画布内操作条');
+  document.querySelector('#canvasactionbar [data-edge-action="basis"]').click();
+  for(let i=0;i<3;i++)await new Promise(r=>setImmediate(r));
+  assert.equal(document.querySelector('#detailtitle').textContent,'可能复用','键盘激活连线应能打开关联证据');
   document.querySelector('.close').click();
   // 单击节点 = 打开详情（用户 2026-10-12：原来单击只"展开关联"，看起来像点了没反应）
   pointer(document.querySelector('#spaceSvg [data-node="p1"]'),'pointerdown');
@@ -106,8 +120,12 @@ test('V7 canvas opens details and turns a pending suggestion into a reviewable d
   assert.match(document.querySelector('#graphstatus').textContent,/当前显示/);
   document.querySelector('#globalCanvas').click();
   assert.equal(document.querySelector('#projectfocus').value,'','回到全局应清除聚焦');
+  // 点虚线先出**画布内操作条**（CV-08），「看依据」才打开弹窗。
   pointer(document.querySelector('#spaceSvg [data-edge="r1"]'),'pointerdown');
   pointer(document.querySelector('#spaceSvg [data-edge="r1"]'),'pointerup');
+  assert(document.querySelector('#canvasactionbar'),'点虚线应先出现画布内操作条');
+  document.querySelector('#canvasactionbar [data-edge-action="basis"]').click();
+  for(let i=0;i<3;i++)await new Promise(r=>setImmediate(r));
   assert.equal(document.querySelector('#detailtitle').textContent,'可能复用');
   assert.match(document.querySelector('#detailbody').textContent,/两处引用同一份资料/);
   assert.match(document.querySelector('#detailbody').textContent,/待确认建议/);
@@ -123,13 +141,13 @@ test('V7 canvas opens details and turns a pending suggestion into a reviewable d
 });
 
 test('canvas detail follows the zoom tiers instead of always drawing everything',async()=>{
- const {nodeDetailAt,showsEdgeLabels,nodeSubtitle}=await import('../prototype/space-view.mjs');
+ const {nodeDetailAt,showsEdgeLabels,nodeSubtitle}=await import('../prototype/space-view-v5.mjs');
  const task={kind:'task',progress:{done:3,total:5},businessStatus:'in_progress'};
  // 低于 60%：只看得到对象名 + 类型
  assert.equal(nodeDetailAt(task,0.45),'任务');
  // 60–110%：补充状态与计数
- assert.match(nodeDetailAt(task,0.8),/3\/5 项 · 运行中/);
- assert.match(nodeDetailAt(task,1.1),/3\/5 项 · 运行中/);
+ assert.match(nodeDetailAt(task,0.8),/3\/5 项 · 进行中/);
+ assert.match(nodeDetailAt(task,1.1),/3\/5 项 · 进行中/);
  // 高于 110%：才显示关系文字
  assert.equal(showsEdgeLabels(0.6),false,'60% 时不应出现关系文字');
  assert.equal(showsEdgeLabels(1.1),false,'110% 时仍不显示关系文字');
@@ -140,7 +158,7 @@ test('canvas detail follows the zoom tiers instead of always drawing everything'
  assert.equal(nodeDetailAt(topic,1.0),nodeSubtitle(topic));
 });
 
-test('long node titles wrap to at most two lines inside the card instead of spilling over',async()=>{ const {wrapNodeTitle,textWidth,NODE_TEXT_WIDTH}=await import('../prototype/space-view.mjs');
+test('long node titles wrap to at most two lines inside the card instead of spilling over',async()=>{ const {wrapNodeTitle,textWidth,NODE_TEXT_WIDTH}=await import('../prototype/space-view-v5.mjs');
  // 实测过：19 个节点里有 2 个标题画到卡片外（最严重超出 41px）。
  for(const title of ['联合验证','推理框架：需要验证哪些收益？','异构算力适配的合作切入点','这是一个非常非常长的项目名称用来测试两行截断与溢出行为'.repeat(3)]){
   const lines=wrapNodeTitle(title);

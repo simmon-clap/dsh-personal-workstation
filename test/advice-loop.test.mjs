@@ -5,10 +5,10 @@ import {buildAdvice, stageAdvanceAdvice} from '../src/advice.mjs';
 
 const ctx = {workspace: 'w', actor: 'operator', canWrite: true};
 /** 建一个项目：交付项全部完成、阶段停在「验证」。 */
-function seeded({deliverables = [{id: 'd1', title: '芯片到货', done: true}, {id: 'd2', title: '跑通 decode', done: true}], stage = '验证'} = {}) {
+function seeded({deliverables = [{id: 'd1', title: '硬件到货', done: true}, {id: 'd2', title: '跑通 decode', done: true}], stage = '验证'} = {}) {
   const store = new WorkstationStore(':memory:');
   store.draft(ctx, {title: '建项目', changes: [{op: 'create', id: 'p1', kind: 'project',
-    data: {title: '示例科技 · 3D 存算一体', stage, deliverables}}]});
+    data: {title: '示例科技 · 示例产品', stage, deliverables}}]});
   store.commit(ctx, {batchId: store.inbox(ctx, {status: 'draft'})[0].id, revision: 1, key: 'k1'});
   return store;
 }
@@ -41,7 +41,7 @@ test('a completed project produces a stage suggestion with evidence and uncertai
 
 // 宪章六·安静：结论没成立时不许提 —— "还有活没干完，建议推进"是噪音。
 test('no suggestion while work is unfinished, and none after the last stage', () => {
-  const unfinished = seeded({deliverables: [{id: 'd1', title: '芯片到货', done: true}, {id: 'd2', title: '跑通 decode', done: false}]});
+  const unfinished = seeded({deliverables: [{id: 'd1', title: '硬件到货', done: true}, {id: 'd2', title: '跑通 decode', done: false}]});
   assert.equal(stageAdvanceAdvice({store: unfinished, ctx}).length, 0, '还有交付项没完成就不该提');
   const last = seeded({stage: '复盘'});
   assert.equal(stageAdvanceAdvice({store: last, ctx}).length, 0, '已经是最后一个阶段就没什么可推进的');

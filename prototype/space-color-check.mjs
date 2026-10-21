@@ -62,7 +62,7 @@ try {
 
   const palette = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);
-    const names = ['--ws-action', '--ws-action-soft', '--ws-success', '--ws-success-soft', '--ws-knowledge', '--ws-knowledge-soft', '--ws-warning', '--ws-warning-soft', '--ws-line', '--ws-ink', '--ws-muted', '--ws-paper', '--ws-surface'];
+    const names = ['--ws-action', '--ws-action-soft', '--ws-success', '--ws-success-soft', '--ws-knowledge', '--ws-knowledge-soft', '--ws-warning', '--ws-warning-soft', '--ws-line', '--ws-ink', '--ws-muted', '--ws-paper', '--ws-surface', '--pal-indigo', '--pal-teal', '--pal-cyan', '--pal-violet', '--pal-magenta', '--pal-pink', '--pal-orange', '--pal-slate', '--pal-gold', '--pal-lime'];
     return names.map(n => getComputedStyle(document.documentElement).getPropertyValue(n).trim().toLowerCase());
   });
   const used = coloured;

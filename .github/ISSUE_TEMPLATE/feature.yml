@@ -1,0 +1,20 @@
+name: 功能建议
+description: 提出一个改进建议
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你遇到的具体问题
+      description: 描述场景与当前的不便，不要只写"希望更好用"。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你希望的解法
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: 数据与隐私影响
+      description: 这个建议是否读取新的外部数据、发送网络请求或改变授权范围？

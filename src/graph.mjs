@@ -3,7 +3,7 @@ export function searchNodes(store,ctx,{query,limit=30}={}){
  store.context(ctx);if(typeof query!=='string'||!query.trim()||query.length>200||!Number.isInteger(limit)||limit<1||limit>100)throw new DomainError('INVALID','节点搜索参数无效');
  // 作用域与 store.list 同口径：全局对象在 root，材料在当前工作区 → 并集查询。
  const scope=store.scopeClause(ctx);
- const rows=store.db.prepare("SELECT id,kind,revision,json_extract(data,'$.title') AS title FROM entities WHERE workspace IN "+scope.sql+" AND archived=0 AND kind NOT IN ('relation','layout') AND instr(lower(json_extract(data,'$.title')),lower(?))>0 ORDER BY id LIMIT ?").all(...scope.params,query.trim(),limit+1);
+ const rows=store.db.prepare("SELECT id,kind,revision,json_extract(data,'$.title') AS title FROM entities WHERE workspace IN "+scope.sql+" AND archived=0 AND kind NOT IN ('relation','layout','view') AND instr(lower(json_extract(data,'$.title')),lower(?))>0 ORDER BY id LIMIT ?").all(...scope.params,query.trim(),limit+1);
  return {items:rows.slice(0,limit),hasMore:rows.length>limit};
 }
 /** 关系依据失效判定：确认时记录的两端版本若与当前不一致（或对象已归档/消失），关系需复核。
@@ -25,11 +25,12 @@ export function graph(store,ctx,{focus,limit=120,offset=0}={}){
  const scope=store.scopeClause(ctx);
  const rows=store.db.prepare('SELECT id FROM entities WHERE workspace IN '+scope.sql+' AND archived=0 ORDER BY id').all(...scope.params);
  const entities=rows.map(r=>store.get(ctx,r.id)),byId=new Map(entities.map(e=>[e.id,e]));
- const nodes=entities.filter(e=>!['relation','layout'].includes(e.kind));
+ const nodes=entities.filter(e=>!['relation','layout','view'].includes(e.kind));
  const edges=[];
  for(const e of entities){
   if(e.data.projectId&&byId.has(e.data.projectId))edges.push({id:'project:'+e.id,from:e.data.projectId,to:e.id,status:'confirmed',title:'项目归属',derived:true});
-  for(const [field,title] of [['ownerId','负责人'],['partnerId','合作方'],['organizationId','所属组织']])if(e.data[field]&&byId.has(e.data[field]))edges.push({id:field+':'+e.id,from:e.id,to:e.data[field],status:'confirmed',title,evidence:'对象字段 '+field,derived:true});
+  // 派生边保留现有规则；只有项目的主责机构叫「主责机构」，其它 kind 的 organizationId 仍是「所属组织」。
+  for(const [field,title] of [['ownerId','负责人'],['partnerId','合作方'],['organizationId','所属组织']])if(e.data[field]&&byId.has(e.data[field]))edges.push({id:field+':'+e.id,from:e.id,to:e.data[field],status:'confirmed',title:field==='organizationId'&&e.kind==='project'?'主责机构':title,evidence:'对象字段 '+field,derived:true});
   if(e.kind==='task')for(const id of e.data.dependsOn??[])if(byId.has(id))edges.push({id:'depends:'+e.id+':'+id,from:e.id,to:id,status:'confirmed',title:'依赖任务',evidence:'对象字段 dependsOn',derived:true});
   if(e.kind==='relation'&&e.data.status!=='rejected'){
    // 端点缺失的关系不能从列表里消失（否则等于静默失效），标记 missing 供复核。
@@ -59,5 +60,27 @@ export function graph(store,ctx,{focus,limit=120,offset=0}={}){
  const page=filtered.slice(offset,offset+limit),ids=new Set(page.map(e=>e.id));
  // 独立关系单独返回：端点不在本页（或已缺失）的关系仍须可见可复核，不能因为画不出来就消失。
  const relations=edges.filter(edge=>!edge.derived).map(({derived,...rest})=>rest);
- return {relations,nodes:page.map(e=>({id:e.id,kind:e.kind,revision:e.revision,title:e.data.title,...(['project','task'].includes(e.kind)?{businessStatus:e.data.status??e.data.stage??null,progress:{done:(e.data[e.kind==='project'?'deliverables':'steps']??[]).filter(x=>x.done).length,total:(e.data[e.kind==='project'?'deliverables':'steps']??[]).length},...(e.kind==='project'?{...(e.data.importance?{importance:e.data.importance}:{}),...(e.data.urgency?{urgency:e.data.urgency}:{}),...(e.data.folder?{folder:e.data.folder}:{})}:{})}:{})})),edges:edges.filter(e=>ids.has(e.from)&&ids.has(e.to)),total:filtered.length,nextOffset:offset+limit<filtered.length?offset+limit:null};
+ // 角色模型（A1）：角色名只作为事实字段透传，画布层不改数据；participants 返回数组拷贝，避免调用方改到库里的数据。
+ const nodesPage=page.map(e=>{
+  const node={id:e.id,kind:e.kind,revision:e.revision,title:e.data.title};
+  // 归属项目要进节点投影：结构态「项目 → 任务」的原地展开靠它，画布层不该再去翻库。
+  if(e.data.projectId)node.projectId=e.data.projectId;
+  if(e.kind==='organization'&&e.data.defaultRole)node.defaultRole=e.data.defaultRole;
+  if(e.kind==='project'){
+   node.roleTemplate=e.data.roleTemplate??null;
+   node.participants=(e.data.participants??[]).map(item=>({...item}));
+   if(e.data.organizationId)node.organizationId=e.data.organizationId;
+  }
+  if(['project','task'].includes(e.kind)){
+   node.businessStatus=e.data.status??e.data.stage??null;
+   node.progress={done:(e.data[e.kind==='project'?'deliverables':'steps']??[]).filter(x=>x.done).length,total:(e.data[e.kind==='project'?'deliverables':'steps']??[]).length};
+   if(e.kind==='project'){
+    if(e.data.importance)node.importance=e.data.importance;
+    if(e.data.urgency)node.urgency=e.data.urgency;
+    if(e.data.folder)node.folder=e.data.folder;
+   }
+  }
+  return node;
+ });
+ return {relations,nodes:nodesPage,edges:edges.filter(e=>ids.has(e.from)&&ids.has(e.to)),total:filtered.length,nextOffset:offset+limit<filtered.length?offset+limit:null};
 }

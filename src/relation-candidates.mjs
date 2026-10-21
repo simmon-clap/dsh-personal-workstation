@@ -63,7 +63,7 @@ function terms(text) {
  * @returns Array<{from,to,reason,kind}> —— reason 是"凭什么提它"，必须非空
  */
 export function relationCandidates(entities = []) {
-  const live = entities.filter(e => e && !e.archived && e.kind !== 'layout');
+  const live = entities.filter(e => e && !e.archived && !['layout','view'].includes(e.kind));
   const byId = new Map(live.map(e => [e.id, e]));
   const known = existingPairs(live);
   const pairKey = (a, b) => a < b ? a + '\u0000' + b : b + '\u0000' + a;

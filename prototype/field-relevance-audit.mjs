@@ -53,8 +53,8 @@ store.draft({workspace: 'w', actor: 'field', canWrite: true}, {
     op: 'create', id: 'art-sync', kind: 'artifact',
     data: {
       title: '会议纪要', path: '会议/纪要.md', mime: 'text/markdown', fileGrantId: 'voice-inbox',
-      fileVersion: 'v3', knowledgeDocId: '2b59395d-fe3b-4043-a864-a404d3de7032',
-      knowledgeBaseId: '1e18f722-143d-4fdb-853f-84a042d1c4dd', knowledgeUpdatedAt: '2026-10-12T00:00:00.000Z',
+      fileVersion: 'v3', knowledgeDocId: '00000000-0000-4000-8000-000000000001',
+      knowledgeBaseId: '00000000-0000-4000-8000-000000000002', knowledgeUpdatedAt: '2026-10-12T00:00:00.000Z',
       sourceRefs: ['session:abc123'], content: '要点',
     },
   }],

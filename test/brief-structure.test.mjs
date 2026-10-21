@@ -4,11 +4,11 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from '../dev-deps.mjs';
 import {WorkstationStore} from '../src/store.mjs';
 import {buildShell} from '../prototype/build-shell.mjs';
-import {mountKnowledge,linkLabels} from '../prototype/knowledge-view.mjs';
+import {mountKnowledge,linkLabels} from '../prototype/knowledge-view-v2.mjs';
 
 // PRD v1.0 KN-01 与整体规划：简报必须能溯源（来源、发布时间、抓取时间、失效链接），
 // 自动抓取/去重/摘要未接入时不产生任何「自动生成」的简报。
-const shell=()=>new JSDOM(buildShell(readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8')));
+const shell=()=>new JSDOM(buildShell(readFileSync(new URL('../prototype/frozen/workbench-v7.html',import.meta.url),'utf8')));
 function store(){
  const instance=new WorkstationStore(':memory:'),ctx={workspace:'w',actor:'t',canWrite:true};
  const draft=data=>{const batch=instance.draft(ctx,{title:'简报',changes:[{op:'create',id:'b'+Math.random().toString(36).slice(2),kind:'brief',data:{title:'简报',...data}}]});return {batch,commit:()=>instance.commit(ctx,{batchId:batch.id,revision:1,key:'k'+Math.random()})}};

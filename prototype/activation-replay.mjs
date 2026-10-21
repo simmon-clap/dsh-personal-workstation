@@ -85,8 +85,10 @@ function unwrap(value){
  return value;
 }
 
-if(!existsSync(installed)){console.log('SKIP: 未找到已安装的包 '+installed);process.exit(0)}
-if(!existsSync(patch)){console.log('SKIP: 未找到 profile 配置 '+patch);process.exit(0)}
+// 「没装 / 没配置」不是通过：这道门禁要证明的是「包能在真实 profile 配置下激活」。
+// 缺环境时明确标记 DEGRADED 并以非零退出，避免 CI/干净机器把"没跑"当成"绿"。
+if(!existsSync(installed)){console.log('DEGRADED: 未找到已安装的包 '+installed+' —— 激活重放没有执行，按未通过处理。');process.exit(2)}
+if(!existsSync(patch)){console.log('DEGRADED: 未找到 profile 配置 '+patch+' —— 激活重放没有执行，按未通过处理。');process.exit(2)}
 
 const userConfig=parseSubset(readProfileConfig(readFileSync(patch,'utf8')));
 const installedPkg=JSON.parse(readFileSync(join(installed,'package.json'),'utf8'));

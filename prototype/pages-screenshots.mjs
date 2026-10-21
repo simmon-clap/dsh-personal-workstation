@@ -23,17 +23,17 @@ const batch = store.draft(ctx, {
   title: '截图用判断',
   changes: [
     {op: 'create', id: 'j-1', kind: 'judgment', data: {
-      title: '服务器端短期难以成立：带宽与成本都不匹配现有客户的价格预期',
+      title: '短期难以成立：带宽与成本都不匹配现有客户的价格预期',
       evidence: [
-        {kind: 'audio', ref: '示例学校.m4a@0-3600', quote: '服务器方案：4 颗一个 page，明年 3 月投片、9 月回片', verified: false},
+        {kind: 'audio', ref: '示例学校.m4a@0-3600', quote: '示例依据：方案参数与时间安排仍需核对', verified: false},
         {kind: 'note', ref: 'user-said-1', quote: '价格敏感是硬约束', verified: false},
       ],
       uncertainty: '口径未确认，待与对方核对成本基准',
       validFrom: '2026-10-11', reviewBy: '2026-11-11', status: 'checking', projectId: 'p-a',
     }},
     {op: 'create', id: 'j-2', kind: 'judgment', data: {
-      title: '合资并垫资的玩法长期有风险',
-      evidence: [{kind: 'audio', ref: '示例学校.m4a@4200-4300', quote: '合资 + 垫资 + 绑地方政府财政', verified: false}],
+      title: '合作结构长期有风险',
+      evidence: [{kind: 'audio', ref: '示例学校.m4a@4200-4300', quote: '示例依据：合作结构需要分阶段验证', verified: false}],
       uncertainty: '对方商业模式自述无法验证', validFrom: '2026-10-11', status: 'current', projectId: 'p-b',
     }},
   ],

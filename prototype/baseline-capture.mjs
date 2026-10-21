@@ -189,13 +189,13 @@ const repoPkg = JSON.parse(readFileSync(join(workstationRoot, 'package.json'), '
 const installedPkg = JSON.parse(readFileSync(join(installedDir, 'package.json'), 'utf8'));
 let servedHash = null, installedHash = null, repoHash = null, servedStatus = null;
 servedHash = await step('取服务器实际发出的 space-view.mjs', async () => {
-  const response = await fetch(target.base + '/personal-workstation/v7/space-view.mjs', {headers: {cookie: target.cookie}});
+  const response = await fetch(target.base + '/personal-workstation/v7/space-view-v5.mjs', {headers: {cookie: target.cookie}});
   servedStatus = response.status;
   if (!response.ok) throw new Error('HTTP ' + response.status);
   return sha256(Buffer.from(await response.arrayBuffer()));
 });
-installedHash = await step('取已装包 space-view.mjs', () => sha256File(join(installedDir, 'src/v7/space-view.mjs')));
-repoHash = await step('取仓库 space-view.mjs', () => sha256File(join(workstationRoot, 'src/v7/space-view.mjs')));
+installedHash = await step('取已装包 space-view.mjs', () => sha256File(join(installedDir, 'src/v7/space-view-v5.mjs')));
+repoHash = await step('取仓库 space-view.mjs', () => sha256File(join(workstationRoot, 'src/v7/space-view-v5.mjs')));
 const servedEqualsInstalled = Boolean(servedHash && installedHash && servedHash === installedHash);
 const installedEqualsRepo = Boolean(installedHash && repoHash && installedHash === repoHash);
 if (servedHash && installedHash && !servedEqualsInstalled) {

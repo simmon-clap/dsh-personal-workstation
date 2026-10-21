@@ -91,6 +91,9 @@ async function main(){
     const veil=document.querySelector('#veil');
     if(!veil.classList.contains('open'))return {open:false};
     const body=document.querySelector('#detailbody');
+    const shell=document.querySelector('#veil .drawer')||document.querySelector('#veil [role="dialog"]');
+    const cs=shell?getComputedStyle(shell):null;
+    const h2=shell?.querySelector('h2');
     const blocks=[];
     for(const node of body.children){
      const text=(node.textContent||'').replace(/\s+/g,' ').trim();
@@ -104,7 +107,9 @@ async function main(){
      noticeCount:body.querySelectorAll('.notice').length,
      proofCount:body.querySelectorAll('.proof').length,
      headingCount:body.querySelectorAll('h3').length,
-     inputs:body.querySelectorAll('input,select,textarea').length};
+     inputs:body.querySelectorAll('input,select,textarea').length,
+     leakedAppearance:!!body.querySelector('[data-settings-appearance]'),
+     style:cs?{blur:cs.backdropFilter,radius:cs.borderRadius,bg:cs.backgroundColor,padding:cs.padding,width:shell.getBoundingClientRect().width,titleSize:h2?getComputedStyle(h2).fontSize:null,titleWeight:h2?getComputedStyle(h2).fontWeight:null}:null};
    });
    report.push({name:opener.name,selector:opener.selector,clicked,errors:[...pageErrors],...dialog});
   }
@@ -132,6 +137,12 @@ if(process.argv[1]){
   if(!row.title)problems.push(row.name+'：标题为空');
   if(!row.actionRows||row.actionRows<1)problems.push(row.name+'：没有动作区');
   if(row.actionRows>2)problems.push(row.name+'：动作区超过两处（'+row.actionRows+'）');
+  const st=row.style||{};
+  if(!/blur\(/.test(st.blur||''))problems.push(row.name+'：弹窗外壳没有毛玻璃（backdrop-filter='+st.blur+'）');
+  if(parseFloat(st.radius)<16)problems.push(row.name+'：弹窗圆角小于 16px（'+st.radius+'）');
+  if(!/\//.test(st.bg||'')||/\/ 1\)/.test(st.bg||''))problems.push(row.name+'：弹窗底色不是半透明（'+st.bg+'）');
+  if(parseFloat(st.titleSize)<18)problems.push(row.name+'：弹窗标题小于 18px（'+st.titleSize+'）');
+  if(row.name!=='空间与设置'&&row.leakedAppearance)problems.push(row.name+'：外观设置区串进了非设置弹窗');
  }
  const missed=report.filter(row=>!row.open).map(row=>row.name);
  // 2026-10-16 红队实测：正常一次运行就有 4 个弹窗从未打开，而门禁照样 PASS/EXIT=0。

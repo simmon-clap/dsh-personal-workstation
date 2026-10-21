@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from '../dev-deps.mjs';
 import {httpRoute} from '../src/http-route.mjs';
 import {WorkstationStore} from '../src/store.mjs';
-import {mountV7} from '../src/v7/v7-controller.mjs';
+import {mountV7} from '../src/v7/v7-controller-v6.mjs';
 
 // Real store + real authenticated HTTP route + the published V7 controller.
 function bridge(handler){

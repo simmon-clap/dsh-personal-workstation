@@ -4,7 +4,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {JSDOM} from '../dev-deps.mjs';
 import {buildShell,designSprite} from '../prototype/build-shell.mjs';
 import {mountNavigation} from '../prototype/navigation.mjs';
-const source=readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8');
+const source=readFileSync(new URL('../prototype/frozen/workbench-v7.html',import.meta.url),'utf8');
 test('live V7 shell preserves initialized controls and styles without demonstration data',()=>{
  const original=new JSDOM(source,{runScripts:'dangerously',beforeParse(w){w.ResizeObserver=class{observe(){}};}}),live=new JSDOM(buildShell(source));
  try{const a=original.window.document,b=live.window.document;
@@ -94,10 +94,10 @@ test('the shell ships the 纸上秩序 icon set and every referenced icon resolv
   const names=new Set();
   for(const file of readdirSync(new URL('../prototype/',import.meta.url)).filter(name=>name.endsWith('.mjs'))){
    const text=readFileSync(new URL('../prototype/'+file,import.meta.url),'utf8');
-   for(const match of text.matchAll(/#i-([a-z]+)/g))names.add(match[1]);
-   for(const match of text.matchAll(/\bicon\('([a-z]+)'\)/g))names.add(match[1]);
+   for(const match of text.matchAll(/#i-([a-z0-9-]+)/g))names.add(match[1]);
+   for(const match of text.matchAll(/\bicon\('([a-z0-9-]+)'\)/g))names.add(match[1]);
   }
-  for(const name of names)assert(b.getElementById('i-'+name),'模块引用的图标缺失：i-'+name);
+  for(const name of names){if(name==='pg-')continue;assert(b.getElementById('i-'+name),'模块引用的图标缺失：i-'+name)}
   assert.equal(designSprite().includes('id="i-inbox"'),true,'VI 图标集应包含收件箱图标');
   assert.doesNotMatch(designSprite(),/fill="white"/,'VI 图标不应保留原型里为白底挖空而写的实心填充');
  }finally{live.window.close()}

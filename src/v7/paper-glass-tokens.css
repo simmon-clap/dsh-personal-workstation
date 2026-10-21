@@ -1,0 +1,176 @@
+/* 纸上玻璃 · Paper Glass tokens v1.0
+ * 由 paper-glass/build.mjs 生成，不要手改。
+ * 结构色来自工作台 VI（--ws-*）；扩展色/渐变/材质是本规范新增，均已登记。
+ * 主题：[data-theme="dark"]；配色模式：[data-palette="calm"]；玻璃强度：[data-glass="bold"]。
+ */
+:root {
+  --ws-paper: #F8F9F7;
+  --ws-paper-rgb: 248 249 247;
+  --ws-surface: #FFFFFF;
+  --ws-surface-rgb: 255 255 255;
+  --ws-ink: #252A31;
+  --ws-ink-rgb: 37 42 49;
+  --ws-muted: #626C78;
+  --ws-muted-rgb: 98 108 120;
+  --ws-line: #DCE1E5;
+  --ws-line-rgb: 220 225 229;
+  --ws-action: #315ED0;
+  --ws-action-rgb: 49 94 208;
+  --ws-action-soft: #EDF2FF;
+  --ws-action-soft-rgb: 237 242 255;
+  --ws-success: #28735B;
+  --ws-success-rgb: 40 115 91;
+  --ws-success-soft: #EDF6F1;
+  --ws-success-soft-rgb: 237 246 241;
+  --ws-warning: #8A601D;
+  --ws-warning-rgb: 138 96 29;
+  --ws-warning-soft: #FBF4E6;
+  --ws-warning-soft-rgb: 251 244 230;
+  --ws-danger: #B33F44;
+  --ws-danger-rgb: 179 63 68;
+  --ws-danger-soft: #FBEFF0;
+  --ws-danger-soft-rgb: 251 239 240;
+  --ws-knowledge: #7555A1;
+  --ws-knowledge-rgb: 117 85 161;
+  --ws-knowledge-soft: #F3EFF8;
+  --ws-knowledge-soft-rgb: 243 239 248;
+  --ws-font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --ws-font-mono: ui-monospace, "SFMono-Regular", monospace;
+  --ws-space-4: 4px;
+  --ws-space-8: 8px;
+  --ws-space-12: 12px;
+  --ws-space-16: 16px;
+  --ws-space-24: 24px;
+  --ws-space-32: 32px;
+  --ws-space-48: 48px;
+  --ws-space-64: 64px;
+  --ws-space-96: 96px;
+  --ws-radius-control: 8px;
+  --ws-radius-card: 12px;
+  --ws-radius-dialog: 20px;
+  --ws-radius-pill: 999px;
+  --ws-motion-hover: 120ms;
+  --ws-motion-switch: 180ms;
+  --ws-motion-dialog: 220ms;
+  --ws-motion-displacement: 8px;
+  --pal-teal: #0F766E;   /* light */
+  --pal-teal-rgb: 15 118 110;
+  --pal-cyan: #0E7490;   /* light */
+  --pal-cyan-rgb: 14 116 144;
+  --pal-indigo: #4338CA;   /* light */
+  --pal-indigo-rgb: 67 56 202;
+  --pal-violet: #6D28D9;   /* light */
+  --pal-violet-rgb: 109 40 217;
+  --pal-magenta: #A21CAF;   /* light */
+  --pal-magenta-rgb: 162 28 175;
+  --pal-pink: #BE123C;   /* light */
+  --pal-pink-rgb: 190 18 60;
+  --pal-orange: #C2410C;   /* light */
+  --pal-orange-rgb: 194 65 12;
+  --pal-lime: #4D7C0F;   /* light */
+  --pal-lime-rgb: 77 124 15;
+  --pal-gold: #A16207;   /* light */
+  --pal-gold-rgb: 161 98 7;
+  --pal-slate: #475569;   /* light */
+  --pal-slate-rgb: 71 85 105;
+  --grad-aurora: linear-gradient(135deg, #4338CA 0%, #6D28D9 32%, #A21CAF 58%, #C2410C 100%);;
+  --grad-cool: linear-gradient(135deg, #0E7490 0%, #4338CA 52%, #6D28D9 100%);;
+  --grad-warm: linear-gradient(135deg, #A16207 0%, #C2410C 52%, #BE123C 100%);;
+  --grad-mint: linear-gradient(135deg, #0F766E 0%, #4D7C0F 100%);;
+  --grad-violet: linear-gradient(135deg, #6D28D9 0%, #A21CAF 100%);;
+  --grad-sunset: linear-gradient(135deg, #C2410C 0%, #BE123C 52%, #6D28D9 100%);;
+  --grad-sky: linear-gradient(135deg, #0E7490 0%, #4338CA 100%);;
+  --grad-gold: linear-gradient(135deg, #A16207 0%, #F59E0B 100%);;
+  --grad-pink: linear-gradient(135deg, #BE123C 0%, #A21CAF 100%);;
+  --grad-teal: linear-gradient(135deg, #0F766E 0%, #0E7490 100%);;
+  --grad-glass: linear-gradient(150deg, rgb(255 255 255 / .34) 0%, rgb(255 255 255 / .06) 38%, transparent 64%);;
+  --grad-sheen: conic-gradient(from 210deg at 50% 50%, rgb(255 255 255 / .85), rgb(255 255 255 / 0) 22%, rgb(255 255 255 / .32) 48%, rgb(255 255 255 / 0) 70%, rgb(255 255 255 / .65));;
+  --series-1: var(--pal-indigo);
+  --series-2: var(--pal-teal);
+  --series-3: var(--pal-orange);
+  --series-4: var(--pal-magenta);
+  --series-5: var(--pal-lime);
+  --series-6: var(--pal-cyan);
+  --series-7: var(--pal-violet);
+  --series-8: var(--pal-pink);
+  --series-9: var(--pal-gold);
+  --series-10: var(--pal-slate);
+  --mat-ultra-thin-blur: 12px;
+  --mat-ultra-thin-alpha: 0.22;
+  --mat-thin-blur: 16px;
+  --mat-thin-alpha: 0.34;
+  --mat-regular-blur: 28px;
+  --mat-regular-alpha: 0.5;
+  --mat-thick-blur: 30px;
+  --mat-thick-alpha: 0.74;
+  --mat-clear-blur: 8px;
+  --mat-clear-alpha: 0.1;
+  --mat-bold-blur: 40px;
+  --mat-bold-alpha: 0.22;
+  --glass-white-rgb: 255 255 255;
+  --media-void: #0b0d10;
+}
+[data-theme="dark"] {
+  --ws-paper: #191C20;
+  --ws-paper-rgb: 25 28 32;
+  --ws-surface: #22262B;
+  --ws-surface-rgb: 34 38 43;
+  --ws-ink: #EEF1F5;
+  --ws-ink-rgb: 238 241 245;
+  --ws-muted: #A5AFBB;
+  --ws-muted-rgb: 165 175 187;
+  --ws-line: #414955;
+  --ws-line-rgb: 65 73 85;
+  --ws-action: #A9BCFF;
+  --ws-action-rgb: 169 188 255;
+  --ws-action-soft: #2C3751;
+  --ws-action-soft-rgb: 44 55 81;
+  --ws-success: #9AD2BC;
+  --ws-success-rgb: 154 210 188;
+  --ws-success-soft: #243D34;
+  --ws-success-soft-rgb: 36 61 52;
+  --ws-warning: #E4C18B;
+  --ws-warning-rgb: 228 193 139;
+  --ws-warning-soft: #413727;
+  --ws-warning-soft-rgb: 65 55 39;
+  --ws-danger: #F0AFB2;
+  --ws-danger-rgb: 240 175 178;
+  --ws-danger-soft: #482E32;
+  --ws-danger-soft-rgb: 72 46 50;
+  --ws-knowledge: #C7B4EB;
+  --ws-knowledge-rgb: 199 180 235;
+  --ws-knowledge-soft: #393148;
+  --ws-knowledge-soft-rgb: 57 49 72;
+  --pal-teal: #5EEAD4;   /* dark */
+  --pal-teal-rgb: 94 234 212;
+  --pal-cyan: #67E8F9;   /* dark */
+  --pal-cyan-rgb: 103 232 249;
+  --pal-indigo: #A5B4FC;   /* dark */
+  --pal-indigo-rgb: 165 180 252;
+  --pal-violet: #C4B5FD;   /* dark */
+  --pal-violet-rgb: 196 181 253;
+  --pal-magenta: #F0ABFC;   /* dark */
+  --pal-magenta-rgb: 240 171 252;
+  --pal-pink: #FDA4AF;   /* dark */
+  --pal-pink-rgb: 253 164 175;
+  --pal-orange: #FDBA74;   /* dark */
+  --pal-orange-rgb: 253 186 116;
+  --pal-lime: #BEF264;   /* dark */
+  --pal-lime-rgb: 190 242 100;
+  --pal-gold: #FDE68A;   /* dark */
+  --pal-gold-rgb: 253 230 138;
+  --pal-slate: #CBD5E1;   /* dark */
+  --pal-slate-rgb: 203 213 225;
+}
+[data-palette="calm"] {
+  --series-1: var(--ws-action);
+  --series-2: var(--ws-success);
+  --series-3: var(--ws-warning);
+  --series-4: var(--ws-danger);
+  --series-5: var(--ws-knowledge);
+  --series-6: var(--ws-muted);
+  --series-7: var(--ws-action);
+  --series-8: var(--ws-success);
+  --series-9: var(--ws-warning);
+  --series-10: var(--ws-danger);
+}

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {JSDOM} from '../dev-deps.mjs';
-import {mountV7} from '../prototype/v7-controller.mjs';
+import {mountV7} from '../prototype/v7-controller-v6.mjs';
 import {visualSeedChanges} from '../prototype/visual-seed.mjs';
 import {WorkstationStore} from '../src/store.mjs';
 import {browserRoute} from '../src/browser-api.mjs';
@@ -44,7 +44,7 @@ test('every control in the live V7 shell has a real handler on all six pages and
  }finally{controller.dispose();store.close();dom.window.close()}
 });
 test('the seeded verification fixture never reaches the published V7 tree',()=>{
- const published=readFileSync(new URL('../src/v7/v7-controller.mjs',import.meta.url),'utf8');
+ const published=readFileSync(new URL('../src/v7/v7-controller-v6.mjs',import.meta.url),'utf8');
  assert.doesNotMatch(published,/visualSeed|visual-seed|联合验证|场景探索/,'发布模块不得包含验收种子数据');
  const names=readFileSync(new URL('../src/v7-assets.mjs',import.meta.url),'utf8');
  assert.doesNotMatch(names,/visual-check|control-audit|visual-seed|screenshots/,'验收脚本不得进入发布路由清单');

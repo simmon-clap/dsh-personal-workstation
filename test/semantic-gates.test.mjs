@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import {CHECKS, runChecks, cleanFixture, canaryReport} from '../prototype/semantic-checks.mjs';
 
 test('判据清单覆盖 17 §3 的 10 项可机械化项（S9/S13 是人工验收，不在此列）', () => {
-  assert.deepEqual(CHECKS.map(c => c.id), ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S10', 'S12']);
+  assert.deepEqual(CHECKS.map(c => c.id), ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S10', 'S12', 'S14', 'S15']);
 });
 
 test('干净夹具：10 项判据全部 0 违规（否则后面所有 canary 都证明不了什么）', () => {
@@ -20,7 +20,7 @@ test('干净夹具：10 项判据全部 0 违规（否则后面所有 canary 都
   for (const row of results) assert.equal(row.count, 0, row.id + ' 在干净夹具上误报：' + JSON.stringify(row.violations).slice(0, 200));
 });
 
-test('canary：每条判据注入一处违规都能抓到（10/10）', () => {
+test('canary：每条判据注入一处违规都能抓到（12/12）', () => {
   const report = canaryReport();
   const missed = report.filter(r => !r.caught);
   assert.deepEqual(missed.map(r => r.id + ' ' + r.why), []);

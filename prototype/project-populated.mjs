@@ -35,6 +35,12 @@ export async function populatedProjectHtml(item,send){
  const history=new Map((data.stageHistory??[]).filter(entry=>entry&&entry.stage).map(entry=>[entry.stage,entry.at]));
  const refs=refLabels(send);
  const ownerNames=await refs.resolve('person',[...tasks.map(task=>task.data.ownerId),data.ownerId??null].filter(Boolean));
+ // 角色模型（A1/A2）：主责机构、参与机构与项目模板是项目的结构事实，详情里如实展示。
+ const participants=Array.isArray(data.participants)?data.participants:[];
+ const roleOrgs=await refs.resolve('organization',[...participants.map(entry=>entry.organizationId),data.organizationId??null].filter(Boolean));
+ const mainOrg=data.organizationId?(roleOrgs.get(data.organizationId)??'已删除或不可见'):'未归属';
+ const participation=participants.length?participants.map(entry=>`${roleOrgs.get(entry.organizationId)??'已删除或不可见'}（${entry.role}）`).join('、'):'还没有标注参与机构';
+ const templateLabel={delivery:'客户交付',ecosystem:'生态战略',investment:'研判投资',research:'研究议题',custom:'自定义'}[data.roleTemplate]??'不套模板';
  const deliverables=data.deliverables??[];
  const dated=deliverables.filter(entry=>validDate(entry.dueDate));
  const lateDeliverables=dated.filter(entry=>late(entry.dueDate,entry.done===true||entry.status==='done'));
@@ -86,7 +92,8 @@ const stagedUndone=data.stage?deliverables.filter(entry=>!entry.done&&entry.stag
 // 这里不再重复指路"去「编辑项目」里填" —— 那条六步路已经被就地编辑取代。
 const goal=`<div class="proof" id="newprojectgoal">${esc(data.goal||'目标待补充：在下面「目标」里点一下就能写')}</div>`;
  return `${goal}<p>${esc(p.partner)} · 按交付项计算进度</p>
-<div style="display:flex;align-items:center;gap:var(--ws-space-24);margin-top:var(--ws-space-16)">${ring(p.done,p.total,p.color)}<div><h3 style="margin:0">已完成 ${p.done} / ${p.total} 项交付</h3><p>剩余 ${p.total-p.done} 项 · ${p.block} 项等待</p></div></div>
+<div class="managerow" data-role="responsibility"><strong>主责机构：${esc(mainOrg)}</strong><small>参与机构：${esc(participation)} · 项目模板：${esc(templateLabel)}</small></div>
+<div class="detailprogress">${ring(p.done,p.total,p.color)}<div>${p.total?`<h3>已完成 ${p.done} / ${p.total} 项交付</h3><p>剩余 ${p.total-p.done} 项 · ${p.block} 项等待</p>`:'<h3>还没有交付项</h3><p>先在项目里定下要交什么；有了交付项，进度和风险才有意义。</p>'}</div></div>
 <div class="detailmetrics"><div><b>${tasks.length}</b><small>关联任务</small></div><div><b>${files.length}</b><small>关联材料</small></div><div><b>阶段：${data.stage?esc(data.stage):'未记录'}</b><small>${stage?'第 '+stage+'/'+phases.length+' 步':'阶段未记录'}</small></div><div><b>${lateDeliverables.length+lateTasks.length}</b><small>逾期项</small></div></div>
 <!-- 阶段条本身可点之后，原来那个蓝色「推进到下一阶段」按钮就是**同一件事的第二个控件**了
      （克制 + VI §6 同一控件全站唯一实现）。这里只留一句说明，动作交给下面的格子。 -->

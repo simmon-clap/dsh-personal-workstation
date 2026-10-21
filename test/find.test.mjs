@@ -8,9 +8,9 @@ function dom(){
  return new JSDOM(html);
 }
 const items=[
- {id:'a1',kind:'artifact',data:{title:'会议纪要 · 示例科技 3D 存算一体芯片路演',path:'示例科技-3D存算一体/杭州示例学校-会议纪要.md'}},
- {id:'p1',kind:'project',data:{title:'示例科技 · 3D 存算一体芯片技术适配与合作研判'}},
- {id:'t1',kind:'task',data:{title:'核对标的：公司主体、股权与融资'}},
+ {id:'a1',kind:'artifact',data:{title:'会议纪要 · 示例科技 示例产品路演',path:'示例科技-示例产品/杭州示例学校-会议纪要.md'}},
+ {id:'p1',kind:'project',data:{title:'示例科技 · 示例产品技术适配与合作研判'}},
+ {id:'t1',kind:'task',data:{title:'核对标的：主体与融资信息'}},
 ];
 
 test('查找框跨类型检索：资料、项目、任务都能按名称找到',async()=>{
@@ -29,7 +29,7 @@ test('查找框跨类型检索：资料、项目、任务都能按名称找到',
  rows[0].click();
  assert.deepEqual(opened,['a1'],'点击结果直接打开该记录');
  // 换关键词：按正文/路径也命中
- input.value='股权';input.dispatchEvent(new window.Event('input'));
+ input.value='融资';input.dispatchEvent(new window.Event('input'));
  await new Promise(resolve=>setTimeout(resolve,20));
  assert.match(window.document.querySelector('#findresults').textContent,/核对标的/);
  // 无命中时给出去哪找的提示，而不是一片空白

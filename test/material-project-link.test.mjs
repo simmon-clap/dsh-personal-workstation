@@ -27,8 +27,8 @@ test('exactly one same-batch project auto-links the materials created with it, w
  const store=new WorkstationStore(':memory:'),ctx=ctxOf();
  try{
   const batch=store.draft(ctx,{title:'会议纪要归档 · 示例科技',changes:[
-   {op:'create',id:'p1',kind:'project',data:{title:'示例科技 · 3D 存算一体芯片技术适配与合作研判'}},
-   {op:'create',id:'a1',kind:'artifact',data:{title:'会议纪要 · 示例科技 3D 存算一体芯片路演',path:'meetings/a.md',content:'纪要原文'}},
+   {op:'create',id:'p1',kind:'project',data:{title:'示例科技 · 示例产品技术适配与合作研判'}},
+   {op:'create',id:'a1',kind:'artifact',data:{title:'会议纪要 · 示例科技 示例产品路演',path:'meetings/a.md',content:'纪要原文'}},
   ]});
   const material=materialOf(batch,'a1');
   assert.equal(material.data.projectId,'p1','同批新建的材料必须自动指向同批新建的项目');

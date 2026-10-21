@@ -31,8 +31,8 @@ function seedJudgment(id, title, share, quote) {
   const batch = store.draft(ctx, {title: '判断 ' + id, changes: [{op: 'create', id, kind: 'judgment', data}]});
   store.commit(ctx, {batchId: batch.id, revision: 1, key: 'j-' + id});
 }
-seedJudgment('j-team', '服务器端短期难以成立', 'team', '先做零成本技术适配验证');
-seedJudgment('j-private', '合资垫资长期有风险', 'private', '合资加垫资绑地方政府财政');
+seedJudgment('j-team', '短期难以成立', 'team', '先做零成本技术适配验证');
+seedJudgment('j-private', '合作结构长期有风险', 'private', '合作结构需要分阶段验证');
 // 没写 share 的那一条：用来验证「默认按仅自己处理」不是一句注释。
 seedJudgment('j-default', '默认可见性判断：这条没有写谁能看', undefined, '没写 share 的记录');
 
@@ -99,13 +99,13 @@ try {
     doc.split('\n').filter(line => /出处：/.test(line)).slice(0, 1).join('').slice(0, 90));
   check('文档带不确定性', doc.includes('成本口径还没确认'), '');
   check('文档写明剔除了几条仅自己', /已剔除 2 条标为「仅自己」/.test(doc), doc.split('\n').filter(line => /剔除/.test(line))[0]?.slice(0, 60) ?? '');
-  check('仅自己的判断没有泄漏进文档', !doc.includes('合资垫资长期有风险'), '');
+  check('仅自己的判断没有泄漏进文档', !doc.includes('合作结构长期有风险'), '');
   // 同上：时间也要说人话（原来断言 ISO 的 `T`，读者不需要看毫秒与时区后缀）。
   check('文档自带导出时间（人话格式）', /导出时间 \d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(doc) && !/\d{4}-\d{2}-\d{2}T\d/.test(doc), '');
 
   // 详情里一键切换谁能看（自己的操作，直接生效）
   await page.evaluate(() => {
-    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('合资垫资长期有风险'));
+    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('合作结构长期有风险'));
     card?.click();
   });
   await new Promise(resolve => setTimeout(resolve, 600));

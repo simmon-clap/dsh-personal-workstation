@@ -12,10 +12,33 @@ window.__ModuleLoader__.load({id:'dsh-personal-workstation',factory:(require)=>{
     return ()=>{
       const handler=event=>{
         if(event.origin!==location.origin)return;
+        if(event.data?.type==='workstation:generate'){
+          const frame=[...document.querySelectorAll('iframe[title="'+PAGE_TITLE+'"]')].find(node=>node.contentWindow===event.source);
+          if(!frame)return;
+          const prompt=typeof event.data.prompt==='string'?event.data.prompt.slice(0,4000):'';
+          const workspaceId=typeof event.data.workspaceId==='string'?event.data.workspaceId:'';
+          const requestId=String(event.data.requestId||'');
+          const reply=(ok,extra={})=>{try{event.source?.postMessage({type:'workstation:generate-ack',requestId,ok,...extra},location.origin)}catch{}};
+          (async()=>{
+            if(!prompt.trim()||!workspaceId){reply(false,{error:'后台生成缺少提示词或工作区'});return;}
+            let ref=null;
+            try{
+              const sessionId=await scope.uiWorkspace.connectWorkspace(workspaceId);
+              ref=scope.sessions.retain(sessionId,{source:'controllerOperation'});
+              await ref.ready;
+              const result=await ref.binding.session.prompt([{type:'text',text:prompt}],'queue');
+              if(result&&result.ok===false)throw Error(result.error?.message||'后台任务没有被接受');
+              reply(true,{sessionId});
+            }catch(error){reply(false,{error:String(error?.message||error)})}
+            finally{try{ref?.release()}catch{}}
+          })();
+          return;
+        }
         if(event.data?.type!=='workstation:open-chat')return;
         const frame=[...document.querySelectorAll('iframe[title="'+PAGE_TITLE+'"]')].find(node=>node.contentWindow===event.source);
         if(!frame)return;   // 只认自己那个 iframe
-        try{scope.uiWorkspace.startSession();}catch{location.assign('/');}
+        const prompt=typeof event.data.prompt==='string'?event.data.prompt.slice(0,4000):'';
+        try{scope.uiWorkspace.startSession(undefined,prompt?{prompt,clearPreviousDraft:false}:undefined);}catch{location.assign('/');}
         event.source?.postMessage({type:'workstation:open-chat-ack'},location.origin);
       };
       window.addEventListener('message',handler);
@@ -34,7 +57,7 @@ window.__ModuleLoader__.load({id:'dsh-personal-workstation',factory:(require)=>{
   return {name:'dsh-personal-workstation',inject:['slots','theme'],apply(ctx){
     ctx.effect(relay(ctx,PAGE_TITLE));
     // 可选依赖：宿主没有 uiWorkspace 时不装桥，面板照常存在（避免"宿主没服务 → 整个插件不挂"）。
-    ctx.inject(['uiWorkspace'],scope=>{scope.effect(chatBridge(scope))});
+    ctx.inject(['uiWorkspace','sessions'],scope=>{scope.effect(chatBridge(scope))});
     // 只保留一个入口：旧界面对用户是重复导航，已移除（回退改用版本回滚）。
     ctx.slots.inject('main',()=>ctx.slots.register({name:'main',key:'personal-workstation'},()=>frame('/personal-workstation?theme='+schemeOf(ctx),PAGE_TITLE)));
     ctx.slots.inject('sidebar.panellist',()=>ctx.slots.register({name:'sidebar.panellist',id:'personal-workstation',label:PAGE_TITLE,order:10},Icon));

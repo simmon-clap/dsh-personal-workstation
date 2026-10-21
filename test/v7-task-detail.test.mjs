@@ -6,7 +6,10 @@ import {createTaskDetail,taskDetailHtml} from '../prototype/task-detail.mjs';
 
 test('V7 task detail uses explicit step flags and separates execution from business status',()=>{
  const html=taskDetailHtml({id:'t',data:{title:'任务',status:'in_progress',steps:[{title:'<script>',done:false},{title:'完成',done:true}],inputScope:'<input>',expectedOutput:'报告'}},null);
- assert.match(html,/运行中/);assert.match(html,/1\/2/);assert.match(html,/&lt;script&gt;/);assert.match(html,/&lt;input&gt;/);assert.match(html,/尚无执行记录/);assert.doesNotMatch(html,/当前步骤|data-project|NaN/);
+ // 业务状态统一用「进行中」（VI §7 / status-vocab）；「运行中」只属于执行记录，两件事分开说。
+ assert.match(html,/进行中/);assert.match(html,/1\/2/);
+ assert.match(taskDetailHtml({id:'t',data:{title:'任务',status:'done'},execution:{status:'running'}},null),/运行中/,'执行记录在跑时写「运行中」');
+ assert.match(taskDetailHtml({id:'t',data:{title:'任务',status:'done'},execution:{status:'running'}},null),/已完成/,'业务完成与执行状态互不冒充');assert.match(html,/&lt;script&gt;/);assert.match(html,/&lt;input&gt;/);assert.match(html,/尚无执行记录/);assert.doesNotMatch(html,/当前步骤|data-project|NaN/);
  assert.doesNotMatch(taskDetailHtml({id:'t',data:{title:'空任务'}},null),/NaN|Infinity/);
 });
 test('V7 task detail opens persisted project, restores focus and discards closed or late responses',async()=>{

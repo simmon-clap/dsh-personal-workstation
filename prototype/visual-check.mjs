@@ -21,9 +21,9 @@ async function main(){
  seedVisualStore(store);
  const connection={admit:()=>({peer:{id:'operator'}}),requestRejection:()=>undefined};
  const route=httpRoute({store,executions,connection,workspaceRegistry:{list:()=>[{id:workspace,title:'个人空间'}],get:id=>id===workspace?{id:workspace,title:'个人空间'}:null},allowedWorkspaces:[workspace]});
- const prototype=readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8');
+ const prototype=readFileSync(new URL('./frozen/workbench-v7.html',import.meta.url),'utf8');
  // 「纸上秩序」设计方自己的 V7 视觉应用页，作为逐页对照基准。
- const designRoot=fileURLToPath(new URL('../../design-system/',import.meta.url));
+ const designRoot=fileURLToPath(new URL('../design-system/',import.meta.url));
  const designTypes={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json','.png':'image/png'};
  const server=createServer((request,response)=>{
   if(request.url==='/prototype'){response.writeHead(200,{'content-type':'text/html; charset=utf-8'});response.end(prototype);return}

@@ -113,9 +113,9 @@ PAGE = BASE + '/personal-workstation';
 console.log('（实例：' + BASE + ' · 登录凭据：试了 ' + picked.tried + ' 组，用 ' + picked.used + '…）');
 let servedHash = null, installedHash = null;
 try {
-  const response = await fetch(BASE + '/personal-workstation/v7/space-view.mjs', {headers: {cookie}});
+  const response = await fetch(BASE + '/personal-workstation/v7/space-view-v5.mjs', {headers: {cookie}});
   if (response.ok) servedHash = sha(Buffer.from(await response.arrayBuffer()));
-  installedHash = sha(readFileSync(join(installed, 'src/v7/space-view.mjs')));
+  installedHash = sha(readFileSync(join(installed, 'src/v7/space-view-v5.mjs')));
 } catch (error) {
   console.log('FAIL: 取不到服务器实际发出的模块：' + error.message);
   process.exit(1);
@@ -131,6 +131,11 @@ const browser = await puppeteer.launch({
   args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
 });
 const page = await browser.newPage();
+// 真实 JS 报错监听（2026-10-19，01 架构审计 §3.3a）：旧版把「整页没有 JavaScript 报错」写成 check(..., true)，
+// 等于这一条永远绿。现在把 pageerror 与 console.error 收集起来，出现即判失败（没跑 ≠ 通过）。
+const jsErrors = [];
+page.on('pageerror', error => jsErrors.push({kind: 'pageerror', text: String(error?.message ?? error)}));
+page.on('console', message => { if (message.type() === 'error') jsErrors.push({kind: 'console.error', text: message.text()}); });
 await page.setViewport({width: 1440, height: 940});
 await page.setCookie({name: cookie.split('=')[0], value: cookie.slice(cookie.indexOf('=') + 1), domain: '127.0.0.1', path: '/'});
 const settle = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -155,7 +160,7 @@ try {
 
   // 浏览器里真正加载的那个模块，和服务器发的是不是同一份（防止中间还有缓存层）
   const loaded = await page.evaluate(async () => {
-    const response = await fetch('/personal-workstation/v7/space-view.mjs', {cache: 'no-store'});
+    const response = await fetch('/personal-workstation/v7/space-view-v5.mjs', {cache: 'no-store'});
     const text = await response.text();
     const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
     return [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -288,7 +293,8 @@ try {
   }
   await page.screenshot({path: join(SHOTS, '05-画布.png')});
 
-  check('整页没有 JavaScript 报错', true);
+  check('整页没有 JavaScript 报错（pageerror / console.error）', jsErrors.length === 0,
+    jsErrors.length ? jsErrors.slice(0, 3).map(item => item.kind + '：' + item.text.slice(0, 100)).join(' | ') : '0 条');
 } catch (error) {
   console.log('FAIL: 验收过程本身出错：' + error.message);
   problems.push('验收脚本异常：' + error.message);

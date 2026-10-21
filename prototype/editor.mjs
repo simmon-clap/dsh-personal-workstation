@@ -17,7 +17,7 @@ export const priorityOptions=[['','未设置'],['high','高'],['medium','中'],[
 const spec={
  project:[
   ['基本信息',[['goal','目标 / 预期成果','textarea']]],
-  ['归属与负责人',[['partnerId','合作机构','ref','organization'],['ownerId','负责人','ref','person']]],
+  ['归属与负责人',[['organizationId','主责机构','ref','organization'],['partnerId','合作机构','ref','organization'],['ownerId','负责人','ref','person'],['roleTemplate','项目模板','select',[['','不套模板'],['delivery','客户交付'],['ecosystem','生态战略'],['investment','研判投资'],['research','研究议题'],['custom','自定义']]]]],
   ['优先级',[['importance','重要程度','select',priorityOptions],['urgency','紧急程度','select',priorityOptions]]],
   ['计划',[['stage','阶段','select',stageOptions],['startDate','计划开始','date'],['dueDate','计划截止','date'],['folder','项目文件夹','folder']]]],
  task:[
@@ -28,7 +28,7 @@ const spec={
   ['基本信息',[['eventType','事务类型','select',[['meeting','会议'],['travel','行程'],['other','其他']]],['location','地点','text',undefined,'例如：线上会议']]],
   ['计划',[['startDate','开始时间','text',undefined,'例如：2026-10-20 10:30'],['endDate','结束时间','text',undefined,'例如：2026-10-20 11:30'],['timezone','时区','text',undefined,'例如：Asia/Shanghai']]],
   ['参与人',[['attendees','参与人','ref-multi','person']]]],
- organization:[['基本信息',[['website','网站','text',undefined,'例如：https://example.com'],['contactId','主要联系人','ref','person']]],['备注',[['note','备注','textarea',undefined,'例如：合作到哪一步、谁在对接']]]],
+ organization:[['基本信息',[['defaultRole','分类（默认角色）','text',undefined,'例如：客户 / 伙伴 / 供应；留空=未分类'],['website','网站','text',undefined,'例如：https://example.com'],['contactId','主要联系人','ref','person']]],['备注',[['note','备注','textarea',undefined,'例如：合作到哪一步、谁在对接']]]],
  person:[['基本信息',[['organizationId','所属组织','ref','organization'],['email','邮箱','text',undefined,'例如：name@example.com']]],['备注',[['note','备注','textarea',undefined,'例如：怎么认识的、负责哪一块']]]],
  artifact:[['基本信息',[['path','关联文件路径','text',undefined,'相对于授权目录，例如 notes/meeting.md'],['grant','授权目录','grant'],['content','内容','textarea']]]],
  topic:[['基本信息',[['content','内容','textarea']]]],
@@ -440,7 +440,12 @@ function wireRefCreate(scope,{kind,notify,batch}){
    }
    // PRD v1.2 PJ-06/PJ-08：同名对象先匹配提示，不凭名称自动合并，也不静默创建第二份。
    if(!existing&&!acknowledged&&await warnDuplicate(kind,result.title))return;
-   const changes=[existing?{op:'update',id:existing.id,expectedRevision:existing.revision,data:result}:{op:'create',kind,data:result}];
+   // 「只提交改动字段」（spec/54 D6）：编辑已有对象时，只把真正变了的字段名放进 fields，
+   // 其余字段（含别的窗口刚改过的）原样保留；一个字段都没变就不生成空改动。
+   const before=existing?.data??{};
+   const changedFields=existing?Object.keys(result).filter(key=>JSON.stringify(result[key])!==JSON.stringify(before[key])):[];
+   if(existing&&!changedFields.length){notify('没有改动，未生成改动');return}
+   const changes=[existing?{op:'update',id:existing.id,expectedRevision:existing.revision,data:result,fields:changedFields}:{op:'create',kind,data:result}];
    // 你自己填的表单：直接生效 + 可撤销（不再让你为自己的操作点同意）。
   const title=(existing?'编辑':'新建')+labels[kind];
   const label=(existing?'已更新 ':'已新建 ')+labels[kind];

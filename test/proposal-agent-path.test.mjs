@@ -27,7 +27,7 @@ test('工具能带依据、不确定性、参考判断提建议（不需要审�
   try {
     // 先有一条判断作为依据
     const judgment = await call('draft', {title: '建判断', changes: [{op: 'create', id: 'j-1', kind: 'judgment', data: {
-      title: '服务器端短期难以成立', evidence: [{kind: 'message', ref: 'msg-1', quote: '价格敏感'}], validFrom: '2026-10-11', status: 'current',
+      title: '短期难以成立', evidence: [{kind: 'message', ref: 'msg-1', quote: '价格敏感'}], validFrom: '2026-10-11', status: 'current',
     }}]});
     await call('commit', {id: judgment.id, revision: 1, key: 'k1'});
 
@@ -53,16 +53,16 @@ test('proposal_history 让 Agent 在提新建议前避开已被否决的', async
     const ctx = {workspace: WORKSPACE.id, actor: 'a', canWrite: true};
     // 起草时就带上用户的否决与理由，然后取消这次改动 —— 建议的生命周期走完
     const advice = await call('draft', {
-      title: '建议：直接安排与股东见面',
-      proposal: {decision: 'rejected', reason: '优先级不对，先看技术再谈股权'},
-      changes: [{op: 'create', id: 't-9', kind: 'task', data: {title: '安排股东见面'}}],
+      title: '建议：直接安排与合作方见面',
+      proposal: {decision: 'rejected', reason: '优先级不对，先看技术再谈合作'},
+      changes: [{op: 'create', id: 't-9', kind: 'task', data: {title: '安排与合作方见面'}}],
     });
     await call('cancel_draft', {id: advice.id, revision: advice.revision});
 
     const history = await call('proposal_history', {limit: 20});
     assert.equal(history.items.length, 1);
     assert.equal(history.items[0].decision, 'rejected');
-    assert.equal(history.items[0].reason, '优先级不对，先看技术再谈股权');
+    assert.equal(history.items[0].reason, '优先级不对，先看技术再谈合作');
     assert.equal(store.batch(ctx, advice.id).status, 'cancelled', '否决后这次改动是被取消的');
   } finally { store.close(); }
 });

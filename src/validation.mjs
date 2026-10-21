@@ -1,5 +1,6 @@
+import {validateViewDefinition} from './view-spec.mjs';
 const common=['title','description','tags','projectId','sourceRefs'];
-const fields={project:['goal','partnerId','ownerId','stage','startDate','dueDate','deliverables','folder','stageHistory','importance','urgency'],task:['ownerId','dueDate','status','steps','dependsOn','executionTarget','expectedOutput','deliverableId','blockedReason'],organization:['website'],person:['organizationId','email'],topic:['content'],artifact:['path','fileGrantId','mime','content','fileVersion','knowledgeBaseId','knowledgeDocId','knowledgeUpdatedAt','taskIds'],event:['startDate','endDate','timezone','location','attendees','eventType','externalSource','externalUid','externalSyncedAt','externalFingerprint'],relation:['from','to','status','evidence','reason','basis'],layout:['positions','viewport','groups'],proposal:['status','content'],memoryRef:['provider','reference','content','verification'],brief:['content','source','sourceUrl','publishedAt','fetchedAt','linkStatus','uncertainty'],judgment:['evidence','uncertainty','validFrom','reviewBy','status','overturnedBy','share','origin']};
+const fields={project:['goal','partnerId','ownerId','stage','startDate','dueDate','deliverables','folder','stageHistory','importance','urgency','roleTemplate','participants','organizationId'],task:['ownerId','dueDate','status','steps','dependsOn','executionTarget','expectedOutput','deliverableId','blockedReason'],organization:['website','contactId','note','defaultRole'],person:['organizationId','email','note'],topic:['content'],artifact:['path','fileGrantId','mime','content','fileVersion','knowledgeBaseId','knowledgeDocId','knowledgeUpdatedAt','taskIds'],event:['startDate','endDate','timezone','location','attendees','eventType','externalSource','externalUid','externalSyncedAt','externalFingerprint'],relation:['from','to','status','evidence','reason','basis'],layout:['positions','viewport','groups','roleColors','roleShapes','order'],proposal:['status','content'],memoryRef:['provider','reference','content','verification'],brief:['content','source','sourceUrl','publishedAt','fetchedAt','linkStatus','uncertainty'],judgment:['evidence','uncertainty','validFrom','reviewBy','status','overturnedBy','share','origin'],view:['template','subject','params','dataRefs','basis','generatedAt','origin','state','actions','savedAs','analysis']};
 function invalid(message){const e=new Error(message);e.code='INVALID';throw e;}
 export function validDate(value){
  const m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2}))?$/.exec(value);
@@ -34,7 +35,7 @@ export function validateData(kind,data){
  if(!fields[kind]||!data||typeof data!=='object'||Array.isArray(data))invalid('对象类型或数据无效');
  const allowed=new Set([...common,...fields[kind]]);
  for(const key of Object.keys(data))if(!allowed.has(key))invalid('未知或受保护字段：'+key);
- for(const key of ['title','description','projectId','goal','partnerId','ownerId','stage','startDate','dueDate','expectedOutput','website','organizationId','email','content','path','fileGrantId','mime','fileVersion','knowledgeBaseId','knowledgeDocId','knowledgeUpdatedAt','endDate','timezone','location','eventType','from','to','status','reason','provider','reference','executionTarget','blockedReason'])if(key in data&&(typeof data[key]!=='string'||data[key].length>500000))invalid(key+'必须为文本');
+ for(const key of ['title','description','projectId','goal','partnerId','ownerId','stage','startDate','dueDate','expectedOutput','website','organizationId','email','contactId','note','content','path','fileGrantId','mime','fileVersion','knowledgeBaseId','knowledgeDocId','knowledgeUpdatedAt','endDate','timezone','location','eventType','from','to','status','reason','provider','reference','executionTarget','blockedReason'])if(key in data&&(typeof data[key]!=='string'||data[key].length>500000))invalid(key+'必须为文本');
  // 材料与任务是**多对多**（一份会议纪要常支撑多个任务）：taskIds 与其它引用数组同一套规则，
  // 条目必须是非空文本；指向的任务是否存在、是否归档由 store 在提交时按引用校验硬拦。
  for(const key of ['tags','sourceRefs','attendees','dependsOn','taskIds'])if(key in data&&(!Array.isArray(data[key])||data[key].length>1000||data[key].some(v=>typeof v!=='string'||!v.trim())))invalid(key+'必须为非空文本数组');
@@ -54,6 +55,29 @@ export function validateData(kind,data){
    const value=data[key];
    if(value===undefined)continue;
    if(typeof value!=='string'||!['high','medium','low'].includes(value))invalid(label+'只能是 high / medium / low（高/中/低）');
+  }
+ }
+ // 角色模型（A1）：角色名是**自由文本**（用户可以自定义模板），产品只给建议、不写死词表。
+ // 单一语义：organization.defaultRole 的 '' 与缺省同义 = 未分类；非空时按 trim 后 1–40 字（纯空格不算空串）。
+ if(kind==='organization'&&data.defaultRole!==undefined){
+  const value=data.defaultRole;
+  if(typeof value!=='string')invalid('默认角色必须为文本');
+  if(value!==''&&(value.trim().length<1||value.trim().length>40))invalid('默认角色需为 1–40 字（空串表示未分类）');
+ }
+ // 项目模板只有 5 个键，缺省=不套模板。参与者每项**只允许** {organizationId, role} 两个字段，
+ // 同一项目同一机构只一条（跨项目可不同）；机构是否存在由 store 在提交时用 resolve 硬拦（REFERENCE）。
+ // project.organizationId（主责机构）可空，引用校验走 store 里 organizationId→organization 那一条，不重复实现。
+ if(kind==='project'&&data.roleTemplate!==undefined&&!['delivery','ecosystem','investment','research','custom'].includes(data.roleTemplate))invalid('项目角色模板只能是 delivery / ecosystem / investment / research / custom');
+ if(kind==='project'&&data.participants!==undefined){
+  const list=data.participants;
+  if(!Array.isArray(list)||list.length>200)invalid('参与者必须为数组（最多 200 条）');
+  const seen=new Set();
+  for(const item of list){
+   if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(key=>!['organizationId','role'].includes(key)))invalid('参与者条目只能包含 organizationId 与 role');
+   if(typeof item.organizationId!=='string'||!item.organizationId.trim())invalid('参与者必须指定机构');
+   if(typeof item.role!=='string'||item.role.trim().length<1||item.role.trim().length>40)invalid('参与者必须写明角色（1–40 字）');
+   if(seen.has(item.organizationId))invalid('同一项目同一机构只能有一条参与者');
+   seen.add(item.organizationId);
   }
  }
  // 阶段推进留痕：只记录真实发生过的阶段与时间，不预填、不推断。
@@ -105,6 +129,35 @@ export function validateData(kind,data){
   }
  }
 
+ // 角色视觉映射是**视图层**数据（与 view:'ecosystem' 配套）：只存角色名→颜色/形状/顺序的映射，
+ // 角色名本身的唯一事实源仍是 organization.defaultRole 与 project.participants[].role，这里不存第二份事实。
+ // 颜色只认调色板变量（--pal-xxx / --pal-xxx-soft），**拒绝 hex 或任意值**；形状只认 5 种；每类最多 10 条。
+ if(kind==='layout'){
+  const roleName=value=>typeof value==='string'&&value.trim().length>=1&&value.trim().length<=40;
+  for(const [key,label] of [['roleColors','角色颜色'],['roleShapes','角色形状']]){
+   const value=data[key];
+   if(value===undefined)continue;
+   if(!value||typeof value!=='object'||Array.isArray(value))invalid(label+'必须是对象');
+   const entries=Object.entries(value);
+   if(entries.length>10)invalid(label+'最多 10 条');
+   for(const [name,token] of entries){
+    if(!roleName(name))invalid(label+'的角色名需为 1–40 字');
+    if(key==='roleColors'&&(typeof token!=='string'||!/^--pal-[a-z]+(-soft)?$/.test(token)))invalid('角色颜色只能是调色板变量名（--pal-xxx）：'+name);
+    if(key==='roleShapes'&&!['hexagon','diamond','square','circle','triangle'].includes(token))invalid('角色形状只能是 hexagon / diamond / square / circle / triangle：'+name);
+   }
+  }
+  if(data.order!==undefined){
+   const list=data.order;
+   if(!Array.isArray(list)||list.length>10)invalid('角色顺序必须为数组（最多 10 条）');
+   const seen=new Set();
+   for(const name of list){
+    if(!roleName(name))invalid('角色顺序里的角色名需为 1–40 字');
+    if(seen.has(name.trim()))invalid('角色顺序不能重复：'+name.trim());
+    seen.add(name.trim());
+   }
+  }
+ }
+
  // 判断是一等公民（宪章第三条）：每条判断必须带依据、什么时候成立与状态。
  // 依据必须能指回原始出处，且要区分「对方自述」与「经第三方验证」。
  if(kind==='judgment'){
@@ -136,6 +189,9 @@ export function validateData(kind,data){
    if(typeof o.at!=='string'||!o.at.trim()||o.at.length>40)invalid('推翻必须记录时间');
   }else if(data.overturnedBy!==undefined&&Object.keys(data.overturnedBy||{}).length)invalid('只有被推翻的判断才能带推翻依据');
  }
+ // 生成视图（18 号 §3）：模板白名单、参数越界、basis / dataRefs 的硬约束只在 view-spec 一处实现，
+ // 这里只做入口转发，避免两份校验漂移。
+ if(kind==='view')validateViewDefinition(data);
 }
 
 /** 建议的说明（方案 A：不新增对象类型，挂在收件箱的待决定项上）。

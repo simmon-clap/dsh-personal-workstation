@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from '../dev-deps.mjs';
 import {WorkstationStore} from '../src/store.mjs';
 import {browserRoute} from '../src/browser-api.mjs';
-import {mountV7} from '../prototype/v7-controller.mjs';
+import {mountV7} from '../prototype/v7-controller-v6.mjs';
 import {createRecordDetail} from '../prototype/record-detail.mjs';
 
 // 体检 A4：项目面板早就能「关联已有材料」，任务详情没有入口；材料详情也不显示它支撑哪些任务。

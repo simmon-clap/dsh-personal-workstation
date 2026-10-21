@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';import assert from 'node:assert/strict';
 import {JSDOM} from '../dev-deps.mjs';
-const original=readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8');
+const original=readFileSync(new URL('./frozen/workbench-v7.html',import.meta.url),'utf8');
 const replica=readFileSync(new URL('./replica/index.html',import.meta.url),'utf8');
 const reconstructed=replica.replace(/<script src="\.\/([\w-]+)\.js"><\/script>/g,(_,name)=>'<script>'+readFileSync(new URL('./replica/'+name+'.js',import.meta.url),'utf8')+'</script>');
 assert.equal(reconstructed,original,'split and rejoined source must match exactly');

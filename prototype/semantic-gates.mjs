@@ -388,6 +388,11 @@ async function collect(target, browser) {
   await gotoView(page, 'space', 1600);
   data.canvas = await page.evaluate(measureCanvas);
   if (!jsonOnly) await page.screenshot({path: join(SHOTS, 'desktop-canvas.png')});
+  // S14：默认进画布看到的结构态（分类列/未分类未归属/三重编码/缩放/项目>任务）
+  data.canvasStructure = await measureStructureCanvas(page, wait);
+  if (!jsonOnly) await page.screenshot({path: join(SHOTS, 'desktop-canvas-structure.png')});
+  // S15：四表面组件签名（详情弹窗宽度/居中、空态结构、卡片密度、筛选控件数量）
+  data.surfaces = await measureSurfaces(page, {gotoView, wait});
   await page.close();
 
   // ── 移动端 390 ──
@@ -416,6 +421,111 @@ async function collect(target, browser) {
   }
   await mobile.close();
   return data;
+}
+
+/** S14 测量：默认进画布（结构态）看到的分类列、未分类/未归属、三重编码、缩放与层级尺寸。
+ *  只点「机构→项目」做原地展开（视图层，不写业务数据），量完 Esc 收起。 */
+async function measureStructureCanvas(page, wait) {
+  const read = () => page.evaluate(() => {
+    const svg = document.querySelector('#spaceSvg');
+    if (!svg) return {opened: false};
+    const world = svg.querySelector('#spaceworld');
+    const match = /scale\(([\d.]+)\)/.exec(world?.getAttribute('transform') || '');
+    const zoom = match ? Number(match[1]) : null;
+    const effective = [...svg.querySelectorAll('text')].map(node => {
+      const size = Number.parseFloat(getComputedStyle(node).fontSize) || 0;
+      const ctm = node.getScreenCTM?.();
+      return size * (ctm?.a || 1);
+    }).filter(value => value > 0);
+    const buckets = [...svg.querySelectorAll('[data-bucket]')].map(node => {
+      const key = node.dataset.bucket;
+      return {
+        key,
+        label: (node.textContent || '').split('·')[0].trim(),
+        kind: key === 'unclassified' ? 'unclassified' : key === 'unassigned' ? 'unassigned' : 'role',
+        count: Number(/(\d+)/.exec(node.textContent || '')?.[1] ?? 0),
+        hasShape: Boolean(node.querySelector('.roleshape'))
+      };
+    });
+    const statusText = document.querySelector('#graphstatus')?.textContent ?? '';
+    return {
+      opened: true,
+      mode: svg.dataset.canvasMode ?? null,
+      zoom,
+      minTextEffective: effective.length ? Math.min(...effective) : null,
+      buckets,
+      mainKinds: [...new Set([...svg.querySelectorAll('[data-node]')].map(node => node.dataset.kind))],
+      unclassifiedCount: Number(/未分类 (\d+)/.exec(statusText)?.[1] ?? 0),
+      unassignedCount: Number(/未归属项目 (\d+)/.exec(statusText)?.[1] ?? 0)
+    };
+  });
+  const base = await read();
+  let projectArea = null, taskArea = null;
+  try {
+    const org = await page.$('#spaceSvg [data-node][data-kind="organization"]');
+    if (org) {
+      await org.click();
+      await wait(700);
+      const project = await page.$('#spaceSvg [data-branch-child][data-kind="project"]');
+      if (project) {
+        const projectBox = await project.boundingBox();
+        projectArea = projectBox ? projectBox.width * projectBox.height : null;
+        await project.click();
+        await wait(700);
+        const task = await page.$('#spaceSvg [data-branch-child][data-kind="task"]');
+        if (task) {
+          const taskBox = await task.boundingBox();
+          taskArea = taskBox ? taskBox.width * taskBox.height : null;
+        }
+      }
+      await page.keyboard.press('Escape');
+      await wait(300);
+      await page.keyboard.press('Escape');
+      await wait(300);
+    }
+  } catch { /* 量不到尺寸不冒充：projectArea/taskArea 保持 null，判据跳过该项 */ }
+  return {...base, projectArea, taskArea};
+}
+
+/** S15 测量：四个表面打开详情量弹窗宽度/居中；收集空态结构签名、卡片密度、每页筛选控件数。 */
+async function measureSurfaces(page, {gotoView, wait}) {
+  const dialogs = [];
+  const readDialog = async surface => {
+    await wait(500);
+    const box = await page.evaluate(() => {
+      const veil = document.querySelector('#veil');
+      if (!veil?.classList.contains('open')) return null;
+      const dialog = veil.querySelector('[role="dialog"]') ?? veil.querySelector('.drawer');
+      if (!dialog) return null;
+      const rect = dialog.getBoundingClientRect();
+      return {width: rect.width, centered: Math.abs(rect.left + rect.width / 2 - window.innerWidth / 2) <= 2};
+    });
+    if (box) dialogs.push({surface, ...box});
+    await page.keyboard.press('Escape');
+    await wait(400);
+  };
+  try {
+    await gotoView(page, 'projects', 900);
+    if (await page.$('#projectsbody [data-project]')) await page.click('#projectsbody [data-project]');
+    await readDialog('projects');
+    await gotoView(page, 'tasks', 900);
+    if (await page.$('#tasksbody [data-task]')) await page.click('#tasksbody [data-task]');
+    await readDialog('tasks');
+    await gotoView(page, 'inbox', 900);
+    if (await page.$('#inboxbody [data-batch], [data-batch]')) await page.click('#inboxbody [data-batch], [data-batch]');
+    await readDialog('inbox');
+  } catch { /* 某个表面打不开就少一条记录，判据会标「没有量到」而不是假绿 */ }
+  const emptyStates = await page.evaluate(() => [...document.querySelectorAll('.v7-empty')].map(node => ({
+    signature: [...node.children].map(child => child.tagName.toLowerCase()).join('+'),
+    surface: node.closest('.view')?.id ?? ''
+  })));
+  const cardDensities = await page.evaluate(() => [...new Set([...document.querySelectorAll('[data-density]')].map(node => node.dataset.density))]);
+  const filterToggles = await page.evaluate(() => {
+    const out = {};
+    for (const view of document.querySelectorAll('.view')) out[view.id || 'unknown'] = view.querySelectorAll('.filtertoggle').length;
+    return out;
+  });
+  return {measured: true, dialogs, emptyStates, cardDensities, filterToggles};
 }
 
 /** 实时注入 canary：证明「测量路径」真的把 DOM 变化量进来了（判据逻辑的 canary 在 semantic-checks 里）。 */

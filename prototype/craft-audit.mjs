@@ -35,13 +35,13 @@ const chrome = chromeExecutable();
 const store = new WorkstationStore(':memory:');
 const executions = new ExecutionStore(store);
 seedVisualStore(store);
-// 夹具里**必须有一个长名字的项目**：真入口复验时，「示例科技 · 3D 存算一体芯片技术适配与合作研判」
+// 夹具里**必须有一个长名字的项目**：真入口复验时，「示例科技 · 示例产品技术适配与合作研判」
 // 这种真名字把原来写死 70px 的 .meter span 挤成了四行竖条 —— 而演示数据全是「技术适配」这种四个字，
 // 本地门禁一路全绿。夹具覆盖不到真实形状，门禁就只是自娱自乐。
 store.draft({workspace: 'w', actor: 'craft', canWrite: true}, {
   title: '长名字项目',
   changes: [
-    {op: 'create', id: 'p-longname', kind: 'project', data: {title: '示例科技 · 3D 存算一体芯片技术适配与合作研判', stage: '验证', importance: 'high'}},
+    {op: 'create', id: 'p-longname', kind: 'project', data: {title: '示例科技 · 示例产品技术适配与合作研判', stage: '验证', importance: 'high'}},
   ],
 }).id && store.commit({workspace: 'w', actor: 'craft', canWrite: true}, {batchId: store.inbox({workspace: 'w', actor: 'craft', canWrite: true})[0].id, revision: 1, key: 'craft-longname'});
 store.draft({workspace: 'w', actor: 'craft', canWrite: true}, {

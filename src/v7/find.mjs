@@ -4,7 +4,7 @@ import {escapeHtml as esc} from './project-render.mjs';
  *  而材料在「文件与资料」；类型分页会让人以为东西不存在。
  *  这里在知识页顶部放一个查找框：按名称/路径/正文搜**所有类型**，
  *  命中后直接打开该记录（材料走内嵌阅读），不必先猜它在哪个页签。 */
-const kindLabels={project:'项目',task:'任务',artifact:'资料',topic:'议题',event:'事务',memoryRef:'记忆',organization:'组织',person:'联系人',relation:'关联',brief:'简报',layout:'布局',judgment:'判断'};
+const kindLabels={project:'项目',task:'任务',artifact:'资料',topic:'议题',event:'事务',memoryRef:'记忆',organization:'组织',person:'联系人',relation:'关联',brief:'简报',layout:'布局',judgment:'判断',view:'视图'};
 
 export function mountFind(document,{send,open,openBatch,notify=()=>{}}){
  const toolbar=document.querySelector('#knowtabs')?.closest('.toolbar');

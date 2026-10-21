@@ -74,6 +74,10 @@ try {
   await wait(800);
   await page.evaluate(() => document.querySelector('.nav [data-view="space"]')?.click());
   await wait(2000);
+  // 画布默认范围已改为「按分类」结构态（spec/54 §2 / D8）：关系与 AI 建议在「全部关系」范围里看。
+  // 这一步同时也在验证「切范围不换页」——URL 没变、页面没重建，只是同一张画布换了范围。
+  await page.evaluate(() => { const scope = document.querySelector('#scopefilter'); if (scope) { scope.value = 'all'; scope.onchange(); } });
+  await wait(1200);
 
   // ① 待决定的推断要画成虚线
   const dashed = await page.evaluate(() => {
@@ -98,15 +102,17 @@ try {
   if (box) await page.mouse.click(box.x, box.y);
   check('虚线点得开', Boolean(opened), String(opened));
   await wait(600);
-  const modalText = await page.evaluate(() => document.querySelector('#veil')?.innerText ?? '');
-  check('点开后说清这是 AI 提议、还没生效', modalText.includes('AI 提议') && modalText.includes('还没生效'), modalText.slice(0, 70).replace(/\n/g, ' '));
-  check('给出「同意这条关联」', modalText.includes('同意这条关联'), '');
-  check('给出「不用了」', modalText.includes('不用了'), '');
+  // CV-08（spec/53 §3.3 / PRD CV-08）：点虚线先出**画布内操作条**，不是强制弹窗；
+  // 四个动作：看依据 / 同意 / 不同意 / 稍后。「看依据」才打开居中弹窗。
+  const barText = await page.evaluate(() => document.querySelector('#canvasactionbar')?.innerText ?? '');
+  check('点开后说清这是 AI 提议、还没生效', barText.includes('AI 提议') && barText.includes('还没生效'), barText.slice(0, 70).replace(/\n/g, ' '));
+  check('给出「同意」动作', barText.includes('同意'), '');
+  check('给出「不同意」与「稍后」', barText.includes('不同意') && barText.includes('稍后'), '');
+  check('不强制弹窗（先出操作条）', await page.evaluate(() => !document.querySelector('#veil')?.classList.contains('open')), '');
 
   // ③ 同意 → 变成正式关联（虚线变实线），收件箱里那条不再是待决定
   await page.evaluate(() => {
-    const button = [...document.querySelectorAll('#veil button')].find(b => b.textContent.includes('同意这条关联'));
-    button?.click();
+    document.querySelector('#canvasactionbar [data-edge-action="accept"]')?.click();
   });
   await wait(1500);
   const after = await page.evaluate(() => {
@@ -130,7 +136,10 @@ try {
   await zoomIn0(9);
   const countedNode = await page.evaluate(() => {
     const groups = [...document.querySelectorAll('#spaceSvg [data-node]')];
-    return groups.find(group => /\d+\/\d+ 项/.test(group.textContent || ''))?.dataset.node ?? null;
+    // 选一个「有状态可显示」的项目/任务节点（0/0 已经如实写成「尚无交付项/尚无步骤」，
+    // 所以不能再靠 "N/N 项" 这个文本来挑节点 —— 那正是 S4 要求删掉的写法）。
+    const usable = groups.filter(group => ['project', 'task'].includes(group.dataset.kind));
+    return usable[0]?.dataset.node ?? groups[0]?.dataset.node ?? null;
   });
   const zoomState = async nodeId => page.evaluate(id => {
     const world = document.querySelector('#spaceworld');

@@ -87,11 +87,11 @@ try {
     check(cookie.includes('='), '宿主签发会话 cookie');
     const page = await fetch(origin + '/personal-workstation', {headers: {cookie}});
     check(page.ok, '干净安装后工作台页返回 200', 'HTTP ' + page.status);
-    const served = await fetch(origin + '/personal-workstation/v7/space-view.mjs', {headers: {cookie}});
+    const served = await fetch(origin + '/personal-workstation/v7/space-view-v5.mjs', {headers: {cookie}});
     check(served.ok, '干净安装后客户端资源可取', 'HTTP ' + served.status);
     if (served.ok) {
       const servedHash = createHash('sha256').update(Buffer.from(await served.arrayBuffer())).digest('hex');
-      check(servedHash === sha(join(installed, 'src/v7/space-view.mjs')), '看到的 = 包里的（模块哈希一致）', servedHash.slice(0, 16));
+      check(servedHash === sha(join(installed, 'src/v7/space-view-v5.mjs')), '看到的 = 包里的（模块哈希一致）', servedHash.slice(0, 16));
     }
     const db = join(dataDirectory, 'workstation.sqlite');
     check(existsSync(db), '数据目录自动建库', db.replace(BASE, '<tmp>'));

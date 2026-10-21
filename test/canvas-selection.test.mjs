@@ -1,7 +1,7 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {JSDOM} from '../dev-deps.mjs';
-import {marqueeSelect,groupBounds,hiddenByGroups,capEdges} from '../prototype/space-view.mjs';
+import {marqueeSelect,groupBounds,hiddenByGroups,capEdges} from '../prototype/space-view-v5.mjs';
 import {validateData} from '../src/validation.mjs';
 import {WorkstationStore} from '../src/store.mjs';
 import {saveLayout,readLayout} from '../src/layout.mjs';
@@ -51,7 +51,7 @@ test('分组是布局层数据：检查只认 ID/名称/成员/折叠，且成�
 });
 
 test('the canvas exposes box-select, batch actions and grouping in the shipped module',()=>{
- const source=readFileSync(new URL('../prototype/space-view.mjs',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../prototype/space-view-v5.mjs',import.meta.url),'utf8');
  for(const needle of ['marqueeSelect','canvasbar','canvasgroup','canvasassign','canvasconfirm','canvasignore','canvasarchive','canvasselect','syncBar']){
   assert(source.includes(needle),'画布必须提供：'+needle);
  }
@@ -63,7 +63,7 @@ test('the canvas exposes box-select, batch actions and grouping in the shipped m
 });
 
 test('画布第 2 批：手动连线当场问清关系与依据，保存即生效（不再走待确认流程）',()=>{
- const source=readFileSync(new URL('../prototype/space-view.mjs',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../prototype/space-view-v5.mjs',import.meta.url),'utf8');
  // 用户 2026-10-12：手动连线原来生成"待确认的改动"，而"关系需要文本证据"是硬规则，
  // 结果点同意必报错 → 死路。现在改成当场问清楚：类型 + 一句话依据。
  assert.match(source,/askLink\(/,'连线必须先问清关系与依据');
@@ -82,7 +82,7 @@ test('画布第 2 批：手动连线当场问清关系与依据，保存即生�
 });
 
 test('画布第 3 批：撤销/重做、导出、无右键菜单、高连接分页都在，且不直接写业务数据',()=>{
- const source=readFileSync(new URL('../prototype/space-view.mjs',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../prototype/space-view-v5.mjs',import.meta.url),'utf8');
  // 撤销/重做只作用于视图层（位置与分组），并随保存写入 layout
  assert.match(source,/const history=\{past:\[\],future:\[\]\}/);
  assert.match(source,/function undo\(\)/);assert.match(source,/function redo\(\)/);

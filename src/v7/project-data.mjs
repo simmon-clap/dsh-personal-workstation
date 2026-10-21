@@ -19,14 +19,14 @@ export function projectModels(items){
  // 语义色被数据借用之后，它原本那个含义就废了。
  const palette=[['var(--ws-action)','var(--ws-action-soft)','chip'],['var(--ws-success)','var(--ws-success-soft)','cloud'],['var(--ws-data-partner-3)','var(--ws-data-partner-3-soft)','link'],['var(--ws-warning)','var(--ws-warning-soft)','project']];
  return live.filter(x=>x.kind==='project').map((p,index)=>{
-  const data=p.data,deliverables=data.deliverables??[],tasks=live.filter(x=>x.kind==='task'&&x.data.projectId===p.id),partner=byId.get(data.partnerId);
+  const data=p.data,deliverables=data.deliverables??[],tasks=live.filter(x=>x.kind==='task'&&x.data.projectId===p.id),partner=byId.get(data.partnerId),owner=byId.get(data.ownerId);
   const [color,bg,icon]=palette[index%palette.length];
   return {id:p.id,revision:p.revision,name:data.title,// 原型卡片把组织名与其描述（领域）拼在一起显示；只显示名称会丢掉业务含义。
  partner:partner?.kind==='organization'?(partner.data.description?partner.data.title+' · '+partner.data.description:partner.data.title):'合作方未设置',done:deliverables.filter(d=>d.done===true).length,total:deliverables.length,progressLabel:deliverables.length?`${deliverables.filter(d=>d.done===true).length}/${deliverables.length}`:'尚未设置',docs:live.filter(x=>x.kind==='artifact'&&x.data.projectId===p.id).length,tasks:tasks.length,block:tasks.filter(t=>t.data.status==='waiting').length,stage:null,stageLabel:data.stage||'阶段未设置',startDate:data.startDate??null,dueDate:data.dueDate??null,color,bg,icon,goal:data.goal??'',deliverables:deliverables.map(x=>({...x})),
  // 重要度/紧急度：用户要求"默认按紧急程度与重要程度排序"。未设置的一律排在已设置之后，
  // 不用默认值假装用户表达过优先级。
  importance:data.importance??'',urgency:data.urgency??'',
- partnerId:data.partnerId??'',ownerId:data.ownerId??'',folder:data.folder??'',
+ partnerId:data.partnerId??'',ownerId:data.ownerId??'',ownerName:owner?.kind==='person'?String(owner.data.title??''):'',folder:data.folder??'',
  // 当前阶段的进入时间：取 stageHistory 里该阶段最后一条（没有就留空，不猜）
  stageEnteredAt:(()=>{const list=(data.stageHistory??[]).filter(entry=>entry&&entry.stage===data.stage);const last=list.at(-1);return last?.at?String(last.at).slice(0,10):'';})(),
  priorityScore:priorityScore(data),

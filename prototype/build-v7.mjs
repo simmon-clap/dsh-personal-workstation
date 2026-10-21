@@ -1,4 +1,4 @@
-import {readFileSync,writeFileSync,mkdirSync,copyFileSync,readdirSync,statSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,copyFileSync,readdirSync,statSync,unlinkSync,existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {resolve,join,relative} from 'node:path';
 import {buildShell} from './build-shell.mjs';
@@ -6,19 +6,25 @@ import {PRESETS,tokenizeShell} from './shell-tokenize.mjs';
 import {dataPaletteCss} from './data-palette.mjs';
 
 const here=fileURLToPath(new URL('./',import.meta.url));
-const worktree=fileURLToPath(new URL('../../工作台-视觉原型-v7.html',import.meta.url));
+const worktree=fileURLToPath(new URL('./frozen/workbench-v7.html',import.meta.url));
 const workstation=fileURLToPath(new URL('../',import.meta.url));
-const design=fileURLToPath(new URL('../../design-system/',import.meta.url));
+const design=fileURLToPath(new URL('../design-system/',import.meta.url));
 
 // Only production modules ship. Demo scripts, the V7 extractor and the verifier must never be served.
 // Shared client-safe modules are copied from src/ and their specifiers rewritten so the served graph is self-contained.
 export const plan=[
- ...['app.mjs','loading.mjs','pending-badge.mjs','vi-select.mjs','ref-labels.mjs','v7-controller.mjs','api.mjs','navigation.mjs','modal.mjs','batch.mjs','editor.mjs','inbox.mjs','space-view.mjs','judgment-export.mjs','files.mjs','download.mjs','empty-state.mjs','knowledge-search.mjs','find.mjs','apple-calendar-view.mjs','event-model.mjs','preview-types.mjs','human-title.mjs','calendar-view.mjs','knowledge-view.mjs','overview-view.mjs','human-time.mjs','inline-edit.mjs','record-detail.mjs','project-data.mjs','project-detail.mjs','project-populated.mjs','project-render.mjs','project-roadmap.mjs','project-view.mjs','projects-controller.mjs','task-detail.mjs','task-render.mjs','task-view.mjs','intake.mjs','markdown.mjs','directory-browser.mjs'].map(name=>({name,source:join(here,name)})),
- {name:'validation.mjs',source:join(workstation,'src/validation.mjs')}
+ ...['appearance-v8.mjs','command-palette.mjs','loading.mjs','pending-badge.mjs','vi-select.mjs','ref-labels.mjs','v7-controller-v6.mjs','api.mjs','navigation.mjs','modal.mjs','card.mjs','batch.mjs','editor.mjs','inbox.mjs','ecosystem-layout.mjs','space-view-v5.mjs','judgment-export.mjs','files.mjs','download.mjs','empty-state.mjs','knowledge-search.mjs','find.mjs','apple-calendar-view.mjs','event-model.mjs','preview-types.mjs','human-title.mjs','calendar-view.mjs','knowledge-view-v2.mjs','generated-view-v2.mjs','overview-view.mjs','human-time.mjs','inline-edit.mjs','record-detail.mjs','project-data.mjs','project-detail.mjs','project-populated.mjs','project-render.mjs','project-roadmap.mjs','project-view.mjs','projects-controller.mjs','task-detail.mjs','status-vocab.mjs','task-render.mjs','task-view.mjs','intake.mjs','markdown.mjs','directory-browser.mjs'].map(name=>({name,source:join(here,name)})),
+ {name:'app.mjs',source:join(here,'app-v12.mjs')},
+
+ {name:'validation.mjs',source:join(workstation,'src/validation.mjs')},
+ // 生成视图 v1 的契约校验（validation.mjs 会 import 它）：浏览器侧也要能解析，所以随 v7 一起发布。
+ {name:'view-spec.mjs',source:join(workstation,'src/view-spec.mjs')}
 ];
 // 「纸上秩序」VI：变量与覆盖样式，以及图标/简笔画资源。CSS 里的相对资源路径要求 assets/ 与样式同级。
 export const designPlan=[
  {name:'tokens.css',source:join(design,'tokens.css')},
+ // 纸上玻璃 v1.0 扩展 token（渐变/色板/材质变量），与工作台 VI 同源。
+ {name:'paper-glass-tokens.css',source:join(design,'paper-glass/tokens.css')},
  // 数据调色板：逐项目/伙伴配色（算数据，不算界面配色）。由 prototype/data-palette.mjs 生成，
  // 登记在 spec/registry.json 的 dataPalette；要改色改那张表，不要手改这里。
  // 宿主主题映射层（VI §12）：把 --ws-* 接到 --dsw-alias-* 上，宿主在就跟随宿主主题。
@@ -31,7 +37,9 @@ export const designPlan=[
  // 对比度修正层：覆盖原型内联颜色，保证 VI 第 9 条成立。
  {name:'v7-contrast.css',source:join(here,'v7-contrast.css')},
  // 工作台修正层：手册要求但两层参考实现都缺的版面规则（两行截断、等宽数字）。
- {name:'v7-workbench.css',source:join(here,'v7-workbench.css')}
+ {name:'v7-workbench.css',source:join(here,'v7-workbench.css')},
+ // 纸上玻璃接入层：必须在最后，负责极光背景/玻璃导航/渐变主按钮/生成视图视觉。
+ {name:'v7-paper-glass-v26.css',source:join(here,'v7-paper-glass-v26.css')}
 ];
 export const assetDirectories=['assets/icons','assets/illustrations','assets'];
 const rewrites=[['../src/validation.mjs','./validation.mjs']];
@@ -54,6 +62,15 @@ function assets(){
 export const designAssets=assets().map(entry=>entry.name);
 
 export function buildV7({shell,modules:directory}){
+ // 每次构建清掉上一版遗留的模块/CSS：版本化文件名会换名，旧产物不清就会混进发布包和门禁。
+ if(existsSync(directory)){
+  const keep=new Set([...plan.map(entry=>entry.name),...designPlan.map(entry=>entry.name),...designAssets]);
+  for(const name of readdirSync(directory)){
+   const full=join(directory,name);
+   if(statSync(full).isDirectory())continue;
+   if(!keep.has(name)&&/\.(mjs|css|html|json)$/.test(name))unlinkSync(full);
+  }
+ }
  // 数据调色板是生成物：每次构建重写，避免手改产物。
  writeFileSync(join(here,'data-palette.css'),dataPaletteCss());
  // 生成期收敛（批次 5）：冻结原型一个字不动，转换只发生在产物里。
@@ -66,7 +83,11 @@ export function buildV7({shell,modules:directory}){
  const body=html.replace(/<style[^>]*data-v7="proto-exact"[^>]*>[\s\S]*?<\/style>/g,'');
  const hexLeft=(body.match(/#[0-9a-fA-F]{3,8}\b/g)??[]).length;
  if(hexLeft)throw Error('外壳仍有 '+hexLeft+' 处字面色值，生成期收敛未覆盖（首个：'+body.match(/#[0-9a-fA-F]{3,8}\b/)[0]+'）');
- writeFileSync(shell,html);
+ // 生成期收敛（B1/B3 收口）：冻结外壳里 `.drawer` 的旧宽度 510px 是**死声明**——同一个元素随后
+ // 被 760px 的规则覆盖，渲染值一直是 760（dialog-audit/S7 实测）。冻结原型不改，只在生成物里
+ // 把这条旧声明收敛成 760，让「详情弹窗只有一个宽度」在产物里也成立（spec/56 §2 / spec/54 §4）。
+ const converged=html.includes('width:510px')?html.replace('width:510px','width:760px'):html;
+ writeFileSync(shell,converged);
  mkdirSync(directory,{recursive:true});
  for(const entry of plan)writeFileSync(join(directory,entry.name),emitted(entry));
  for(const entry of designPlan)copyFileSync(entry.source,join(directory,entry.name));

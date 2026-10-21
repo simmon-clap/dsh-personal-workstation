@@ -22,7 +22,7 @@ const seed = store.draft(ctx, {
   changes: [
     {op: 'create', id: 'p-1', kind: 'project', data: {title: '示例科技验证'}},
     {op: 'create', id: 'j-1', kind: 'judgment', data: {
-      title: '服务器端短期难以成立', evidence: [{kind: 'message', ref: 'msg-1', quote: '价格敏感是硬约束'}],
+      title: '短期难以成立', evidence: [{kind: 'message', ref: 'msg-1', quote: '价格敏感是硬约束'}],
       validFrom: '2026-10-11', status: 'current', projectId: 'p-1',
     }},
   ],
@@ -104,7 +104,7 @@ try {
   await page.evaluate(id => document.querySelector('[data-why="' + id + '"]')?.setAttribute('open', ''), adviceA.id);
   await new Promise(resolve => setTimeout(resolve, 900));
   const chain = await page.evaluate(id => document.querySelector('[data-whychain="' + id + '"]')?.innerText ?? '', adviceA.id);
-  check('为什么这么建议能追到你哪条判断', chain.includes('服务器端短期难以成立'), chain.slice(0, 46).replace(/\n/g, ' '));
+  check('为什么这么建议能追到你哪条判断', chain.includes('短期难以成立'), chain.slice(0, 46).replace(/\n/g, ' '));
 
   await page.evaluate(id => document.querySelector('[data-why="' + id + '"]')?.setAttribute('open', ''), adviceB.id);
   await new Promise(resolve => setTimeout(resolve, 700));

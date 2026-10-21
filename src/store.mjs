@@ -8,7 +8,7 @@ export class DomainError extends Error {
   constructor(code, message) { super(message); this.code = code; }
 }
 const fail = (code, message) => { throw new DomainError(code, message); };
-const kinds = new Set(['project','task','organization','person','topic','artifact','event','relation','layout','proposal','memoryRef','brief','judgment']);
+const kinds = new Set(['project','task','organization','person','topic','artifact','event','relation','layout','proposal','memoryRef','brief','judgment','view']);
 const copy = value => JSON.parse(JSON.stringify(value));
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const forbidden = new Set(['__proto__','prototype','constructor']);
@@ -78,6 +78,15 @@ export class WorkstationStore {
   writeDraft(ctx,{title,changes,source={},proposal},id,expected){this.context(ctx,true);text(title,'这次改动标题');if(!Array.isArray(changes)||!changes.length||changes.length>100)fail('INVALID','变更数量应为1–100');safe(changes);safe(source);if(proposal!==undefined)safe(proposal);if(JSON.stringify({changes,source,proposal}).length>1000000)fail('INVALID','这次改动过大');text(id,'这次改动ID');const old=this.batch(ctx,id);if(!old&&expected!==undefined)fail('CONFLICT','要修改的这次改动不存在');if(old&&(old.status!=='draft'||old.revision!==expected))fail('CONFLICT','这次改动版本已变化');const normalized=changes.map(c=>{if(!['create','update','archive','restore','delete'].includes(c.op))fail('INVALID','未知操作');const id=c.id??(c.op==='create'?randomUUID():null);text(id,'对象ID');if(c.op==='create'&&!kinds.has(c.kind))fail('INVALID','未知对象类型');if(c.op!=='create'&&(!Number.isInteger(c.expectedRevision)||c.expectedRevision<1))fail('INVALID','必须指定对象版本');// 归档、恢复、删除都不需要重复提交整份数据：服务端用库里已有的内容。
   if(!['archive','restore','delete'].includes(c.op)&&(!c.data||Array.isArray(c.data)||typeof c.data!=='object'))fail('INVALID','必须提供对象数据');
   // 逐字段来源：只允许给本变更实际改动的字段加注来源，缺省即「未标注」，不得伪造。
+  // 「只提交改动字段」（spec/54 D6 / 宪章五）：update 可以带 fields —— 只把这些字段合并进旧数据，
+  // 其余字段（含并发窗口里别人改的）原样保留。没有 fields 的老调用仍是整条替换（向后兼容）。
+  if(c.fields!==undefined){
+   if(c.op!=='update')fail('INVALID','只有修改可以指定要改动哪几个字段');
+   if(!Array.isArray(c.fields)||c.fields.length<1||c.fields.length>50||c.fields.some(field=>typeof field!=='string'||!field.trim()))fail('INVALID','字段列表必须为 1–50 个非空字段名');
+   const listed=new Set(c.fields);
+   if(listed.size!==c.fields.length)fail('INVALID','字段列表不能重复');
+   for(const field of c.fields)if(!c.data||!Object.hasOwn(c.data,field))fail('INVALID','字段列表只能包含本次变更里给出的字段：'+field);
+  }
   if(c.sources!==undefined){const sources=c.sources;if(!sources||typeof sources!=='object'||Array.isArray(sources))fail('INVALID','字段来源必须是对象');const keys=Object.keys(sources);if(keys.length>50)fail('INVALID','字段来源条目过多');for(const key of keys){if(!c.data||!Object.hasOwn(c.data,key))fail('INVALID','字段来源只能标注本次变更包含的字段：'+key);const value=sources[key];if(typeof value!=='string'||!value.trim()||value.length>200)fail('INVALID','字段来源说明必须为 1–200 字：'+key);}}
   return {...copy(c),id};});
   // 同批新建「1 个项目 + 材料」时自动把材料挂到该项目（体检 A2）：用户真实痛点是材料建好了却没归属，
@@ -135,6 +144,9 @@ export class WorkstationStore {
     const item=this.get(ctx,row.id);
     for(const field of fields)if(item.data?.[field]===id)out.push({id:item.id,kind:item.kind,title:item.data?.title??item.id,field});
     for(const field of arrays)if(Array.isArray(item.data?.[field])&&item.data[field].includes(id))out.push({id:item.id,kind:item.kind,title:item.data?.title??item.id,field});
+    // 项目参与机构（A1）是对象数组而不是字符串数组：机构被归档/删除前也要先解除参与关系，
+    // 否则会留下「组织已被归档、项目还写着它参与」的失效引用。
+    if(item.kind==='project'&&Array.isArray(item.data?.participants)&&item.data.participants.some(entry=>entry?.organizationId===id))out.push({id:item.id,kind:item.kind,title:item.data?.title??item.id,field:'participants'});
    }
    return out;
   }
@@ -150,7 +162,10 @@ return {...b,receipt,diff:b.changes.map((c,i)=>{const snapshot=receipt.after[i]?
   // **restore 也不带数据**（它从库里把对象恢复回来），原来没被排除 →
   // `validateData(kind, undefined)` 报「对象类型或数据无效」→ 整批被判「需补充/冲突」→
   // 在「待确认」里根本看不见，用户以为"点不动"（2026-10-16 实测到的真 bug）。
-  if(('archive'===c.op||'delete'===c.op||'restore'===c.op)&&c.data===undefined)return [];const kind=c.op==='create'?c.kind:this.get(ctx,c.id)?.kind;if(!kind)return [];try{validateData(kind,c.data);if(kind!=='layout'&&c.op!=='archive')text(c.data.title,'标题');return [];}catch(e){if(e.code!=='INVALID')throw e;return [{id:c.id,code:e.code,message:e.message}];}});return {...b,conflicts,validationErrors,references,diff:b.changes.map(c=>{const current=this.get(ctx,c.id);const after=c.op==='archive'||c.op==='delete'?null:c.op==='restore'?current?.data??null:c.data;return {id:c.id,kind:c.kind??current?.kind??null,op:c.op,before:current,after,...(c.op==='archive'?{archivedData:c.data??current?.data??null}:{}),sources:c.sources?copy(c.sources):null}})};}
+  if(('archive'===c.op||'delete'===c.op||'restore'===c.op)&&c.data===undefined)return [];const kind=c.op==='create'?c.kind:this.get(ctx,c.id)?.kind;if(!kind)return [];
+  // 带 fields 的 update 是**部分字段**：校验前先与库里的旧数据合并，否则「只改一个字段」会被误判成缺标题。
+  const payload=c.op==='update'&&Array.isArray(c.fields)?{...this.get(ctx,c.id)?.data,...c.data}:c.data;
+  try{validateData(kind,payload);if(kind!=='layout'&&c.op!=='archive')text(payload.title,'标题');return [];}catch(e){if(e.code!=='INVALID')throw e;return [{id:c.id,code:e.code,message:e.message}];}});return {...b,conflicts,validationErrors,references,diff:b.changes.map(c=>{const current=this.get(ctx,c.id);const after=c.op==='archive'||c.op==='delete'?null:c.op==='restore'?current?.data??null:c.data;return {id:c.id,kind:c.kind??current?.kind??null,op:c.op,before:current,after,...(c.op==='archive'?{archivedData:c.data??current?.data??null}:{}),sources:c.sources?copy(c.sources):null}})};}
   undoDraft(ctx,key){this.context(ctx,true);this.db.exec('BEGIN IMMEDIATE');try{const result=this.writeUndoDraft(ctx,key);this.db.exec('COMMIT');return result}catch(error){this.db.exec('ROLLBACK');throw error}}
   writeUndoDraft(ctx,key){const r=this.receipt(ctx,key);if(!r)fail('NOT_FOUND','记录编号不存在');const changes=r.after.map((after,i)=>{
    const before=r.before[i];
@@ -162,10 +177,26 @@ return {...b,receipt,diff:b.changes.map((c,i)=>{const snapshot=receipt.after[i]?
   });const existing=this.db.prepare("SELECT id FROM batches WHERE workspace=? AND status='draft' AND json_extract(body,'$.source.undoReceipt')=? ORDER BY rowid DESC").all(ROOT_SCOPE,r.id);for(const row of existing){const draft=this.batch(ctx,row.id);if(JSON.stringify(draft.changes)===JSON.stringify(changes))return draft}return this.writeDraft(ctx,{title:'撤销这次改动',changes,source:{undoReceipt:r.id}},randomUUID());}
   // 材料↔任务是**多对多**（用户明确）：taskIds 每一项都必须指向同一工作区内一个未归档的任务，
   // 由 resolve 在本工作区里查；同时 taskIds 进了 references()，所以任务被材料引用时删除/归档会被拦下。
-  validateEntity(entity,resolve){validateData(entity.kind,entity.data);if(!entity.data||typeof entity.data!=='object')fail('INVALID','对象无效');if(entity.kind!=='layout')text(entity.data.title,'标题');if(entity.data.projectId){const p=resolve(entity.data.projectId);if(!p||p.archived||p.kind!=='project')fail('REFERENCE','所属项目不可用');}for(const [field,kind] of [['ownerId','person'],['partnerId','organization'],['organizationId','organization']])if(entity.data[field]){const ref=resolve(entity.data[field]);if(!ref||ref.archived||ref.kind!==kind)fail('REFERENCE',field+'引用无效');}if(entity.kind==='task')for(const id of entity.data.dependsOn??[]){const ref=resolve(id);if(id===entity.id||!ref||ref.archived||ref.kind!=='task')fail('REFERENCE','任务依赖无效');}if(entity.kind==='artifact')for(const id of entity.data.taskIds??[]){const ref=resolve(id);if(!ref||ref.archived||ref.kind!=='task')fail('REFERENCE','关联任务不可用：'+id);}if(entity.kind==='relation'){for(const key of ['from','to']){const ref=resolve(entity.data[key]);if(!ref||ref.archived)fail('REFERENCE','关系端点不可用');}if(!['suggested','confirmed','rejected','stale'].includes(entity.data.status))fail('INVALID','关系状态无效');if(!entity.data.evidence)fail('INVALID','关系缺少依据');}if(entity.kind==='task'&&entity.data.execution)fail('EXECUTION_OWNED','执行状态只能由执行器适配器更新');}
+  validateEntity(entity,resolve){validateData(entity.kind,entity.data);if(!entity.data||typeof entity.data!=='object')fail('INVALID','对象无效');if(entity.kind!=='layout')text(entity.data.title,'标题');if(entity.data.projectId){const p=resolve(entity.data.projectId);if(!p||p.archived||p.kind!=='project')fail('REFERENCE','所属项目不可用');}for(const [field,kind] of [['ownerId','person'],['contactId','person'],['partnerId','organization'],['organizationId','organization']])if(entity.data[field]){const ref=resolve(entity.data[field]);if(!ref||ref.archived||ref.kind!==kind)fail('REFERENCE',field+'引用无效');}
+  // 项目参与机构（A1）：每条 participants[].organizationId 必须 resolve 到未归档的组织，与 partnerId 同一写法，
+  // 错误码 REFERENCE；同一项目同一机构的重复关系已在 validation 里拦（INVALID），这里只拦引用失效。
+  if(entity.kind==='project')for(const item of entity.data.participants??[]){const ref=resolve(item.organizationId);if(!ref||ref.archived||ref.kind!=='organization')fail('REFERENCE','参与机构不可用：'+item.organizationId);}
+  if(entity.kind==='task')for(const id of entity.data.dependsOn??[]){const ref=resolve(id);if(id===entity.id||!ref||ref.archived||ref.kind!=='task')fail('REFERENCE','任务依赖无效');}if(entity.kind==='artifact')for(const id of entity.data.taskIds??[]){const ref=resolve(id);if(!ref||ref.archived||ref.kind!=='task')fail('REFERENCE','关联任务不可用：'+id);}if(entity.kind==='relation'){for(const key of ['from','to']){const ref=resolve(entity.data[key]);if(!ref||ref.archived)fail('REFERENCE','关系端点不可用');}if(!['suggested','confirmed','rejected','stale'].includes(entity.data.status))fail('INVALID','关系状态无效');if(!entity.data.evidence)fail('INVALID','关系缺少依据');}if(entity.kind==='task'&&entity.data.execution)fail('EXECUTION_OWNED','执行状态只能由执行器适配器更新');
+  // 生成视图只引用真实、未归档的对象（18 号 §3.2 / §5）；revision 不要求等于当前值：
+  // 保存下来的是**定义**，之后 revision 变了由 stale 标记，而不是保存失败。
+  if(entity.kind==='view'){
+   if(!Array.isArray(entity.data.dataRefs)||!entity.data.dataRefs.length)fail('INVALID','视图至少需要一条数据引用');
+   for(const ref of entity.data.dataRefs){
+    const match=/^([^@]{1,200})@([1-9]\d*)$/.exec(String(ref));
+    if(!match)fail('INVALID','视图数据引用必须为「对象ID@版本」');
+    const target=resolve(match[1]);
+    if(!target||target.archived)fail('REFERENCE','视图引用的对象不可用：'+match[1]);
+   }
+  }}
   commit(ctx,{batchId,revision,key}){this.context(ctx,true);text(key,'同一次请求');const hash=digest({batchId,revision});this.db.exec('BEGIN IMMEDIATE');try{const prior=this.db.prepare('SELECT * FROM receipts WHERE workspace=? AND key=?').get(ROOT_SCOPE,key);if(prior){if(prior.hash!==hash)fail('IDEMPOTENCY','同一同一次请求不能用于不同请求');this.db.exec('COMMIT');return JSON.parse(prior.body);}const b=this.batch(ctx,batchId);if(!b||b.status!=='draft'||b.revision!==revision)fail('CONFLICT','这次改动不存在、已经生效，或版本过期');
    // 「为什么这么建议」的依据必须真实存在：basedOn 只能指向同一工作区里未归档的判断。
-   if(b.proposal?.basedOn?.length){for(const id of b.proposal.basedOn){const ref=this.get(ctx,id);if(!ref||ref.archived||ref.kind!=='judgment')fail('REFERENCE','建议参考的判断不可用：'+id);}}const pending=new Map(),before=[];for(const c of b.changes){const old=this.get(ctx,c.id);before.push(old);if(c.op==='create'){if(old)fail('CONFLICT','对象已存在');pending.set(c.id,{id:c.id,kind:c.kind,revision:1,archived:false,data:copy(c.data)});}else{if(!old||old.revision!==c.expectedRevision||(c.op==='restore'?!old.archived:old.archived))fail('CONFLICT','这条内容在你操作前刚被改过 —— 这次改动已经过期，需要重新生成后再决定');if(c.op==='archive'&&c.data!==undefined)validateData(old.kind,c.data);pending.set(c.id,{...old,revision:old.revision+1,archived:c.op==='archive',deleted:c.op==='delete',data:['archive','restore','delete'].includes(c.op)&&c.data===undefined?old.data:c.op==='delete'?old.data:copy(c.data)});}}const resolve=id=>pending.get(id)??this.get(ctx,id);// 校验集合必须按**作用域并集**取：全局对象在 root、材料在工作区，漏掉任一边都会让引用校验失效
+   if(b.proposal?.basedOn?.length){for(const id of b.proposal.basedOn){const ref=this.get(ctx,id);if(!ref||ref.archived||ref.kind!=='judgment')fail('REFERENCE','建议参考的判断不可用：'+id);}}const pending=new Map(),before=[];for(const c of b.changes){const old=this.get(ctx,c.id);before.push(old);if(c.op==='create'){if(old)fail('CONFLICT','对象已存在');pending.set(c.id,{id:c.id,kind:c.kind,revision:1,archived:false,data:copy(c.data)});}else{if(!old||old.revision!==c.expectedRevision||(c.op==='restore'?!old.archived:old.archived))fail('CONFLICT','这条内容在你操作前刚被改过 —— 这次改动已经过期，需要重新生成后再决定');if(c.op==='archive'&&c.data!==undefined)validateData(old.kind,c.data);const merged=c.op==='update'&&Array.isArray(c.fields)?{...copy(old.data),...Object.fromEntries(c.fields.map(field=>[field,copy(c.data[field])]))}:null;
+   pending.set(c.id,{...old,revision:old.revision+1,archived:c.op==='archive',deleted:c.op==='delete',data:['archive','restore','delete'].includes(c.op)&&c.data===undefined?old.data:c.op==='delete'?old.data:merged??copy(c.data)});}}const resolve=id=>pending.get(id)??this.get(ctx,id);// 校验集合必须按**作用域并集**取：全局对象在 root、材料在工作区，漏掉任一边都会让引用校验失效
  // （实测：漏掉后"归档仍被引用的项目"不再被拦，是这次作用域改造踩到的真回归）。
  const validationScopes=this.scopeClause(ctx);
  const all=new Map(this.db.prepare('SELECT id FROM entities WHERE workspace IN '+validationScopes.sql+' AND archived=0').all(...validationScopes.params).map(r=>[r.id,this.get(ctx,r.id)]));for(const [id,e] of pending)all.set(id,e);for(const e of all.values())if(!e.archived)this.validateEntity(e,resolve);validateDependencies(all.values());const removed=[...pending.values()].filter(e=>e.deleted);

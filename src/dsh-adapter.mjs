@@ -1,4 +1,5 @@
 import {DomainError} from './store.mjs';
+import {exportViewMarkdown} from './view-spec.mjs';
 import {appleStatus,runAppleSync} from './apple-sync.mjs';
 import {createAudioInput} from './audio-input.mjs';
 import {runtimeStatus} from './runtime-status.mjs';
@@ -12,6 +13,7 @@ import {assembleContext} from './context-assembler.mjs';
 import {judgmentChecks} from './judgment-synthesis.mjs';
 import {buildPendingChecks} from './pending-checks.mjs';
 import {decideLevel,spokenThisWeek} from './speak.mjs';
+import {buildViewPreview,previewAndSaveView} from './view-spec.mjs';
 
 /** Only host-owned dependencies and configuration are accepted here. */
 export class DshAdapter {
@@ -38,7 +40,7 @@ export class DshAdapter {
   }
   async run(args,exec){
     if(!args||typeof args!=='object'||Array.isArray(args))throw new DomainError('INVALID','参数格式无效');
-    const permitted=new Set(['action','id','kind','status','limit','offset','title','changes','proposal','candidates','revision','key','view','positions','viewport','focus','query','baseId','topK','includeArchived','taskId','projectId','executionTarget','grantId','path','language','mode','feedback','condition','subjectId']);
+    const permitted=new Set(['action','id','kind','status','limit','offset','title','changes','proposal','candidates','revision','key','view','positions','viewport','focus','query','baseId','topK','includeArchived','taskId','projectId','executionTarget','grantId','path','language','mode','feedback','condition','subjectId','template','params','viewId','viewData','analysis','roleColors','roleShapes','order']);
     if(Object.keys(args).some(k=>!permitted.has(k)))throw new DomainError('INVALID','不接受工作区、权限或未知参数');
     try{args=structuredClone(args)}catch{throw new DomainError('INVALID','参数必须为可复制的数据')}
     const ctx=await this.context(exec);
@@ -130,8 +132,11 @@ export class DshAdapter {
       case 'node_search':return searchNodes(this.store,ctx,{query:args.query,limit:args.limit});
       case 'graph':return graph(this.store,ctx,{focus:args.focus,limit:args.limit,offset:args.offset});
       case 'layout_get':return {item:readLayout(this.store,ctx,args.view)};
+      // 生成视图 v1（18 号 §3）：预览只读，不落库；模板/参数/引用校验都在 view-spec.mjs。
+      case 'view_export':return exportViewMarkdown(args.viewData);
+      case 'view_preview':return {view:buildViewPreview({store:this.store,ctx,template:args.template,subjectId:args.subjectId,params:args.params,viewId:args.viewId,now:new Date()})};
     }
-    if(!['layout_save','draft','commit','undo_draft','cancel_draft','knowledge_ingest','heartbeat_run','speak_feedback'].includes(args.action))throw new DomainError('INVALID','未知工作台动作');
+    if(!['layout_save','draft','commit','undo_draft','cancel_draft','knowledge_ingest','heartbeat_run','speak_feedback','view_save'].includes(args.action))throw new DomainError('INVALID','未知工作台动作');
     // PRD v1.3 CH-06-2「建议、歧义和草稿留待处理」：草稿只是待处理的建议，落进收件箱等待取舍，
     // 不改变任何业务数据，因此不要求审批；真正改变业务数据的 commit 与画布布局 layout_save 仍然必须审批。
     // 收录会写入宿主知识库（另一个系统），与提交一样需要审批；审批后才有可写上下文。
@@ -148,6 +153,9 @@ export class DshAdapter {
     // 主动做事（F19–F22 判定 + F24 留痕）：**不改业务数据**，只往自己的记录表写一条"这次看到了什么、
     // 为什么没打扰你"，所以按交互律 11「做事不需要理由」**不要求审批**；出声才是需要额度的那件事（批次 8）。
     // 你的回应：Agent 替你说"没必要/照做了"等于替你表态，所以走审批；界面上自己点则直接生效。
+    // 保存视图：Agent 侧用同一套参数重新生成（模板+参数+引用），只落 draft、不直接 commit；
+    // 是否真的进业务数据由用户在收件箱确认（18 号 §3.3）。
+    if(args.action==='view_save')return previewAndSaveView({store:this.store,ctx:fresh,template:args.template,subjectId:args.subjectId,params:args.params,analysis:args.analysis,now:new Date(),source:{sessionId:exec.agent.id,callId:exec.callId}});
     if(args.action==='speak_feedback'){
      if(!this.speak)throw new DomainError('UNAVAILABLE','出声反馈尚未接入');
      return {item:this.speak.record(fresh,{kind:args.feedback,subjectId:args.subjectId??null,condition:args.condition??null}),state:this.speak.state(fresh)};
@@ -205,11 +213,11 @@ export class DshAdapter {
 
 export function toolDefinition(adapter){return {
  name:'workstation',
- description:'查询和维护当前授权工作区的项目、任务、材料、日程和变更收件箱。先读取对象版本，再生成这次改动和预览；同意只会处理用户授权的范围，并返回真实记录编号。数据字段请先阅读 personal-workstation Skill。',
- parameters:{type:'object',additionalProperties:false,required:['action'],properties:{action:{type:'string',enum:['relation_candidates','assistant_context','judgment_checks','pending_checks','list','get','inbox','execution_start','execution_history','runtime_status','knowledge_bases','knowledge_search','knowledge_status','knowledge_ingest','overview','graph','node_search','layout_get','layout_save','preview','receipt','draft','commit','undo_draft','cancel_draft','transcribe','proposal_history','heartbeat_run','heartbeat_status','speak_status','speak_feedback']},id:{type:'string'},kind:{type:'string'},status:{type:'string'},limit:{type:'integer'},offset:{type:'integer'},candidates:{type:'array',items:{type:'object',additionalProperties:true},description:'可选：还没写进工作台的候选判断（字段同判断记录：title/evidence/uncertainty/validFrom/status），用它们和既有判断先对一遍矛盾。'},
-title:{type:'string'},proposal:{type:'object',additionalProperties:false,properties:{evidence:{type:'array',items:{type:'object',additionalProperties:false,required:['kind','ref','quote'],properties:{kind:{type:'string',enum:['message','file','audio','web','note']},ref:{type:'string'},quote:{type:'string'},verified:{type:'boolean'}}}},uncertainty:{type:'string'},basedOn:{type:'array',items:{type:'string'}},decision:{type:'string',enum:['undecided','accepted','rewritten','rejected']},reason:{type:'string'},decidedAt:{type:'string'}}},changes:{type:'array',items:{type:'object',additionalProperties:false,required:['op'],properties:{op:{type:'string',enum:['create','update','archive','restore','delete']},id:{type:'string'},kind:{type:'string'},expectedRevision:{type:'integer'},data:{type:'object',additionalProperties:true},sources:{type:'object',additionalProperties:{type:'string'},description:'可选：逐字段来源说明（字段名 → 证据出处，例如 会议纪要第3段 / 用户口述 / 文件路径）。只标注本次改动且确有出处的字段；不确定就留空，不要编造。'}}}},revision:{type:'integer'},key:{type:'string'},view:{type:'string'},focus:{type:'string'},query:{type:'string'},baseId:{type:'string'},taskId:{type:'string'},projectId:{type:'string'},feedback:{type:'string',enum:['followed','noted','unnecessary','ignored','missed']},condition:{type:'string'},subjectId:{type:'string'},executionTarget:{type:'string'},topK:{type:'integer'},grantId:{type:'string'},path:{type:'string'},language:{type:'string'},includeArchived:{type:'boolean'},positions:{type:'object'},viewport:{type:'object'}}},
+ description:'查询和维护当前授权工作区的项目、任务、材料、日程和变更收件箱。先读取对象版本，再生成这次改动和预览；同意只会处理用户授权的范围，并返回真实记录编号。可按模板生成只读视图：预览不写进工作台，保存只生成一条还没确认的改动。数据字段请先阅读 personal-workstation Skill。',
+ parameters:{type:'object',additionalProperties:false,required:['action'],properties:{action:{type:'string',enum:['relation_candidates','assistant_context','judgment_checks','pending_checks','list','get','inbox','execution_start','execution_history','runtime_status','knowledge_bases','knowledge_search','knowledge_status','knowledge_ingest','overview','graph','node_search','layout_get','layout_save','view_preview','view_export','view_save','preview','receipt','draft','commit','undo_draft','cancel_draft','transcribe','proposal_history','heartbeat_run','heartbeat_status','speak_status','speak_feedback']},id:{type:'string'},kind:{type:'string'},status:{type:'string'},limit:{type:'integer'},offset:{type:'integer'},candidates:{type:'array',items:{type:'object',additionalProperties:true},description:'可选：还没写进工作台的候选判断（字段同判断记录：title/evidence/uncertainty/validFrom/status），用它们和既有判断先对一遍矛盾。'},
+title:{type:'string'},proposal:{type:'object',additionalProperties:false,properties:{evidence:{type:'array',items:{type:'object',additionalProperties:false,required:['kind','ref','quote'],properties:{kind:{type:'string',enum:['message','file','audio','web','note']},ref:{type:'string'},quote:{type:'string'},verified:{type:'boolean'}}}},uncertainty:{type:'string'},basedOn:{type:'array',items:{type:'string'}},decision:{type:'string',enum:['undecided','accepted','rewritten','rejected']},reason:{type:'string'},decidedAt:{type:'string'}}},changes:{type:'array',items:{type:'object',additionalProperties:false,required:['op'],properties:{op:{type:'string',enum:['create','update','archive','restore','delete']},id:{type:'string'},kind:{type:'string'},expectedRevision:{type:'integer'},data:{type:'object',additionalProperties:true},fields:{type:'array',items:{type:'string'},description:'只改动这些字段（合并进旧数据，其余字段原样保留）；不传=整条替换。'},sources:{type:'object',additionalProperties:{type:'string'},description:'可选：逐字段来源说明（字段名 → 证据出处，例如 会议纪要第3段 / 用户口述 / 文件路径）。只标注本次改动且确有出处的字段；不确定就留空，不要编造。'}}}},revision:{type:'integer'},key:{type:'string'},view:{type:'string'},focus:{type:'string'},query:{type:'string'},baseId:{type:'string'},taskId:{type:'string'},projectId:{type:'string'},feedback:{type:'string',enum:['followed','noted','unnecessary','ignored','missed']},condition:{type:'string'},viewData:{type:'object',additionalProperties:true,description:'view_export 用：要导出的预览视图对象（含 content），仅生成 Markdown，不落库。'},analysis:{type:'object',additionalProperties:false,description:'view_save 用：AI 解读。只能引用 view_preview 返回的 dataRefs；summary≤600字，findings 1–8 条（每条 ref/text），uncertainty≤300字。',properties:{summary:{type:'string'},findings:{type:'array',maxItems:8,items:{type:'object',additionalProperties:false,required:['ref','text'],properties:{ref:{type:'string'},text:{type:'string'}}}},uncertainty:{type:'string'}}},subjectId:{type:'string'},template:{type:'string',enum:['risk-matrix','timeline','compare-table','blocker'],description:'生成视图的模板：risk-matrix / timeline 用于项目（subjectId=项目），blocker 用于任务（subjectId=任务），compare-table 用 params.subjectIds 传 2–3 个判断/议题。'},params:{type:'object',additionalProperties:true,description:'模板参数：risk-matrix 可给 horizonDays（1–3650，默认 90）；compare-table 必须给 subjectIds（2–3 个），可选 dimensions；timeline / blocker 不接受参数。'},viewId:{type:'string',description:'view_preview 时可选：打开保存过的视图并按当前数据重算，引用变化会标为 stale。'},executionTarget:{type:'string'},topK:{type:'integer'},grantId:{type:'string'},path:{type:'string'},language:{type:'string'},includeArchived:{type:'boolean'},positions:{type:'object'},viewport:{type:'object'},roleColors:{type:'object'},roleShapes:{type:'object'},order:{type:'array',items:{type:'string'}}}},
  output:{schema:{type:'object',additionalProperties:true},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},
  // knowledge_ingest 会导入文件并生成草稿，与会话内其它写操作共享同一对象，不算并发安全。
-  isConcurrencySafe:args=>['relation_candidates','assistant_context','judgment_checks','pending_checks','list','get','inbox','proposal_history','execution_history','runtime_status','knowledge_bases','knowledge_search','knowledge_status','overview','graph','node_search','layout_get','preview','receipt','heartbeat_status','speak_status'].includes(args?.action),
+  isConcurrencySafe:args=>['relation_candidates','assistant_context','judgment_checks','pending_checks','list','get','inbox','proposal_history','execution_history','runtime_status','knowledge_bases','knowledge_search','knowledge_status','overview','graph','node_search','layout_get','view_preview','preview','receipt','heartbeat_status','speak_status'].includes(args?.action),
  execute:(args,exec)=>adapter.run(args,exec),
 };}

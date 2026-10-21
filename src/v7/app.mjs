@@ -1,4 +1,6 @@
-import {mountV7} from './v7-controller.mjs';
+import {mountV7} from './v7-controller-v6.mjs';
+import {mountAppearanceInSettings} from './appearance-v8.mjs';
+import {mountCommandPalette} from './command-palette.mjs';
 
 const post=async(action,data={})=>{
  const response=await fetch('/personal-workstation/api',{method:'POST',headers:{'content-type':'application/json','x-workstation-client':'1'},body:JSON.stringify({...data,action})});
@@ -40,6 +42,8 @@ async function main(){
   const rootWorkspace=(root&&items.find(item=>item.id===root)?.id)??items[0].id;
   window.__dshWorkbenchRoot={id:rootWorkspace,title:(items.find(item=>item.id===rootWorkspace)?.title)??rootWorkspace,path:(items.find(item=>item.id===rootWorkspace)?.path)??''};
   await show(rootWorkspace);
+  mountAppearanceInSettings(document,{notify});
+  mountCommandPalette(document,{notify});
  }catch(error){notify(error.message,true);}
 }
 main();

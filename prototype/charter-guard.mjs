@@ -170,7 +170,7 @@ const CHECKS = [
           samples.push(`${file.path}: ${m[0].slice(0, 48)}`);
         }
         // 具名颜色只在**颜色属性**里算（避免把 white-space 这类词误判）。
-        const NAMED = /(?:^|[;{,\s])(?:color|background|background-color|background-image|border|border-color|border-top|border-bottom|border-left|border-right|border-block|border-inline|fill|stroke|outline|outline-color|box-shadow|text-shadow|caret-color|accent-color)\s*:\s*[^;{}]*?\b(white|black|red|green|blue|yellow|orange|purple|gray|grey|silver|maroon|navy|teal|olive|lime|aqua|fuchsia)\b/g;
+        const NAMED = /(?:^|[;{,\s])(?:color|background|background-color|background-image|border|border-color|border-top|border-bottom|border-left|border-right|border-block|border-inline|fill|stroke|outline|outline-color|box-shadow|text-shadow|caret-color|accent-color)\s*:\s*[^;{}]*?(?<![\w-])(white|black|red|green|blue|yellow|orange|purple|gray|grey|silver|maroon|navy|teal|olive|lime|aqua|fuchsia)(?![\w-])/g;
         for (const m of source.matchAll(NAMED)) {
           samples.push(`${file.path}: 具名颜色 ${m[1]}`);
         }

@@ -452,7 +452,7 @@ test('unsaved edits: Escape pauses with a visible choice instead of discarding s
 test('pending checks appear in the inbox and open the judgment they came from',async()=>{
  const store=new WorkstationStore(':memory:'),dom=shell(),document=dom.window.document,send=bridge(store);
  const c={workspace:'w',actor:'t',canWrite:true};
- const seedJudgment=store.draft(c,{title:'判断',changes:[{op:'create',id:'j1',kind:'judgment',data:{title:'合资+垫资模式有风险',status:'checking',validFrom:'2026-09-01',uncertainty:'尚未核对对方已有的合资案',evidence:[{kind:'file',ref:'纪要.md#3',quote:'合资 + 垫资 + 绑地方政府财政'}]}}]});
+ const seedJudgment=store.draft(c,{title:'判断',changes:[{op:'create',id:'j1',kind:'judgment',data:{title:'合作结构模式有风险',status:'checking',validFrom:'2026-09-01',uncertainty:'尚未核对对方已有的案例记录',evidence:[{kind:'file',ref:'纪要.md#3',quote:'示例依据：合作结构需要分阶段验证'}]}}]});
  store.commit(c,{batchId:seedJudgment.id,revision:1,key:'j1'});
  const batch=createBatchFlow(document,send,{notify:()=>{},confirm:()=>true});
  const inbox=createInbox(document,send,batch,{notify:()=>{}});
@@ -465,7 +465,7 @@ test('pending checks appear in the inbox and open the judgment they came from',a
   assert.ok(section,'待核对必须进收件箱');
   assert.match(section.textContent,/问什么/);
   assert.match(section.textContent,/算完成/);
-  assert.match(section.textContent,/尚未核对对方已有的合资案/);
+  assert.match(section.textContent,/尚未核对对方已有的案例记录/);
   const card=section.querySelector('[data-check]');
   assert.equal(card.getAttribute('role'),'button','整张卡可点，数字/状态才点得回原因');
   card.click();
@@ -487,7 +487,7 @@ test('no pending checks means the inbox shows no empty follow-up block',async()=
 test('为什么这么建议：basedOn 里的判断可以点开（不是一段死文字）',async()=>{
  const store=new WorkstationStore(':memory:'),dom=shell(),document=dom.window.document,send=bridge(store);
  const c={workspace:'w',actor:'t',canWrite:true};
- const seedJ=store.draft(c,{title:'判断',changes:[{op:'create',id:'j1',kind:'judgment',data:{title:'合资+垫资有风险',status:'checking',validFrom:'2026-09-01',evidence:[{kind:'file',ref:'纪要#3',quote:'原文'}]}}]});
+ const seedJ=store.draft(c,{title:'判断',changes:[{op:'create',id:'j1',kind:'judgment',data:{title:'合作结构有风险',status:'checking',validFrom:'2026-09-01',evidence:[{kind:'file',ref:'纪要#3',quote:'原文'}]}}]});
  store.commit(c,{batchId:seedJ.id,revision:1,key:'j1'});
  const advice=store.draft(c,{title:'建议：先做技术适配',proposal:{evidence:[{kind:'file',ref:'纪要#3',quote:'原文'}],uncertainty:'还没实测',basedOn:['j1'],decision:'undecided'},changes:[{op:'create',id:'t1',kind:'task',data:{title:'跑 decode 验证'}}]});
  void advice;
@@ -503,7 +503,7 @@ test('为什么这么建议：basedOn 里的判断可以点开（不是一段死
   await new Promise(resolve=>setTimeout(resolve,60));
   const links=[...root.querySelectorAll('[data-why-open]')];
   assert.equal(links.length,1,'basedOn 的每条判断都要可点');
-  assert.match(links[0].textContent,/合资\+垫资有风险/);
+  assert.match(links[0].textContent,/合作结构有风险/);
   links[0].click();
   assert.deepEqual(opened,['j1']);
  }finally{inbox.dispose();batch.dispose();store.close();dom.window.close()}

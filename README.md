@@ -1,60 +1,89 @@
 # DSH 个人工作台
 
-个人工作台是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的一个插件：把项目、任务、材料、日程、判断与 Agent 提议的改动收在同一个本地页面里，数据存本机 SQLite，不经过第三方服务器。
+个人工作台是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的一个本地插件：
+把项目、任务、材料、日程与判断收在同一个页面里，数据存本机 SQLite，默认不经过第三方服务器。
+
+当前公开版本：**3.9.2**。
 
 ## 能做什么
 
 - **总览**：项目、任务、交付项、待办与日程的真实统计；点数字就地弹窗列出那一组对象。
-- **收件箱**：Agent 或你自己录入的改动先落成一条待决定项，同意才写进工作台；可撤销。AI 建议必须带依据与不确定性，回答"为什么这么建议"。
+- **收件箱**：Agent 或你自己录入的改动先落成一条待决定项，同意才写进工作台；可撤销。AI 建议必须带依据与不确定性。
 - **项目 / 任务**：阶段、交付项、步骤与截止；项目文件夹里的材料可关联；单据字段支持就地编辑。
 - **知识**：判断是一等公民——每条判断必须带依据出处、什么时候成立、状态与不确定性；支持核对、推翻留痕、导出。
 - **关联空间**：无限画布，把项目、任务、知识、事务与跨项目共享关系连起来；AI 只提候选，确认由你决定。
 - **日程与事务**、**文件与资料**、**语音转写**（本机模型）、**主动做事**（定时只留痕，不打扰）。
-- **DSH 对话 / IM**：同一份数据；来自飞书等 IM 的写入进同一个收件箱。
+- **DSH 对话 / IM**：同一份数据；来自 IM 的写入进同一个收件箱。
 
-## 安装
+## 环境要求
 
-要求：DSH 桌面端（含 Web UI）、Node.js ≥ 24。
+- DSH 桌面端（含 Web UI）。
+- Node.js **≥ 22.12**。本仓库在 Node 23.11 上跑完整测试，CI 用 Node 24；23.x 安装依赖时会出现一条
+  `EBADENGINE` 警告（来自开发依赖 jsdom 的声明范围），不影响运行，推荐使用 24 LTS。
+- 安装依赖与运行测试需要能访问 npm registry。
 
-1. 构建并打包：
+## 安装（从发布包）
 
-   ```bash
-   cd workstation
-   npm run build:v7
-   npm pack --pack-destination releases
-   ```
-
-2. 把打出来的 `releases/dsh-personal-workstation-<version>.tgz` 设为 DSH profile 的依赖（在 `~/.dsh/profiles/<profile>/package.json` 里用 `file:` 指向该 tgz），然后：
+1. 从 GitHub Releases 下载 `dsh-personal-workstation-3.9.2.tgz`（或在源码里 `npm pack`，见下一节）。
+2. 把 tgz 设为 DSH profile 的依赖：在 `~/.dsh/profiles/<profile>/package.json` 的 `dependencies` 里写
+   `"dsh-personal-workstation": "file:/绝对路径/dsh-personal-workstation-3.9.2.tgz"`，然后：
 
    ```bash
    pnpm --dir ~/.dsh/profiles/<profile> install
    ```
 
-3. **先改配置**：把本仓库的 `cordis.patch.yml` 复制到 profile 的 `cordis.patch.yml`（或合并进已有 patch），把 `dataDirectory` 改成你的绝对路径、`allowedWorkspaces` 填你在 DSH 里登记的工作区 ID。
-
-4. 重启 DSH。打开 DSH 侧栏「个人工作台」。
+3. **先改配置**：把仓库里的 `cordis.patch.yml` 复制到 profile 的 `cordis.patch.yml`（或合并进已有 patch），
+   把 `dataDirectory` 改成你自己的绝对路径，`allowedWorkspaces` 填你在 DSH 里登记的工作区 ID。
+   文件功能还需要配置 `fileGrants`；没配时界面会如实显示未接入。
+4. 重启 DSH，打开侧栏「个人工作台」。
 
 升级 = 重复 1–2 + 重启。
+
+## 从源码构建与开发
+
+```bash
+npm install          # 开发依赖（jsdom / puppeteer-core）
+npm run build:v7     # 从冻结原型生成 src/v7/ 与 src/v7-shell.html
+npm test             # 单元与集成测试
+npm pack             # 打出可安装的 tgz
+```
+
+- 公开仓库**自带构建输入**：`prototype/frozen/workbench-v7.html`（冻结原型）、`design-system/`（设计系统最小子集，
+  见该目录 README）、`test/fixtures/registry.json`。干净 clone 不需要仓库外的私有设计资产即可构建与测通。
+- `src/v7/**` 与 `src/v7-shell.html` 是**生成物**，由 `npm run build:v7` 生成，不要手改；提交前请重新构建并确认
+  `git status` 干净。
+- `npm run verify` 是作者侧完整门禁链，其中若干项（规范覆盖、基线像素、设计资产比对）依赖仓库外的内部规范与基线，
+  在干净 clone 上不会全绿；公开 CI 只跑构建、测试与两个卫生检查（公开仓库卫生、业务数据不外流）。
+- 产品源码：`src/*.mjs`（Host 侧）、`prototype/*.mjs`（UI 源）、`client/client.js`（Web Client 插件入口）。
+- 发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
 ## 数据与隐私
 
 - 所有业务数据都在你配置的 `dataDirectory` 里（SQLite，WAL 模式）；录音、会议纪要、项目文件夹留在你授权的工作区目录。
 - 插件默认不向任何外部服务发送数据；飞书/日历/执行器等外部能力未配置时**如实显示未接入**，不伪造结果。
 - 工作台**没有**往飞书发消息的代码；出声通道始终 `ready:false · implemented:false`。
-- 备份：用 `sqlite3 <db> ".backup <dest>"`（WAL 模式下直接 `cp` 会拿到旧快照）。
+- 本仓库不含业务数据、录音、会议纪要、凭据或个人路径；发布包只带代码、公开文档与配置模板。
+  仓库自带的 `design-system/` 只有界面资产（token/图标/插画/品牌标识），不含业务内容。
 
-## 开发
+## 已知限制
 
-```bash
-npm install        # 开发依赖（jsdom / puppeteer-core）
-npm test           # 单元与集成测试
-npm run verify     # 机械门禁（含真实浏览器检查；需要本机 Chrome，可用 CHROME_PATH 指定）
-```
+这一版先解决「可以安全公开」与「干净 clone 可构建、可测试」；数据生命周期（导出/恢复/迁移版本）列入下一版。
+以下是当前真实存在的限制，使用前请知悉：
 
-- 产品源码：`src/*.mjs`（Host 侧）、`prototype/*.mjs`（UI 源）、`client/client.js`（Web Client 插件）。
-- `src/v7/*` 与 `src/v7-shell.html` 是**生成物**，由 `npm run build:v7` 从冻结原型生成，不要手改。
-- 界面规范见 `plans/`（内部文档不随包发布）。
+- **没有整库导出 / 导入**：换一台机器或重装系统时，工作台没有「一键带走全部数据」的入口；需要自行备份 SQLite 文件。
+- **备份不是自动的**：只有运行双端同步时才会顺带生成备份，`backups/` 目录默认是空的；也没有做过恢复演练。
+- **数据库没有版本号**：升级时靠幂等建表/加列完成迁移，迁移前不会自动备份。
+- **两台机器之间同步不到撤销凭据**：在一台机器上同意某条改动后，另一台机器上无法撤销这条改动（会提示缺少回执）。
+- **数据目录与代码仓库在同一个父目录**：默认部署配置对父目录给了读写授权，覆盖面包含业务库与 `.git`。
+  这是部署配置的取舍，不属于插件仓库内容；如果要收紧，把 `dataDirectory` 移到授权根目录之外再重启。
+- **历史记录按工作区隔离**：切换/迁移工作区后，旧工作区名下的操作历史在当前工作区不可见。
+- **备份没有保留策略**：本机长期运行会积累大量备份文件（实测 297 份 / 约 157 MB），需要手动清理。
+- **建议闭环在真实数据里只走过「采纳」一条路**：还没有「改写后采纳」与「否决」的真实样本，相关界面属于未验证状态。
+- **外部接入未验证**：Mini 双端同步、苹果日历、飞书/钉钉、OCR、常驻定时只在部分环境试过，公开版本不承诺开箱可用；
+  未接入时界面会明确说明。
+- **完整作者侧门禁不可在公开仓库复现**：`npm run verify` 的部分门禁需要内部规范与视觉基线（不在本仓库）。
+  公开 CI 覆盖构建、单测与仓库/发布物卫生，不等于完整产品验收。
 
 ## 许可
 
-MIT（见 `LICENSE`）。
+MIT（见 [LICENSE](LICENSE)）。

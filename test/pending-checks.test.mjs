@@ -9,8 +9,8 @@ const seed=store=>{
  const write=changes=>{const d=store.draft(c,{title:'seed',changes});store.commit(c,{batchId:d.id,revision:1,key:'k'+Math.random()})};
  write([{op:'create',id:'org',kind:'organization',data:{title:'示例科技'}}]);
  write([{op:'create',id:'person',kind:'person',data:{title:'张工'}}]);
- write([{op:'create',id:'p1',kind:'project',data:{title:'3D 存算一体',partnerId:'org',ownerId:'person'}}]);
- write([{op:'create',id:'j1',kind:'judgment',data:{title:'合资+垫资模式有风险',status:'checking',projectId:'p1',validFrom:'2026-09-01',reviewBy:'2026-10-20',uncertainty:'尚未核对对方已有的合资案',evidence:[{kind:'file',ref:'纪要.md#3',quote:'合资 + 垫资 + 绑地方政府财政'}]}}]);
+ write([{op:'create',id:'p1',kind:'project',data:{title:'示例产品',partnerId:'org',ownerId:'person'}}]);
+ write([{op:'create',id:'j1',kind:'judgment',data:{title:'合作结构模式有风险',status:'checking',projectId:'p1',validFrom:'2026-09-01',reviewBy:'2026-10-20',uncertainty:'尚未核对对方已有的案例记录',evidence:[{kind:'file',ref:'纪要.md#3',quote:'示例依据：合作结构需要分阶段验证'}]}}]);
  write([{op:'create',id:'j2',kind:'judgment',data:{title:'带宽数字是对方自述',status:'current',validFrom:'2026-09-02',uncertainty:'四条成本数字未经第三方验证',evidence:[{kind:'message',ref:'msg-1',quote:'对方说 4W'}]}}]);
 };
 test('every pending check answers who/what/done/why with real sources',()=>{
@@ -22,7 +22,7 @@ test('every pending check answers who/what/done/why with real sources',()=>{
   assert.equal(first.judgmentId,'j1','待核对排前面');
   assert.equal(first.askWho,'张工','有负责人就用记录里的负责人');
   assert.equal(first.partnerTitle,undefined,'不输出多余字段');
-  assert.match(first.askWhat,/合资案/);
+  assert.match(first.askWhat,/案例记录/);
   assert.match(first.whatCountsAsDone,/2026-10-20/,'有复核日期就写进完成标准');
   assert.match(first.whyNow,/待核对/);
   assert.equal(first.evidenceRef,'纪要.md#3','要带得出处');

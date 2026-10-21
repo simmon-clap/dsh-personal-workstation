@@ -18,10 +18,10 @@ import {join, dirname, resolve} from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
 const workspace = resolve(root, '..');
-const target = join(workspace, '工作台-视觉原型-v7.html');
+const target = join(root, 'prototype', 'frozen', 'workbench-v7.html');
 
-const tokens = JSON.parse(readFileSync(join(workspace, 'design-system', 'tokens.json'), 'utf8'));
-const registry = JSON.parse(readFileSync(join(workspace, 'spec', 'registry.json'), 'utf8'));
+const tokens = JSON.parse(readFileSync(join(root, 'design-system', 'tokens.json'), 'utf8'));
+const registry = JSON.parse(readFileSync(join(root, 'test', 'fixtures', 'registry.json'), 'utf8'));
 const apply = process.argv.includes('--apply');
 
 // 色值：值 → 变量名。只做**同值**替换，所以不需要判断，也不可能改坏渲染。

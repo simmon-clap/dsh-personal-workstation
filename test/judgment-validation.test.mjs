@@ -34,11 +34,11 @@ function accept(data) {
   }
 }
 
-const evidence = (over = {}) => ({kind: 'message', ref: 'msg-1', quote: '对方自述明年三月投片', verified: false, ...over});
+const evidence = (over = {}) => ({kind: 'message', ref: 'msg-1', quote: '对方自述的时间安排', verified: false, ...over});
 
 test('合法判断可以写入，并保留依据、什么时候成立与状态', () => {
   const saved = accept({
-    title: '服务器端短期难以成立：带宽与成本不匹配现有客户的价格预期',
+    title: '短期难以成立：需求与成本不匹配现有预期',
     evidence: [evidence(), {kind: 'note', ref: 'user-said-1', quote: '价格敏感是硬约束'}],
     uncertainty: '性能与成本为对方自述，未经第三方验证',
     validFrom: '2026-10-11',
@@ -63,7 +63,7 @@ test('判断可以归到真实存在的项目；指向不存在的项目会被�
     const ok = store.draft(ctx, {
       title: '建判断',
       changes: [{op: 'create', kind: 'judgment', data: {
-        title: '服务器端短期难以成立', evidence: [evidence()], validFrom: '2026-10-11', status: 'current', projectId,
+        title: '短期难以成立', evidence: [evidence()], validFrom: '2026-10-11', status: 'current', projectId,
       }}],
     });
     store.commit(ctx, {batchId: ok.id, revision: 1, key: ok.id});
@@ -118,7 +118,7 @@ test('被推翻必须留下理由与时间；没被推翻不能带推翻依据',
 
 test('推翻留痕后旧判断仍然读得到（不抹掉当时为什么这么想）', () => {
   const saved = accept({
-    title: '服务器端短期难以成立',
+    title: '短期难以成立',
     evidence: [evidence()],
     validFrom: '2026-10-11',
     status: 'overturned',

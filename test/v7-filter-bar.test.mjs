@@ -79,13 +79,14 @@ test('收件箱：5 个状态片 + 3 个下拉都还在，只是收进面板；�
   assert.equal(all.querySelector('.fdot'),null,'「全部」不是一个状态，不给色点');
   assert.equal(panel.querySelectorAll('.filterfield [data-viselect]').length,3,'项目 / 变更类型 / 来源三个下拉都在');
   assert.equal(panel.querySelectorAll('.fdot[data-state]').length,4,'四个状态片各有一个色点，且用状态点的词');
-  // 默认筛的是「待确认」：按钮必须说出来
-  assert.equal(doc.querySelector('#inboxfiltertoggle').textContent,'筛选 · 1');
+  // 默认视图就是「待确认」：它是这份列表本身的定义，不是你刚施加的筛选 ——
+  // 默认态不写「筛选 · 1」（spec/54 §3.4 / 48 M3「筛选默认值不装成用户筛选」）。
+  assert.equal(doc.querySelector('#inboxfiltertoggle').textContent,'筛选');
   doc.querySelector('#inboxfiltertoggle').click();
   assert.equal(doc.querySelector('#inboxfilters').hidden,false);
   doc.querySelector('#inboxfilters [data-inbox="cancelled"]').click();
   await new Promise(resolve=>setTimeout(resolve,20));
-  assert.equal(doc.querySelector('#inboxfiltertoggle').textContent,'筛选 · 1','换了状态仍然是一条');
+  assert.equal(doc.querySelector('#inboxfiltertoggle').textContent,'筛选 · 1','主动换了状态才是一条筛选');
   assert.equal(doc.querySelector('#inboxfilters').hidden,false,'重绘后面板不自己收起来');
   assert.equal(doc.querySelector('#inboxfilters .filterchip.active').textContent.trim(),'已取消');
   doc.querySelector('#inboxfilters [data-inbox=""]').click();

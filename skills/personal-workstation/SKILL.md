@@ -73,7 +73,7 @@ description: 在普通 DSH 对话中查询、新建、编辑和归档工作台�
 - project：goal、partnerId（organization ID）、ownerId（person ID）、stage、startDate、dueDate、deliverables、**importance / urgency**、**folder**、**stageHistory**。
   - `importance`（重要程度）与 `urgency`（紧急程度）：只认 `high` / `medium` / `low`，或不写。**必须由用户给出**（"这个项目重要且紧急"）——用户没说就留空，不要按语气或日期猜；留空在列表里排到最后，不会被当默认值。
     这两个字段会影响**项目列表的默认排序**（重要×紧急 → 截止日期近 → 名称）与**筛选**（阶段/机构/负责人/重要度/紧急度/交付状态），所以用户表达过就一定要写上，否则排序对他是错的。
-  - `folder`：项目在工作区内的**相对路径**（如 `示例科技-3D存算一体`），绝对路径与 `..` 会被拒。它让「文件与资料」页能把项目文件夹列出来；只在用户明确要"项目对应一个文件夹"时写。
+  - `folder`：项目在工作区内的**相对路径**（如 `示例科技-示例产品`），绝对路径与 `..` 会被拒。它让「文件与资料」页能把项目文件夹列出来；只在用户明确要"项目对应一个文件夹"时写。
   - `stageHistory`：阶段进入时间的记录（`[{stage, at}]`，stage 只能是 接触/需求/方案/验证/复盘，at 是 ISO 时间）。**正常情况下由界面的「推进到『X』」按钮写入**；用户在对话里明确说"推进到方案阶段"时，才由你同时写 `stage` 与一条 `stageHistory`，不要自己推测阶段变化、也不要一次补多条。
   - `deliverables` 每项可带 `dueDate`、`ownerId`、`status`（todo/doing/done/blocked）与 `stage`；只写用户给出的日期与负责人，没给就不写（界面会如实显示"未排期"）。交付项完成靠 `done`，不要用 status 反推百分比。
 - task：ownerId、dueDate、status（todo/waiting/in_progress/done/cancelled）、steps、dependsOn（task ID 数组）、executionTarget、expectedOutput、**blockedReason**、**deliverableId**。业务 done 不代表 Agent 执行成功。禁止写 execution。

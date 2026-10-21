@@ -1,7 +1,7 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {JSDOM} from '../dev-deps.mjs';import {buildShell} from '../prototype/build-shell.mjs';import {mountOverview} from '../prototype/overview-view.mjs';import {mountProjectViews} from '../prototype/project-view.mjs';import {mountTaskViews} from '../prototype/task-view.mjs';import {mountKnowledge,mountPersonal} from '../prototype/knowledge-view.mjs';
-test('V7 overview derives metrics, today events and topics from persisted records',()=>{const dom=new JSDOM(buildShell(readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8'))),doc=dom.window.document;const items=[{id:'p',kind:'project',data:{title:'项目',deliverables:[{done:true},{done:false}]}},{id:'t',kind:'task',data:{title:'等待',status:'waiting'}},{id:'e',kind:'event',data:{title:'会议',startDate:'2026-01-02T09:30:00+08:00',location:'线上'}},{id:'allday',kind:'event',data:{title:'全天事务',startDate:'2026-01-02'}},{id:'old',kind:'event',data:{title:'旧会',startDate:'2026-01-01T09:30:00+08:00'}},{id:'k',kind:'topic',data:{title:'议题',summary:'摘要'}}];const view=mountOverview(doc,items,{now:new Date('2026-01-02T01:00:00Z')});try{assert.match(doc.querySelector('#metrics').textContent,/1\/2/);assert.match(doc.querySelector('#metrics').textContent,/需要解锁\s*1/);assert.match(doc.querySelector('#home .lower').textContent,/会议/);assert.doesNotMatch(doc.querySelector('#home .lower').textContent,/旧会/);assert.match(doc.querySelector('#home .lower').textContent,/议题/);assert.match(doc.querySelector('#home .lower').textContent,/全天事务/);}finally{view.dispose();dom.window.close()}});
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {JSDOM} from '../dev-deps.mjs';import {buildShell} from '../prototype/build-shell.mjs';import {mountOverview} from '../prototype/overview-view.mjs';import {mountProjectViews} from '../prototype/project-view.mjs';import {mountTaskViews} from '../prototype/task-view.mjs';import {mountKnowledge,mountPersonal} from '../prototype/knowledge-view-v2.mjs';
+test('V7 overview derives metrics, today events and topics from persisted records',()=>{const dom=new JSDOM(buildShell(readFileSync(new URL('../prototype/frozen/workbench-v7.html',import.meta.url),'utf8'))),doc=dom.window.document;const items=[{id:'p',kind:'project',data:{title:'项目',deliverables:[{done:true},{done:false}]}},{id:'t',kind:'task',data:{title:'等待',status:'waiting'}},{id:'e',kind:'event',data:{title:'会议',startDate:'2026-01-02T09:30:00',location:'线上'}},{id:'allday',kind:'event',data:{title:'全天事务',startDate:'2026-01-02'}},{id:'old',kind:'event',data:{title:'旧会',startDate:'2026-01-01T09:30:00'}},{id:'k',kind:'topic',data:{title:'议题',summary:'摘要'}}];const view=mountOverview(doc,items,{now:new Date('2026-01-02T01:00:00')});try{assert.match(doc.querySelector('#metrics').textContent,/1\/2/);assert.match(doc.querySelector('#metrics').textContent,/需要解锁\s*1/);assert.match(doc.querySelector('#home .lower').textContent,/会议/);assert.doesNotMatch(doc.querySelector('#home .lower').textContent,/旧会/);assert.match(doc.querySelector('#home .lower').textContent,/议题/);assert.match(doc.querySelector('#home .lower').textContent,/全天事务/);}finally{view.dispose();dom.window.close()}});
 test('empty workspaces explain the state and offer a next step instead of a blank card',async()=>{
- const dom=new JSDOM(buildShell(readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8'))),doc=dom.window.document;
+ const dom=new JSDOM(buildShell(readFileSync(new URL('../prototype/frozen/workbench-v7.html',import.meta.url),'utf8'))),doc=dom.window.document;
  let created=0;
  const views=await mountProjectViews(doc,async()=>({items:[]}),()=>{},{onCreate:()=>{created++}});
  try{
@@ -10,7 +10,8 @@ test('empty workspaces explain the state and offer a next step instead of a blan
   assert.equal(strip.querySelector('h3').textContent,'还没有项目');
   assert.match(strip.querySelector('img').getAttribute('src'),/assets\/illustrations\/projects\.svg/);
   strip.querySelector('.btn').click();assert.equal(created,1,'空态必须给出可执行的下一步');
-  assert(doc.querySelector('#projectsbody .v7-empty'),'交付分布不应留只有脚注的空卡');
+  assert(doc.querySelector('#projectsbody .v7-empty'),'项目页空态要给出下一步（组合页只留一张卡带，不再有空的交付分布卡）');
+  assert.equal(doc.querySelector('#projectsbody').textContent.includes('交付与阻塞分布'),false,'组合页不再重复画交付条');
   assert(doc.querySelector('#roadmap .v7-empty'),'路线图空态应说明计划区间');
   const tasks=mountTaskViews(doc,[],()=>{});
   try{const state=doc.querySelector('#tasksbody .v7-empty');assert(state,'任务空态缺失');assert.match(state.textContent,/还没有任务/);assert.match(state.querySelector('img').getAttribute('src'),/waiting\.svg/)}finally{tasks.dispose()}
@@ -25,7 +26,7 @@ test('empty workspaces explain the state and offer a next step instead of a blan
 });
 
 test('the overview keeps exactly four metric cards and shows the counts on one line',()=>{
- const dom=new JSDOM(buildShell(readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8'))),doc=dom.window.document;
+ const dom=new JSDOM(buildShell(readFileSync(new URL('../prototype/frozen/workbench-v7.html',import.meta.url),'utf8'))),doc=dom.window.document;
  const items=[
   {id:'a1',kind:'artifact',data:{title:'未归属资料'}},
   {id:'a2',kind:'artifact',data:{title:'已归属资料',projectId:'p1'}},

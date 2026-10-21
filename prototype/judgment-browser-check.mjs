@@ -30,11 +30,11 @@ const seed = store.draft(ctx, {
       data: {
         // 来源（用户 2026-10-17）：这条代表"Agent 起草的判断"，所以带 origin='ai'
         origin: 'ai',
-        title: '服务器端短期难以成立：带宽与成本都不匹配现有客户的价格预期',
+        title: '短期难以成立：带宽与成本都不匹配现有客户的价格预期',
         evidence: [
           // F8：出处指向**真实存在的资料记录**，这样"点回原始出处"能被确定地验证
           // （不是"看起来有个按钮"，而是点下去真的打开了那条资料）。
-          {kind: 'file', ref: 'a-minutes', quote: '服务器方案：4 颗一个 page，明年 3 月投片、9 月回片', verified: false},
+          {kind: 'file', ref: 'a-minutes', quote: '示例依据：方案参数与时间安排仍需核对', verified: false},
           {kind: 'note', ref: 'user-said-2026-10-11', quote: '价格敏感是硬约束', verified: false},
         ],
         uncertainty: '口径未确认，待与对方核对成本基准',
@@ -45,13 +45,13 @@ const seed = store.draft(ctx, {
     },
     {
       op: 'create', id: 'a-minutes', kind: 'artifact',
-      data: {title: '会议纪要 · 示例科技路演', path: '会议/示例科技-3D存算一体/杭州示例学校-会议纪要.md', projectId: 'p-a', mime: 'text/markdown'},
+      data: {title: '会议纪要 · 示例科技路演', path: '会议/示例科技-示例产品/杭州示例学校-会议纪要.md', projectId: 'p-a', mime: 'text/markdown'},
     },
     {
       op: 'create', id: 'j-2', kind: 'judgment',
       data: {
-        title: '合资并垫资的玩法长期有风险',
-        evidence: [{kind: 'audio', ref: '示例学校.m4a@4200-4300', quote: '合资 + 垫资 + 绑地方政府财政', verified: false}],
+        title: '合作结构长期有风险',
+        evidence: [{kind: 'audio', ref: '示例学校.m4a@4200-4300', quote: '示例依据：合作结构需要分阶段验证', verified: false}],
         uncertainty: '对方商业模式自述无法验证',
         validFrom: '2026-10-11',
         status: 'overturned',
@@ -89,7 +89,7 @@ try {
   check('研究议题页签存在（未新增一级入口）', tabs.includes('topics'), '页签：' + tabs.join('/'));
 
   const body = await page.evaluate(() => document.querySelector('#knowbody')?.innerText ?? '');
-  check('判断出现在研究议题列表', body.includes('服务器端短期难以成立'), body.slice(0, 60).replace(/\n/g, ' '));
+  check('判断出现在研究议题列表', body.includes('短期难以成立'), body.slice(0, 60).replace(/\n/g, ' '));
   check('卡片显示依据条数与状态', body.includes('依据 2 条') && body.includes('待核对'), '');
   check('卡片显示什么时候成立', body.includes('2026-10-11'), '');
   check('卡片显示不确定性（按不确定性原文断言）', body.includes('口径未确认，待与对方核对成本基准'), '');
@@ -97,7 +97,7 @@ try {
 
   // 点开详情：依据必须**就地展开**（不跳页），每条带出处
   const opened = await page.evaluate(() => {
-    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('服务器端短期难以成立'));
+    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('短期难以成立'));
     if (!card) return null;
     card.click();
     return true;
@@ -113,7 +113,7 @@ try {
   check('详情抽屉真的打开了（可见性断言，不只看文本）', drawn.open && drawn.visible, JSON.stringify(drawn));
   const detail = await page.evaluate(() => document.querySelector('#detailbody')?.innerText ?? '');
   check('详情里依据就地展开（不跳页）', detail.includes('依据（2 条）'), '');
-  check('依据带出处原文', detail.includes('明年 3 月投片'), '');
+  check('依据带出处原文', detail.includes('时间安排'), '');
   check('依据标注来源类型与出处', detail.includes('文件') && detail.includes('出处'), '');
   check('出处不把内部 id 摆给用户看', !detail.includes('a-minutes'), '内部 id 应该只留在 title 里');
   check('依据区分是否经第三方验证', detail.includes('未经第三方验证'), '');
@@ -144,7 +144,7 @@ try {
 
   // 被推翻的判断：旧判断与理由都还在
   const overturned = await page.evaluate(() => {
-    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('合资并垫资'));
+    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('合作结构'));
     if (!card) return null;
     card.click();
     return true;
@@ -153,7 +153,7 @@ try {
   const detail2 = await page.evaluate(() => document.querySelector('#detailbody')?.innerText ?? '');
   check('被推翻的判断仍可打开', overturned === true);
   check('推翻理由可见（不抹掉当时为什么这么想）', detail2.includes('对方愿意自行承担前期投入'), '');
-  check('原依据未被删除', detail2.includes('合资 + 垫资'), '');
+  check('原依据未被删除', detail2.includes('合作结构'), '');
 
   // ---- 界面可达性（批次 1 审查漏网的缺陷：判断建不了 / 编辑不了）----
   await page.evaluate(() => document.querySelector('#detailbody .close, #veil .close')?.click());
@@ -165,7 +165,7 @@ try {
   await page.evaluate(() => document.querySelector('#veil .close')?.click());
   await new Promise(resolve => setTimeout(resolve, 300));
   await page.evaluate(() => {
-    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('服务器端短期难以成立'));
+    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('短期难以成立'));
     card?.click();
   });
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -186,13 +186,13 @@ try {
   await page.evaluate(() => document.querySelector('[data-know-filter]').click());
   await new Promise(resolve => setTimeout(resolve, 300));
   const filtered = await page.evaluate(() => document.querySelector('#knowbody')?.innerText ?? '');
-  check('筛选后只显示待核对', filtered.includes('服务器端短期难以成立') && !filtered.includes('合资并垫资'), '');
+  check('筛选后只显示待核对', filtered.includes('短期难以成立') && !filtered.includes('合作结构'), '');
   check('筛选可恢复（按钮变回全部）', await page.evaluate(() => Boolean(document.querySelector('[data-know-filter]'))));
   check('筛选没有新增页签', (await page.evaluate(() => [...document.querySelectorAll('#knowtabs [data-know]')].map(n => n.dataset.know))).length === 4, '页签仍为 4 个');
 
   // 打开待核对判断 → 就地核对
   await page.evaluate(() => {
-    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('服务器端短期难以成立'));
+    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('短期难以成立'));
     card?.click();
   });
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -217,7 +217,7 @@ try {
   mkdirSync('prototype/screenshots', {recursive: true});
   await page.screenshot({path: 'prototype/screenshots/judgment-list.png'});
   await page.evaluate(() => {
-    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('服务器端短期难以成立'));
+    const card = [...document.querySelectorAll('#knowbody [data-id]')].find(n => n.innerText.includes('短期难以成立'));
     card?.click();
   });
   await new Promise(resolve => setTimeout(resolve, 400));

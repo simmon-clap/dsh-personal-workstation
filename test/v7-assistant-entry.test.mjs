@@ -7,12 +7,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {openDshChat} from '../prototype/v7-controller.mjs';
+import {openDshChat} from '../prototype/v7-controller-v6.mjs';
 
 const source = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 test('D2-1：入口文案 = 去 DSH 对话；说明书与"复制开场白"必须删干净', () => {
-  const controller = source('../prototype/v7-controller.mjs');
+  const controller = source('../prototype/v7-controller-v6.mjs');
   assert.match(controller, /去 DSH 对话/, '按钮必须改成真动作的名字');
   assert.doesNotMatch(controller, /这里不放输入框/, '说明书弹窗必须删掉');
   assert.doesNotMatch(controller, /复制一句开场白/, '"复制粘贴"不能作为唯一动作');
@@ -20,15 +20,18 @@ test('D2-1：入口文案 = 去 DSH 对话；说明书与"复制开场白"必须
 });
 
 test('D2-6：不操作宿主 DOM（禁止 parent.document/top.document）', () => {
-  for (const text of [source('../prototype/v7-controller.mjs'), source('../client/client.js')]) {
+  for (const text of [source('../prototype/v7-controller-v6.mjs'), source('../client/client.js')]) {
     assert.doesNotMatch(text, /parent\.document|top\.document|window\.parent\.document/);
   }
 });
 
 test('客户端半：只用公开的 uiWorkspace.startSession()，且只在自家 iframe 上响应', () => {
   const client = source('../client/client.js');
-  assert.match(client, /ctx\.inject\(\['uiWorkspace'\]/, 'uiWorkspace 必须是可选依赖（宿主没有时不装桥）');
-  assert.match(client, /uiWorkspace\.startSession\(\)/);
+  assert.match(client, /ctx\.inject\(\['uiWorkspace'(?:,'sessions')?\]/, 'uiWorkspace/sessions 必须是可选依赖（宿主没有时不装桥）');
+  assert.match(client, /uiWorkspace\.startSession\(undefined/);
+  assert.match(client, /prompt/);
+  assert.match(client, /sessions\.retain/, '静默后台生成必须用 sessions 服务在后台起回合');
+  assert.match(client, /binding\.session\.prompt/);
   assert.match(client, /workstation:open-chat/);
   assert.match(client, /workstation:open-chat-ack/);
   assert.match(client, /contentWindow===event\.source/, '必须只认自己那个 iframe');
@@ -72,6 +75,13 @@ test('兜底：嵌入态 600ms 内没有 ack → 跳回 /（同源，输入框�
   openDshChat(win, {settleMs: 20});
   await new Promise(resolve => setTimeout(resolve, 40));
   assert.deepEqual(assigned, ['/'], '没有 ack 必须有一个可完成动作的下一步');
+});
+
+test('按钮化 AI：openDshChat 可携带 prompt，且不改变无 prompt 的旧行为', () => {
+  const {win, sent, ack} = fakeWindow();
+  openDshChat(win, {settleMs: 20, prompt: '为项目生成视图'});
+  assert.deepEqual(sent, [{message: {type: 'workstation:open-chat', prompt: '为项目生成视图'}, origin: 'http://127.0.0.1:51199'}]);
+  ack();
 });
 
 test('D2-4：独立页（不在 iframe 里）→ 同源跳到 /', () => {

@@ -42,7 +42,7 @@ async function main(){
  seedVisualStore(store);
  const connection={admit:()=>({peer:{id:'operator'}}),requestRejection:()=>undefined};
  const route=httpRoute({store,executions,connection,workspaceRegistry:{list:()=>[{id:workspace,title:'个人空间'}],get:id=>id===workspace?{id:workspace,title:'个人空间'}:null},allowedWorkspaces:[workspace]});
- const designRoot=fileURLToPath(new URL('../../design-system/',import.meta.url));
+ const designRoot=fileURLToPath(new URL('../design-system/',import.meta.url));
  const designTypes={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json'};
  const server=createServer((request,response)=>{
   if(request.url.startsWith('/design/')){
@@ -157,14 +157,17 @@ if(process.argv[1]&&process.argv[1]===fileURLToPath(import.meta.url)){
  // 但也不该因此把它扔掉：它是一个能发现"又漂了"的客观量。所以改成**棘轮**（与 charter-guard 同一套）：
  //   · 比基线更差（超过容差）→ FAIL，并指出是哪一页、差多少；
  //   · 比基线更好 → PASS，并提示可以把基线收紧（不自动改写 —— 自动改写等于把棘轮拆了）。
- const baselineFile=join(here,'..','..','spec','pixel-baseline.json');   // 规范在仓库根 spec/（与 spec-coverage-audit 同一处）
+ const baselineFile=process.env.PIXEL_BASELINE??join(here,'..','..','spec','pixel-baseline.json');   // 规范在仓库根 spec/（与 spec-coverage-audit 同一处）
  const TOLERANCE=0.005;   // 0.5 个百分点：留出渲染噪声的余量，但不允许持续漂移
  let baseline=null;
  try{baseline=JSON.parse(readFileSync(baselineFile,'utf8'))}catch{}
  if(!baseline||!baseline.pages){
-  console.log('（没有基线，本次只报数不判决；把本次结果写进 '+baselineFile+' 即可开始棘轮）');
+  // 没有基线 = 这一项**没有判定**，不能算通过（spec/17 C3：假绿按 P0 处理）。
+  // 需要先建立基线，或显式提供一条基线；两者都没有时按失败退出，让发布流程停下来。
+  console.log('FAIL: 没有像素基线（'+baselineFile+'），本次无法判定是否漂移 —— 未判定 ≠ 通过。');
+  console.log('  处理：在该路径写入本次结果的 pages 表建立棘轮，或用 PIXEL_BASELINE 指向一条已有基线。');
   console.log('本次逐页：'+results.map(r=>r.view+' '+(r.best.ratio*100).toFixed(2)+'%').join(' · '));
-  process.exit(0);
+  process.exit(1);
  }
  const regressed=verdict(results,baseline.pages,TOLERANCE);
  console.log('（这些差异里含**已拍板的有意偏离**：VI 优先、字阶入档、去页头口号等；'

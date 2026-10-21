@@ -65,8 +65,8 @@ test('盯依赖：依赖解锁才说话，还在等就写清在等谁',()=>{
 test('做简报：有新信息必须带真实来源与时间；没有新信息不许硬凑',()=>{
  const {store,create}=setup();
  try{
-  create('材料',[{op:'create',id:'proj-1',kind:'project',data:{title:'存算一体'}}]);
-  create('材料',[{op:'create',id:'topic-1',kind:'topic',data:{title:'3D 存算一体'}}]);
+  create('材料',[{op:'create',id:'proj-1',kind:'project',data:{title:'示例产品'}}]);
+  create('材料',[{op:'create',id:'topic-1',kind:'topic',data:{title:'示例产品'}}]);
   create('材料',[{op:'create',id:'art-1',kind:'artifact',data:{title:'路演纪要',path:'会议/纪要.md',projectId:'proj-1'}}]);
   const withMaterial=runHeartbeat({store,ctx,now:NOW,rules:HEARTBEAT_RULES.filter(rule=>rule.id==='briefs'),since:'2026-10-01T00:00:00Z'});
   const brief=withMaterial.candidates.find(item=>item.rule==='做简报');

@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-const source=readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8');
-const expected='e863a0aa7765968243689307240222cc87aac91539ed3cb7ab86726d9cd5f4a5';
+const source=readFileSync(new URL('./frozen/workbench-v7.html',import.meta.url),'utf8');
+const expected='222a4471c32f0895c5912122bd0d10c8ac93298179bb07a5d99a79e47b8602f9';
 if(createHash('sha256').update(source).digest('hex')!==expected)throw Error('原型已变更，需重新核对基线');
 const directory=new URL('./replica/',import.meta.url);mkdirSync(directory,{recursive:true});
 const names=['core','space','files','layout-v5','intake','projects-v7'];let index=0;

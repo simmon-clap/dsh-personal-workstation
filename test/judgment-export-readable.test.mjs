@@ -3,7 +3,7 @@
  *  验收方法：拿**真实库里的判断**生成文档，然后**站在"没有工作台的读者"角度**读它。
  *  第一次的真实结果是**不通过**，三处都把内部编号摆给了读者：
  *    · 谁在何时判断：`operator:407457ca-a50f-4b22-9f82-5faafa9767ec`（UUID，不是人）
- *    · 出处：`art-3dcim-minutes-20261011`（内部编号，不知道是什么）
+ *    · 出处：`art-example-minutes-20261011`（内部编号，不知道是什么）
  *    · 记录时间：`2026-10-16T07:00:16.852Z`（机器时间戳）
  *  这正是用户反复强调的那条铁律：**值要翻译，不许把内部编号摆给用户看**。
  *
@@ -18,9 +18,9 @@ const UUID = '407457ca-a50f-4b22-9f82-5faafa9767ec';
 const item = overrides => ({
   id: 'j-1', kind: 'judgment', author: `operator:${UUID}`, at: '2026-10-16T07:00:16.852Z',
   data: {
-    title: '服务器方案当前并不存在（明年 3 月投片、9 月回片）', share: 'team', status: 'checking',
+    title: '当前方案与时间安排尚未确认', share: 'team', status: 'checking',
     validFrom: '2026-10-11', uncertainty: '时间点是对方口述的排期，没有任何书面材料。',
-    evidence: [{kind: 'file', ref: 'art-3dcim-minutes-20261011', quote: '服务器方案：4 颗一个 page，明年 3 月投片、9 月回片', verified: false}],
+    evidence: [{kind: 'file', ref: 'art-example-minutes-20261011', quote: '示例依据：方案参数与时间安排仍需核对', verified: false}],
     ...overrides,
   },
 });
@@ -33,8 +33,8 @@ test('作者：说人话，绝不摆 UUID', () => {
 });
 
 test('出处：能解析成标题就用标题；解析不到也不退回裸编号', () => {
-  assert.equal(humanRef('art-1', () => '会议纪要 · 3D 存算一体'), '会议纪要 · 3D 存算一体');
-  assert.doesNotMatch(humanRef('art-3dcim-minutes-20261011', null), /art-3dcim/, '解析不到时不许把编号摆出来');
+  assert.equal(humanRef('art-1', () => '会议纪要 · 示例产品'), '会议纪要 · 示例产品');
+  assert.doesNotMatch(humanRef('art-example-minutes-20261011', null), /art-example/, '解析不到时不许把编号摆出来');
   assert.match(humanRef('file.md@12-40', null), /第 12–40 段/, '带段落范围的出处要保留"哪一段"这个有用信息');
 });
 
@@ -45,7 +45,7 @@ test('时间：说人话（不带毫秒与时区后缀）', () => {
 
 test('整篇文档不得出现 UUID 或内部编号（站到"别人"的角度读）', () => {
   const items = [item({}), item({title: '仅自己的那条', share: 'private'})];
-  const doc = judgmentDocument(items, {at: '2026-10-16T14:40:00Z', resolve: () => '会议纪要 · 3D 存算一体'});
+  const doc = judgmentDocument(items, {at: '2026-10-16T14:40:00Z', resolve: () => '会议纪要 · 示例产品'});
   assert.doesNotMatch(doc, new RegExp(UUID), '文档里不许出现操作者 UUID');
   assert.doesNotMatch(doc, /\b(?:j|proj|art|ev|topic|task|rel|voice)-[a-z0-9-]{4,}/i, '文档里不许出现内部编号');
   assert.match(doc, /已剔除 1 条标为「仅自己」的判断/, '剔除项必须明示（分享默认仅自己）');

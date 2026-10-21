@@ -34,7 +34,7 @@ test('装了新构建（磁盘变了）→ 必须报"陈旧"，这就是"需要�
  try{
   const index=createAssetIndex(join(dir,'v7'),join(dir,'v7-shell.html'));
   // 模拟"又装了一版"：改一个模块的内容（mtime 不变也算变化 —— 指纹比内容不比时间）
-  const target=join(dir,'v7','space-view.mjs');
+  const target=join(dir,'v7','space-view-v5.mjs');
   writeFileSync(target,readFileSync(target,'utf8')+'\n// 新版本\n');
   assert.equal(index.stale(),true,'磁盘内容变了却没报陈旧 —— needsRestart 又会恒为 false');
  }finally{rmSync(dir,{recursive:true,force:true})}

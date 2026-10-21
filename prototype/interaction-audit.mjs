@@ -31,7 +31,7 @@ const WS=argOf('--workspace')??(()=>{
   if(!existsSync(path))continue;
   const text=readFileSync(path,'utf8');
   // 2026-10-16 修：`workstation-data/workspaces.json` 的真实形状是**一个 id 数组**
-  // （`["9359d460-…","e19694df-…"]`），原来的两个分支都认不出来 → 这道门禁一直 EXIT=2 跑不动，
+  // （一个 UUID 数组，例如 `["00000000-0000-4000-8000-000000000000"]`），原来的两个分支都认不出来 → 这道门禁一直 EXIT=2 跑不动，
   // 而另一道门禁却把它当作"交叉复核"引用（引用了一道根本跑不起来的东西）。
   try{const parsed=JSON.parse(text);if(Array.isArray(parsed)&&typeof parsed[0]==='string')return parsed[0]}
   catch{}

@@ -22,7 +22,7 @@ async function main(){
  seedVisualStore(store);
  const connection={admit:()=>({peer:{id:'operator'}}),requestRejection:()=>undefined};
  const route=httpRoute({store,executions,connection,workspaceRegistry:{list:()=>[{id:workspace,title:'个人空间'}],get:id=>id===workspace?{id:workspace,title:'个人空间'}:null},allowedWorkspaces:[workspace]});
- const prototype=readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8');
+ const prototype=readFileSync(new URL('./frozen/workbench-v7.html',import.meta.url),'utf8');
  const server=createServer((request,response)=>{
   if(request.url==='/prototype'){response.writeHead(200,{'content-type':'text/html; charset=utf-8'});response.end(prototype);return}
   route.handler(request,response);

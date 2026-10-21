@@ -189,6 +189,55 @@ function S12(data, out) {
   if (subtitles.length > 1 && unique.size < subtitles.length) push(out, '顶栏', '全站同一句副标题（页面身份缺失）', subtitles.length - unique.size, {sample: [...unique].slice(0, 2)});
 }
 
+/** S14 · 画布层级与分类（spec/54 §4 / spec/56 §8.1）。
+ *  量的是**默认进画布时**用户看到的东西，不是函数返回值：
+ *   · 默认范围是结构态（D8=全部机构），按关系角色分列；
+ *   · 未分类/未归属如实成列，不藏、不猜；
+ *   · 结构层只有机构与（未归属）项目；资料/议题/判断/事务不进主层；
+ *   · 默认缩放 ≥60% 或屏幕文字 ≥12px（VI §9 / S5 同一口径）；
+ *   · 角色必须有颜色+形状+名称三重编码（颜色不得单独承担区分）；
+ *   · 项目视觉面积 > 任务（VI §9「节点大小=层级」）。 */
+function S14(data, out) {
+  const c = data.canvasStructure;
+  if (!c?.opened) { push(out, '画布', '没有量到结构态（无法判定，不等于通过）', 1); return; }
+  if (c.mode !== 'structure') push(out, '画布', '默认范围不是「按分类」结构态（D8 要求默认全部机构）', 1, {mode: c.mode});
+  const buckets = Array.isArray(c.buckets) ? c.buckets : [];
+  if (!buckets.length) push(out, '画布', '结构态没有分出任何分类列', 1);
+  for (const bucket of buckets) {
+    if (bucket.kind === 'role' && bucket.hasShape === false) push(out, '画布', '分类「' + (bucket.label || bucket.key) + '」只有颜色没有形状/名称（颜色单独承担区分）', 1);
+  }
+  if ((c.unclassifiedCount ?? 0) > 0 && !buckets.some(b => b.kind === 'unclassified')) push(out, '画布', '有 ' + c.unclassifiedCount + ' 个未分类机构却没有「未分类」列（把未知藏起来了）', 1);
+  if ((c.unassignedCount ?? 0) > 0 && !buckets.some(b => b.kind === 'unassigned')) push(out, '画布', '有 ' + c.unassignedCount + ' 个未归属项目却没有「未归属」列', 1);
+  const stray = (c.mainKinds ?? []).filter(kind => !['organization', 'project'].includes(kind));
+  if (stray.length) push(out, '画布', '结构层混入非结构对象：' + [...new Set(stray)].join('、'), stray.length);
+  if (Number.isFinite(c.zoom) && c.zoom < 0.6 && !(Number.isFinite(c.minTextEffective) && c.minTextEffective >= 12)) {
+    push(out, '画布', '默认缩放 ' + Math.round(c.zoom * 100) + '%、屏幕文字最小 ' + (c.minTextEffective ?? 0).toFixed(1) + 'px（需 ≥60% 或 ≥12px）', 1, {zoom: c.zoom});
+  }
+  if (Number.isFinite(c.projectArea) && Number.isFinite(c.taskArea) && c.projectArea <= c.taskArea) {
+    push(out, '画布', '项目卡面积不大于任务卡（' + Math.round(c.projectArea) + ' ≤ ' + Math.round(c.taskArea) + 'px²）', 1);
+  }
+}
+
+/** S15 · 四表面一致（spec/54 §4 / spec/56 §8.2）：项目 / 任务 / 收件箱 / 画布 用同一套组件实现与两档密度。
+ *  浏览器侧能直接量到的四件事：详情弹窗只有一个宽度且居中、空态只有一种结构、卡片密度只允许登记过的两档、
+ *  每页只有一个「筛选」控件。 */
+function S15(data, out) {
+  const s = data.surfaces;
+  if (!s?.measured) { push(out, '四表面', '没有量到四表面（无法判定，不等于通过）', 1); return; }
+  for (const dialog of s.dialogs ?? []) {
+    if (Number.isFinite(dialog.width) && Math.abs(dialog.width - 760) > 1) push(out, dialog.surface || '详情弹窗', '详情弹窗宽度不是 760（实际 ' + Math.round(dialog.width) + 'px）', 1, {value: dialog.width});
+    if (dialog.centered === false) push(out, dialog.surface || '详情弹窗', '详情弹窗没有居中', 1);
+  }
+  const signatures = [...new Set((s.emptyStates ?? []).map(item => item.signature))];
+  if (signatures.length > 1) push(out, '四表面', '空态不止一种结构：' + signatures.join(' / '), signatures.length - 1, {signatures});
+  const allowed = new Set(['standard', 'canvasNode']);
+  const densities = [...new Set((s.cardDensities ?? []).filter(Boolean))];
+  for (const density of densities) if (!allowed.has(density)) push(out, '四表面', '出现未登记的卡片密度：' + density, 1);
+  for (const [name, count] of Object.entries(s.filterToggles ?? {})) {
+    if (count > 1) push(out, name, '同一页出现 ' + count + ' 个「筛选」控件（应只有一个）', count - 1);
+  }
+}
+
 export const CHECKS = [
   {id: 'S1', title: '页面标题层级', ref: '17 §3.1', run: S1},
   {id: 'S2', title: '主色主动作 / 入口唯一', ref: '17 §3.2', run: S2},
@@ -199,7 +248,9 @@ export const CHECKS = [
   {id: 'S7', title: '弹窗五条 + 危险分离', ref: '17 §3.7', run: S7},
   {id: 'S8', title: '移动端首屏与底栏', ref: '17 §3.8', run: S8},
   {id: 'S10', title: '跨插件健康四行', ref: '17 §3.10', run: S10},
-  {id: 'S12', title: '解释性文案 0 处', ref: '17 §3.12', run: S12}
+  {id: 'S12', title: '解释性文案 0 处', ref: '17 §3.12', run: S12},
+  {id: 'S14', title: '画布层级与分类', ref: 'spec/54 §4 · spec/56 §8.1', run: S14},
+  {id: 'S15', title: '四表面组件一致', ref: 'spec/54 §4 · spec/56 §8.2', run: S15}
 ];
 
 /** 跑全部判据。返回 [{id,title,ref,violations,count,fail}]。 */
@@ -254,7 +305,31 @@ export function cleanFixture() {
     editor: {unsavedProtected: true, dangerGap: 40},
     canvas: {opened: true, zoom: 0.8, texts: [{text: '项目', effective: 10.4}, {text: '会议纪要', effective: 10.4}]},
     mobile: {navRows: 1, navH: 56, vh: 844, views: mobileViews, detail: {overlaps: [], firstScreenVisible: 4, hiddenAtBottom: [], paddingBottom: 140, footerH: 120}},
-    subtitleWording: []
+    subtitleWording: [],
+    // S14：默认进画布看到的（结构态、两列、三重编码、缩放与层级尺寸）
+    canvasStructure: {
+      opened: true,
+      mode: 'structure',
+      buckets: [
+        {key: '客户', label: '客户', kind: 'role', count: 2, hasShape: true},
+        {key: 'unassigned', label: '未归属', kind: 'unassigned', count: 1, hasShape: true}
+      ],
+      mainKinds: ['organization', 'project'],
+      unclassifiedCount: 0,
+      unassignedCount: 1,
+      zoom: 0.8,
+      minTextEffective: 10.4,
+      projectArea: 260 * 110,
+      taskArea: 176 * 72
+    },
+    // S15：四表面组件签名
+    surfaces: {
+      measured: true,
+      dialogs: [{surface: 'projects', width: 760, centered: true}, {surface: 'tasks', width: 760, centered: true}, {surface: 'inbox', width: 760, centered: true}],
+      emptyStates: [{surface: 'projects', signature: 'img+h3+p+button'}, {surface: 'tasks', signature: 'img+h3+p+button'}, {surface: 'inbox', signature: 'img+h3+p+button'}],
+      cardDensities: ['standard', 'canvasNode'],
+      filterToggles: {projects: 1, tasks: 1, inbox: 1}
+    }
   };
 }
 
@@ -269,7 +344,13 @@ export const CANARIES = [
   {id: 'S7', why: '弹窗不居中 + Escape 关不掉 + 焦点不回 + 背景可操作 + 未保存直接关 + 危险按钮相邻', inject: d => { d.settings.rules = {centered: false, escapeCloses: false, focusRestored: false, backgroundInert: false, activeAfterClose: 'BODY'}; d.editor = {unsavedProtected: false, dangerGap: 4}; }},
   {id: 'S8', why: '导航两行 + 任务首屏 0 条 + 空指标 462px + 底栏盖字段', inject: d => { d.mobile.navRows = 2; d.mobile.navH = 133; d.mobile.views.tasks.actionableFirstScreen = 0; d.mobile.views.tasks.visibleTasks = 0; d.mobile.views.tasks.metricsH = 462; d.mobile.views.tasks.metricsShowZero = true; d.mobile.detail = {overlaps: ['负责人', '业务状态', '截止'], firstScreenVisible: 0, hiddenAtBottom: ['负责人', '业务状态'], paddingBottom: 0, footerH: 122}; }},
   {id: 'S10', why: '设置页只有「飞书 未接上 未配置」，四层一行都没有', inject: d => { d.settings.health = {missing: ['加载', '连接', 'cwd', '发送']}; }},
-  {id: 'S12', why: '解释性文案泄漏 + 七页同一句副标题', inject: d => { d.views.inbox.wording.push({phrase: '最近加载', quote: '来源与项目筛选只作用于本页最近加载的 50 条'}); d.subtitleWording.push({phrase: '总览提示'}); d.views.home.subtitle = d.views.projects.subtitle = '同一句占位提示'; }}
+  {id: 'S12', why: '解释性文案泄漏 + 七页同一句副标题', inject: d => { d.views.inbox.wording.push({phrase: '最近加载', quote: '来源与项目筛选只作用于本页最近加载的 50 条'}); d.subtitleWording.push({phrase: '总览提示'}); d.views.home.subtitle = d.views.projects.subtitle = '同一句占位提示'; }},
+  {id: 'S14', why: '默认回到关系态 + 只有颜色没有形状 + 未分类被藏起来 + 结构层混入资料 + 44% 且文字 5.7px + 任务卡比项目卡大', inject: d => {
+    d.canvasStructure = {...d.canvasStructure, mode: 'all', buckets: [{key: '客户', label: '客户', kind: 'role', count: 2, hasShape: false}], mainKinds: ['organization', 'project', 'artifact'], unclassifiedCount: 3, unassignedCount: 0, zoom: 0.44, minTextEffective: 5.7, projectArea: 100, taskArea: 300};
+  }},
+  {id: 'S15', why: '弹窗出现第二个宽度/不居中 + 空态两种结构 + 未登记卡片密度 + 同页两个筛选', inject: d => {
+    d.surfaces = {measured: true, dialogs: [{surface: 'projects', width: 760, centered: true}, {surface: 'tasks', width: 720, centered: false}], emptyStates: [{surface: 'projects', signature: 'img+h3+p+button'}, {surface: 'inbox', signature: 'text-only'}], cardDensities: ['standard', 'canvasNode', 'dense'], filterToggles: {projects: 2}};
+  }}
 ];
 
 /** 跑 canary：返回 [{id, why, caught, count}]。 */

@@ -1,4 +1,5 @@
 import {buildBriefing} from './briefing.mjs';
+import {exportViewMarkdown,updateViewAnalysis} from './view-spec.mjs';
 import {buildAdvice} from './advice.mjs';
 import {REQUEST_MAX_BYTES} from './limits.mjs';
 import {appleStatus,runAppleSync,appleImportDraft} from './apple-sync.mjs';
@@ -17,6 +18,7 @@ import {readBatchOrigin} from './session-origin.mjs';
 import {artifactState} from './artifact-state.mjs';
 import {ingestFile,knowledgeState} from './knowledge-ingest.mjs';
 import {readLayout,saveLayout} from './layout.mjs';
+import {buildViewPreview,saveViewDraft} from './view-spec.mjs';
 const output=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 /** Installed on the authenticated DSH connection; no standalone server. */
 export function browserRoute({store,connection,workspaceRegistry,allowedWorkspaces,rootWorkspaceId,rootStatus,files,knowledge,schedule,heartbeatTiming={scheduled:false,intervalMinutes:0},executions,heartbeat,speak,runner,office,speech,sessionQuery,grants,workspaceFs,workspaces,configuredWorkspaces=[],integrations={},apple=null,appleConfig={},audio:audio_input=createAudioInput(),transcribeWithoutApproval=false,executionEnabled=false,imHealth=null}){
@@ -171,6 +173,12 @@ export function browserRoute({store,connection,workspaceRegistry,allowedWorkspac
      case 'apple_sync':return output(await runAppleSync({store,ctx,apple,config:appleConfig,mode:['push','pull','both'].includes(body.mode)?body.mode:'both'}));
      case 'apple_import':return output(await appleImportDraft({store,ctx,apple,config:appleConfig}));
      case 'layout_save':return output(saveLayout(store,ctx,body));
+     // 生成视图 v1（18 号 §3）：预览只读、不落库；保存只生成 draft，由既有 batch 审核，不直接 commit。
+     // 输入/输出与 Agent 侧同一套（src/view-spec.mjs），不在这里另写一份模板逻辑。
+     case 'view_preview':return output({view:buildViewPreview({store,ctx,template:body.template,subjectId:body.subjectId,params:body.params,viewId:body.viewId,now:new Date()})});
+     case 'view_save':return output(saveViewDraft({store,ctx,view:body.view,as:body.as,analysis:body.analysis,source:{operator:admission.peer?.id??'operator'}}));
+     case 'view_export':return output(exportViewMarkdown(body.view));
+     case 'view_analysis_update':return output(updateViewAnalysis({store,ctx,viewId:body.viewId,revision:body.revision,analysis:body.analysis,source:{operator:admission.peer?.id??'operator'}}));
      case 'overview':return output(overview(store,ctx,{execution:{connected:Boolean(executionEnabled),reason:executionEnabled?'执行器已启用':'执行器未启用'}}));
      case 'pending_checks':return output({items:buildPendingChecks({store,ctx,limit:body.limit??5})});
      case 'graph':return output(graph(store,ctx,{focus:body.focus,limit:body.limit,offset:body.offset}));

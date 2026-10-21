@@ -24,7 +24,7 @@ test('every server action the legacy UI used has a V7 entry or a recorded reason
  for(const action of intentional.keys())assert(actions.includes(action),'已记录的例外应仍然存在：'+action);
 });
 test('V7 keeps the legacy feature entries reachable',()=>{
- const controller=sources.find(([name])=>name==='v7-controller.mjs')[1];
+ const controller=sources.find(([name])=>name==='v7-controller-v6.mjs')[1];
  const expect={
   '新建入口':/editor\.menu\(\)/,
   '编辑与归档':/editor\.open\(kind,item\)/,
@@ -54,7 +54,7 @@ test('V7 never ships demonstration records or a model claim it cannot back',()=>
   const code=source.replace(/\/\*[\s\S]*?\*\//g,'').replace(/^\s*\/\/.*$/gm,'');
   assert.doesNotMatch(code,/伙伴 A|伙伴 B|联合验证方案交流|示例资料|示例日程|演示输入已收到/,name+' 含演示内容');
  }
- const controller=sources.find(([name])=>name==='v7-controller.mjs')[1];
+ const controller=sources.find(([name])=>name==='v7-controller-v6.mjs')[1];
  assert.match(controller,/在工作台里不调用模型|不内置模型输入/,'缺少未接入能力的如实说明（工作台不调用模型，只把人送回 DSH 对话）');
  assert.doesNotMatch(controller,/自动确认关系|AI 已生成/,'不得声称未实现的模型能力');
 });

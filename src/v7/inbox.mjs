@@ -3,6 +3,8 @@ import {humanTitle} from './human-title.mjs';
 import {escapeHtml as esc} from './project-render.mjs';
 import {selectHtml,wireSelects} from './vi-select.mjs';
 import {filterBarHtml,wireFilterBar} from './project-view.mjs';
+import {emptyState} from './empty-state.mjs';
+import {cardOpen,cardClose,cardTitle} from './card.mjs';
 import {mountDirectoryBrowser,humanFolderError} from './directory-browser.mjs';
 
 const statusNames={draft:'待确认',committed:'已处理',cancelled:'已取消'};
@@ -305,8 +307,7 @@ export function batchLink(item,projects=[]){
    +'<div class="sectionhead"><h2>待核对</h2><small>这些判断还欠你一句核对</small></div>'
    +checks.map(check=>`<div class="pendingcheck" role="button" tabindex="0" data-check="${esc(check.judgmentId)}"><h3>${esc(check.title)}</h3>`
     +`<p class="inboxmeta">${esc(check.askWhoLabel||'还没记录找谁核')} · ${esc(check.whyNow||'')}</p>`
-    +`<p>问什么：${esc(check.askWhat||'这条判断的依据是否仍然成立？')}</p>`
-    +`<p class="formhint">算完成：${esc(check.whatCountsAsDone||'找到一条能确认或推翻它的原始出处')}</p>`
+    +`<details class="checkdetail"><summary>看要核对什么</summary><p>问什么：${esc(check.askWhat||'这条判断的依据是否仍然成立？')}</p><p class="formhint">算完成：${esc(check.whatCountsAsDone||'找到一条能确认或推翻它的原始出处')}</p></details>`
     +`<span class="checkhint">查看这条判断 →</span></div>`).join('')
    +'</section>';
  }
@@ -335,12 +336,18 @@ export function createInbox(document,send,batch,{notify=()=>{},openLogin,project
   *  真入口复验抓到的：侧栏角标显示 1 条，但「待确认」这一栏是空的 —— 那条其实卡在「需补充/冲突」里。
   *  只写一句"没有待你决定的改动"，用户会以为坏了。这里如实说清楚，并给一个能直接过去的动作。 */
  function emptyMarkup(blockedCount){
-  const waiting=blockedCount;
-  return `<div class="v7-empty"><img src="/personal-workstation/v7/assets/illustrations/${waiting?'waiting':'empty'}.svg" alt="" width="180" height="120">`
-   +`<h3>${waiting?'这一栏没有要你确认的改动':'暂时没有新的改动'}</h3>`
-   +`<p>${waiting?`还有 ${waiting} 条卡在「需补充/冲突」——它们缺信息，补齐后才会回到这里。`:'你自己录入或 Agent 整理出来的改动，都会先落到这里等你决定。'}</p>`
-   +`<button class="btn" data-inbox="${waiting?'blocked':'all'}">${waiting?'去看那 '+waiting+' 条':'看收件箱全部记录'}</button></div>`;
+  // 空态只有一处实现（spec/56 §5 / 18 C5）：用 empty-state.mjs，不自造第二套 .v7-empty 结构。
+  const waiting=blockedCount>0;
+  // 动作走列表已有的 `[data-inbox]` 接线（wireList 会给它挂 onclick），不在这里另写一套渲染调用。
+  const node=emptyState(document,{illustration:waiting?'waiting':'complete',
+   title:waiting?'这一栏没有要你确认的改动':'暂时没有新的改动',
+   description:waiting?'还有 '+blockedCount+' 条卡在「需补充/冲突」——它们缺信息，补齐后才会回到这里。':'你自己录入或 Agent 整理出来的改动，都会先落到这里等你决定。',
+   action:{label:waiting?'去看那 '+blockedCount+' 条':'看收件箱全部记录',run:()=>{}}});
+  const button=node.querySelector('.btn');
+  if(button)button.dataset.inbox=waiting?'blocked':'all';
+  return node.outerHTML;
  }
+
   function listHtml(rows,total,blockedCount=0,checks=[]){
   const cards=rows.map(({item,blocked})=>{const counts=new Map();for(const change of item.changes??[])counts.set(change.op,(counts.get(change.op)??0)+1);
    const names=(item.changes??[]).slice(0,3).map(change=>change.data?.title||change.id).join('、');
@@ -396,7 +403,11 @@ export function createInbox(document,send,batch,{notify=()=>{},openLogin,project
     :'';
    // 卡片用 div[role=button]：里面还要放「同意/不同意」两个按钮，<button> 套 <button> 是非法结构
    // （浏览器/jsdom 的解析会把内部按钮挪出去，点击行为随之错乱）。
-   return `<div class="inboxitem" data-inboxitem="${esc(item.id)}"><div class="surface resource inboxcard" role="button" tabindex="0" data-batch="${esc(item.id)}"${item.proposal?` data-advice="1" data-decision="${esc(item.proposal.decision??'undecided')}"`:''}><div class="inboxhead"><span class="statusdot" data-state="${esc(stateKey)}" aria-hidden="true"></span><h2>${esc(humanTitle(item.title))}</h2><time>${esc(when)}</time></div><div class="inboxops">${ops}</div>${item.status==='draft'?(item.proposal?adviceActions:`<div class="inboxdecide"><button class="btn primary" data-inboxapprove="${esc(item.id)}" type="button">同意</button><button class="btn" data-inboxreject="${esc(item.id)}" type="button">不同意</button></div>`):''}<div class="diffbar" role="img" aria-label="${esc([...counts].map(([name,count])=>name+' '+count).join('、'))}">${segments}</div><p class="inboxmeta"><span class="stateText">${esc(state)}</span> · 这次要做 ${item.changes?.length??0} 件事</p>${originKnown?`<p class="inboxmeta">来自：${esc(origin)}</p>`:''}${compositionLine}${linkLine}<p class="inboxnames">涉及：${esc(names)}${(item.changes?.length??0)>3?' 等':''}</p>${item.proposal?proposalBlock:''}</div>${assign}</div>`}).join('');
+   // 卡片减密（spec/54 §3.4）：一行标题+时间、一行状态与改动摘要、差异条、来源、主动作。
+   // AI 提议与普通改动用**同一张卡的结构**，只有来源标识不同（「AI 提议」写进来源行，不另造一种卡片）。
+   const sourceLine=item.proposal?'AI 提议'+(originKnown?' · '+origin:''):(originKnown?origin:'');
+   const composed=[compositionLine,linkLine].filter(Boolean).join('');
+   return `<div class="inboxitem" data-inboxitem="${esc(item.id)}">${cardOpen({tag:'div',className:'surface resource inboxcard',role:'button',tabindex:0,batch:item.id,extra:item.proposal?` data-advice="1" data-decision="${esc(item.proposal.decision??'undecided')}"`:''})}${item.proposal?` data-advice="1" data-decision="${esc(item.proposal.decision??'undecided')}"`:''}><div class="inboxhead"><span class="statusdot" data-state="${esc(stateKey)}" aria-hidden="true"></span>${cardTitle(humanTitle(item.title),{tag:'h2'})}<time>${esc(when)}</time></div>${item.status==='draft'?(item.proposal?adviceActions:`<div class="inboxdecide"><button class="btn primary" data-inboxapprove="${esc(item.id)}" type="button">同意</button><button class="btn" data-inboxreject="${esc(item.id)}" type="button">不同意</button></div>`):''}<div class="diffbar" role="img" aria-label="${esc([...counts].map(([name,count])=>name+' '+count).join('、'))}">${segments}</div><p class="inboxmeta"><span class="stateText">${esc(state)}</span><span class="inboxops">${ops}</span> · 这次要做 ${item.changes?.length??0} 件事 · 涉及：${esc(names)}${(item.changes?.length??0)>3?' 等':''}</p>${sourceLine?`<p class="inboxmeta"${item.proposal?' data-source="ai"':''}>来自：${esc(sourceLine)}</p>`:''}${composed}${item.proposal?proposalBlock:''}`+cardClose('div')+`${assign}</div>`}).join('');
   const note=total>previewCap?`<p class="notice">冲突状态只对最近 ${previewCap} 个待你决定的改动逐一核对，其余仍可打开查看。</p>`:'';
   const options=(list,current)=>list.map(([value,label])=>`<option value="${esc(value)}"${value===current?' selected':''}>${esc(label)}</option>`).join('');
   // PRD v1.3 CH-04：可按项目、来源会话、变更类型筛选。筛选作用于本页已加载批次。
@@ -527,7 +538,7 @@ export function createInbox(document,send,batch,{notify=()=>{},openLogin,project
   // 「筛选」控件接线（全站唯一实现）：展开 / 收起、按钮上写出生效条数、状态片的选中态。
   // 状态、项目、变更类型、来源各算一条；「全部」（空值）是默认，不算。默认筛的就是「待确认」，
   // 所以一进来按钮上写着「筛选 · 1」—— 这份列表本来就是被筛过的，不许装作没筛。
-  wireFilterBar(root,{id:'inboxfilters',toggleId:'inboxfiltertoggle',state:filterState,counted:['status','project','kind','source'],defaults:{status:'',project:'',kind:'',source:''},chips:{attribute:'data-inbox',key:'status'},onToggle:open=>{panelOpen=open}});
+  wireFilterBar(root,{id:'inboxfilters',toggleId:'inboxfiltertoggle',state:filterState,counted:['status','project','kind','source'],defaults:{status:['pending',''],project:'',kind:'',source:''},chips:{attribute:'data-inbox',key:'status'},onToggle:open=>{panelOpen=open}});
   for(const node of root.querySelectorAll('[data-face]'))node.onclick=()=>{op=node.dataset.face;render(root).catch(error=>notify(error.message,true))};
   for(const node of root.querySelectorAll('[data-op]'))node.onclick=()=>{op=node.dataset.op;render(root).catch(error=>notify(error.message,true))};
   for(const select of root.querySelectorAll('[data-facet]'))select.onchange=()=>{if(select.dataset.facet==='project')project=select.value;if(select.dataset.facet==='kind')op=select.value;if(select.dataset.facet==='source')source=select.value;render(root).catch(error=>notify(error.message,true))};

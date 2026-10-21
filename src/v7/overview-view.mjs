@@ -28,7 +28,7 @@ export function mountOverview(document,items,{openEvent,openTopic,onListGroup,on
  const waitingSub=waitingTasks.length?(reasons.length?waitingWho+reasons.slice(0,2).join('；')+(reasons.length>2?` 等 ${reasons.length} 条原因`:''):waitingWho+'原因未记录'):'当前没有等待项';
  metricsNode.innerHTML=metric('推进中的项目',projects.length,'按交付项跟踪',icon('project'),'activeProjects')
  +metric('交付项完成',`${done}/${total}`,total?'全部项目汇总':'尚无交付项',total?ring(done,total):'','allProjects')
- +metric('运行中的任务',tasks.filter(t=>t.data.status==='in_progress').length,`另有 ${waiting} 项等待`,icon('task'),'runningTasks')
+ +metric('进行中的任务',tasks.filter(t=>t.data.status==='in_progress').length,`另有 ${waiting} 项等待`,icon('task'),'runningTasks')
  +metric('需要解锁',waiting,waitingSub,icon('link'),'waitingTasks');
  // 点指标卡 = 去那组对象所在的页面（沿用既有的 data-goto 通道，不新造跳转）。
  // PRD v1.1 §3 要求总览展示待整理/待确认计数。基线没有这两个数字，因此用一行小字补充，

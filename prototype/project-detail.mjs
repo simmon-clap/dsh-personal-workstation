@@ -6,7 +6,7 @@ import {escapeHtml} from './project-render.mjs';
 import {sharedModal} from './modal.mjs';
 import {refLabels} from './ref-labels.mjs';
 
-export function createProjectDetail(document,send,{openGraph,openIntake,onIntake,openTask,onEdit,onOpenFolder,openFileDialog,onAdvanceStage,onNewTask,onLinkMaterial,onOpenMaterial,onUnlinkMaterial,onInlineChange,batch=null,notify=()=>{}}){
+export function createProjectDetail(document,send,{openGraph,openIntake,onIntake,openTask,onEdit,onOpenFolder,openFileDialog,onAdvanceStage,onNewTask,onLinkMaterial,onOpenMaterial,onUnlinkMaterial,onInlineChange,batch=null,notify=()=>{},generatedView=null,onOpenSubject=null}){
  const modal=sharedModal(document);let token;
  async function open(id){
   const request=token=modal.begin();if(request===null)return;
@@ -26,6 +26,50 @@ export function createProjectDetail(document,send,{openGraph,openIntake,onIntake
  if(!body.querySelector('#newprojectintake'))make('为该项目录入资料','',()=>openIntake?.(item.id),'newprojectintake');
  make('编辑项目','primary',()=>onEdit?.('project',item),'newprojectedit');
   body.append(actions);
+  // ── 生成视图（18 号规范 §3–§4；27 号方案 G1）：详情弹窗内的「AI 分析」区块 ──
+  // 不是新页面、不是新入口：区块默认只有标题与一行说明，用户点按钮才调用 view_preview。
+  // 生成只返回预览（不落库）；预览可收起；保存走 view_save → 既有收件箱确认，不直接写库。
+  if(generatedView&&typeof generatedView.block==='function'){
+   const intakeAction=onIntake?{label:'为该项目录入资料',run:()=>onIntake(item.id)}:null;
+   const emptyActions={};
+   if(intakeAction){emptyActions['risk-matrix']=intakeAction;emptyActions.timeline=intakeAction}
+   const viewBlock=generatedView.block({
+    subjectId:item.id,
+    subjectTitle:data.title,
+    subjectKind:'项目',
+    heading:'AI 分析',
+    summary:'按这个项目已有的任务、交付项与判断生成；只是预览，不保存，关闭即弃。',
+    templates:[
+     {id:'risk-matrix',label:'生成风险与证据',params:{horizonDays:90}},
+     {id:'timeline',label:'生成时间线',params:{}},
+    ],
+    onOpenSubject:id=>{if(id!==item.id)onOpenSubject?.(id)},
+    emptyActions:Object.keys(emptyActions).length?emptyActions:undefined,
+   });
+   // 放在「阶段推进」之前：AI 分析回答的是"这个项目现在最大的风险是什么"，属于概览层，
+   // 不该压到弹窗最底部（27 §7：弹窗被推长时，区块默认折叠）。
+   const anchor=body.querySelector('[data-section="stage"]');
+   if(anchor)anchor.before(viewBlock.element);
+   else body.append(viewBlock.element);
+   // 已保存的视图：定义可重开、按当前数据重算；引用变了的显示 stale（18 §5/§6 G2）。
+   const savedBox=document.createElement('details');savedBox.className='gv-saved';savedBox.hidden=true;
+   const savedSummary=document.createElement('summary');savedSummary.className='gv-savedtitle';savedBox.append(savedSummary);
+   const savedList=document.createElement('div');savedList.className='gv-savedlist';savedBox.append(savedList);
+   viewBlock.element.append(savedBox);
+   void (async()=>{
+    const all=await send('list',{kind:'view',limit:200,includeArchived:false}).catch(()=>({items:[]}));
+    const saved=(all.items??[]).filter(v=>!v.archived&&v.data?.subject?.id===item.id);
+    if(!saved.length)return;
+    savedSummary.textContent='已保存的分析视图（'+saved.length+'）';
+    savedBox.hidden=false;
+    for(const v of saved){
+     const b=document.createElement('button');b.type='button';b.className='gv-savedopen';
+     b.textContent=(v.data?.title??'分析视图')+' · '+(v.data?.generatedAt??'').slice(0,10);
+     b.onclick=()=>{viewBlock.openSaved?.(v.id);b.blur()};
+     savedList.append(b);
+    }
+   })();
+  }
   // ---- 项目管理面板的交互：阶段推进 / 新建任务 / 关联材料 / 取消关联 / 打开材料 ----
   const rail=body.querySelector('[data-phase-rail]');
   if(rail){

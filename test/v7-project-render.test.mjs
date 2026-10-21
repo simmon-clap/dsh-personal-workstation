@@ -10,17 +10,19 @@ import {test} from 'node:test';import assert from 'node:assert/strict';import {r
 const TYPE_SCALE=[11,12,13,14,15,18,22,32];
 const snapType=value=>{const n=Number(value);if(TYPE_SCALE.includes(n))return n;if(n<TYPE_SCALE[0])return TYPE_SCALE[0];return TYPE_SCALE.reduce((best,candidate)=>Math.abs(candidate-n)<Math.abs(best-n)?candidate:best,TYPE_SCALE[0])};
 const skeleton=html=>html.replace(/ style="[^"]*"/g,'').replace(/ (?:fill|stroke)="[^"]*"/g,'').replace(/ font-size="(\d+(?:\.\d+)?)"/g,(whole,size)=>' font-size="'+snapType(size)+'"');
-test('project card keeps the original V7 structure while colours move to custom properties',()=>{
- const source=readFileSync(new URL('../prototype/replica/core.js',import.meta.url),'utf8');
- const start=source.indexOf('const pct='),end=source.indexOf('\nfunction gantt(');
- const original=runInNewContext(source.slice(start,end)+';({card,ring})');
+test('project card keeps the V7 four-row skeleton (partner, priority, stage, stats)',()=>{
  const p={id:'p',name:'项目',partner:'合作方',done:2,total:4,color:'#6488d6',bg:'#edf2ff',icon:'chip',stage:2,docs:3,block:1};
- assert.equal(skeleton(projectCard(p)),skeleton(original.card(p)),'除内联样式外必须与原型标记完全一致');
- assert.match(ring(2,4),/font-size="15"/,'环内数字必须落在 VI 字阶内（原型 16px 不在字阶，落到 15px）；改回字阶外字号这里会红');
- const C='(?:#6488d6|var\\(--ws-data-partner-1\\))',B='(?:#edf2ff|var\\(--ws-data-partner-1-soft\\))';
- assert.match(projectCard(p),new RegExp('style="--pc:'+C+';--pb:'+B+';color:var\\(--pc\\);background:var\\(--pb\\)"'),'色值必须走自定义属性（VI token 或登记的数据色），深色层才能压暗而不自造颜色');
- assert.match(projectCard(p),new RegExp('<i style="--pc:'+C+';background:var\\(--pc\\)"><\\/i><i style="--pc:'+C+';"><\\/i>'),'已完成步骤填充、未完成步骤留空的结构必须保留');
- // 环：结构与几何必须一致，上色写法允许不同（VI 变量 / 数据变量 / 原字面量，值等价）。
- assert.equal(skeleton(ring(2,4)),skeleton(original.ring(2,4).replace('stroke="#edf0f5"','stroke="var(--ring-track,#edf0f5)"')));
+ const html=projectCard(p);
+ assert.match(html,/^<button class="project surface"/);
+ for(const cls of ['projecttop','symbol','mini-ring','projectpartner','projectmeta','projecttagline','projectnumbers'])assert.match(html,new RegExp('class="'+cls+'"'),'卡片必须有 '+cls);
+ // 一张卡一次（PJ-01）：阶段不再另画五格步骤条，交付进度只在环 + 数字里表达一次。
+ assert.doesNotMatch(html,/class="steps"/,'不再画与阶段标签重复的步骤条');
+ assert.match(html,/class="projectmeta">负责人/,'卡片要写负责人（没有就如实写未设置）');
+ assert.match(html,/截止 /,'卡片要写截止日期（没有就如实写无截止）');
+ assert.match(html,/class="chip">阶段未设置</,'阶段是卡片第一行信息');
+ assert.match(html,/尚未设置|2\/4/,'交付项必须如实显示');
+ assert.match(ring(2,4),/font-size="15"/,'环内数字必须落在 VI 字阶内');
+
+ assert.match(projectCard(p),/style="--pc:[^;"]+;--pb:[^;"]+;color:var\(--pc\);background:var\(--pb\)"/,'色值必须走自定义属性');
 });
-test('real project text is escaped and missing progress is not a fabricated percentage',()=>{const html=projectCard({id:'" onclick="bad',name:'<script>bad</script>',partner:'A & B',done:0,total:0,color:'#6488d6',bg:'#edf2ff',icon:'chip',stage:null,docs:0,block:0});assert(!html.includes('<script>'));assert(html.includes('&lt;script&gt;'));assert(html.includes('A &amp; B'));assert(html.includes('尚无交付项'));assert(!html.includes('0%'));});
+test('real project text is escaped and missing progress is not a fabricated percentage',()=>{const html=projectCard({id:'" onclick="bad',name:'<script>bad</script>',partner:'A & B',done:0,total:0,color:'#6488d6',bg:'#edf2ff',icon:'chip',stage:null,docs:0,block:0});assert(!html.includes('<script>'));assert(html.includes('&lt;script&gt;'));assert(html.includes('A &amp; B'));assert(html.includes('尚无交付项'));assert(!html.includes('mini-ring'),'0/0 不画环');assert(!html.includes('0%'));});

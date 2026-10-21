@@ -14,13 +14,13 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 const settle = async (times = 30) => { for (let index = 0; index < times; index += 1) await tick(); };
 const notFound = path => { const error = Error('目录不存在：' + path); error.code = 'NOT_FOUND'; return error; };
 
-/** 一棵小目录树：根有 会议/资料；会议下有 示例科技-3D存算一体。 */
+/** 一棵小目录树：根有 会议/资料；会议下有 示例科技-示例产品。 */
 function tree() {
   return {
     '': {path: '', parent: '', items: [{name: '会议', path: '会议'}, {name: '资料', path: '资料'}]},
-    '会议': {path: '会议', parent: '', items: [{name: '示例科技-3D存算一体', path: '会议/示例科技-3D存算一体'}]},
+    '会议': {path: '会议', parent: '', items: [{name: '示例科技-示例产品', path: '会议/示例科技-示例产品'}]},
     '资料': {path: '资料', parent: '', items: []},
-    '会议/示例科技-3D存算一体': {path: '会议/示例科技-3D存算一体', parent: '会议', items: []}
+    '会议/示例科技-示例产品': {path: '会议/示例科技-示例产品', parent: '会议', items: []}
   };
 }
 
@@ -44,14 +44,14 @@ test('G-FLD-1：存量值不存在 → 从根目录开始 + 一句人话（不�
     if (!(path in data)) throw notFound(path);
     return data[path];
   };
-  const h = mount({initialPath: '示例科技-3D存算一体', send, title: '示例科技 · 3D 存算一体芯片技术适配'});
+  const h = mount({initialPath: '示例科技-示例产品', send, title: '示例科技 · 示例产品芯片技术适配'});
   await settle();
   const panel = h.container;
-  assert.match(panel.textContent, /原来填的「示例科技-3D存算一体」不在工作区里/, '非法存量值必须有一句人话');
+  assert.match(panel.textContent, /原来填的「示例科技-示例产品」不在工作区里/, '非法存量值必须有一句人话');
   assert.match(panel.textContent, /工作区/, '必须从根目录开始并显示当前位置');
   assert(panel.querySelector('[data-folder-enter="会议"]'), '必须能从根目录进入真实文件夹');
   assert(panel.querySelector('[data-folder-select]'), '任何状态下都要能选当前目录');
-  assert(panel.querySelector('[data-folder-candidate="会议/示例科技-3D存算一体"]'), '必须按标题给出真实候选');
+  assert(panel.querySelector('[data-folder-candidate="会议/示例科技-示例产品"]'), '必须按标题给出真实候选');
   h.browser.dispose();
 });
 
@@ -93,10 +93,10 @@ test('G-FLD-5：越界路径（FORBIDDEN）→ 说明不在工作区 + 回根目
 test('G-FLD-8：面包屑 / 上级 / 回根都能用（从深层目录回退）', async () => {
   const data = tree();
   const send = async (action, params = {}) => { if (action === 'directory_list') return data[params.path ?? '']; throw Error(action); };
-  const h = mount({initialPath: '会议/示例科技-3D存算一体', send});
+  const h = mount({initialPath: '会议/示例科技-示例产品', send});
   await settle();
   const panel = h.container;
-  assert.match(panel.textContent, /示例科技-3D存算一体/, '必须显示当前目录');
+  assert.match(panel.textContent, /示例科技-示例产品/, '必须显示当前目录');
   panel.querySelector('[data-folder-crumb="会议"]').click(); await settle();
   assert.equal(h.browser.path, '会议', '点面包屑必须回到对应层级');
   panel.querySelector('[data-folder-up]').click(); await settle();
@@ -115,17 +115,17 @@ test('选文件夹把当前路径交给调用方（≤3 次点击完成真实场
   await settle();
   const panel = h.container;
   panel.querySelector('[data-folder-enter="会议"]').click(); await settle();
-  panel.querySelector('[data-folder-enter="会议/示例科技-3D存算一体"]').click(); await settle();
+  panel.querySelector('[data-folder-enter="会议/示例科技-示例产品"]').click(); await settle();
   panel.querySelector('[data-folder-select]').click(); await settle();
-  assert.deepEqual(h.selected, ['会议/示例科技-3D存算一体'], '面板内 2 次进入 + 1 次选中 = 3 次');
+  assert.deepEqual(h.selected, ['会议/示例科技-示例产品'], '面板内 2 次进入 + 1 次选中 = 3 次');
   h.browser.dispose();
 });
 
 test('suggestFolders 按标题匹配真实目录、不 hardcode；无命中回退到根目录候选', async () => {
   const data = tree();
   const send = async (action, params = {}) => { if (action === 'directory_list') return data[params.path ?? '']; throw Error(action); };
-  const hit = await suggestFolders(send, '示例科技 · 3D 存算一体芯片技术适配与合作研判');
-  assert.deepEqual(hit.map(item => item.path), ['会议/示例科技-3D存算一体'], '必须按标题命中真实目录');
+  const hit = await suggestFolders(send, '示例科技 · 示例产品技术适配与合作研判');
+  assert.deepEqual(hit.map(item => item.path), ['会议/示例科技-示例产品'], '必须按标题命中真实目录');
   const fallback = await suggestFolders(send, '完全无关的名字');
   assert(fallback.length >= 1, '没有命中也要有候选（根目录前几个），不能给空');
   assert(fallback.some(item => item.path === '会议' || item.path === '资料'));

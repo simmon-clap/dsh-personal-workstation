@@ -35,7 +35,7 @@ test('every served V7 module resolves inside the published set',()=>{
   }
  }
  const entry=readFileSync(new URL('../src/v7/app.mjs',import.meta.url),'utf8');
- assert.match(entry,/import \{mountV7\} from '\.\/v7-controller\.mjs'/);
+ assert.match(entry,/import \{mountV7\} from '\.\/v7-controller-v6\.mjs'/);
  assert.doesNotMatch(entry,/jsdom|replica\//);
 });
 test('the shipped shell loads the 纸上秩序 design system and its assets are served',async()=>{
@@ -84,7 +84,7 @@ test('V7 routes serve the replica shell and modules, never the demo scripts',asy
  }finally{store.close()}
 });
 test('the dark layer only uses colours from the 纸上秩序 palette',async()=>{
- const tokens=JSON.parse(readFileSync(new URL('../../design-system/tokens.json',import.meta.url),'utf8'));
+ const tokens=JSON.parse(readFileSync(new URL('../design-system/tokens.json',import.meta.url),'utf8'));
  // 数据调色板（逐项目/伙伴配色）是**登记在册**的数据色，与 VI 调色板一起构成允许集合；
  // 断言的是"不许自造颜色"，不是"只许 15 色"——用户已拍板逐项目配色算数据。
  const {DATA_COLORS}=await import('../prototype/data-palette.mjs');

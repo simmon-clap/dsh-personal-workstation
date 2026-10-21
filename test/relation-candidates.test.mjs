@@ -33,7 +33,7 @@ test('每条候选都要带"凭什么提它"，没信号的对一条都不提', 
 
 test('共同专名能提为候选，理由里写清是哪个词', () => {
   const entities = [
-    mk('e1', 'topic', {title: '示例科技 3D 存算一体 调研'}),
+    mk('e1', 'topic', {title: '示例科技 示例产品 调研'}),
     mk('e2', 'artifact', {title: '示例科技 路演纪要'}),
     mk('z1', 'topic', {title: '别的题目'}),
   ];

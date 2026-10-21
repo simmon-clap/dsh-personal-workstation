@@ -11,7 +11,7 @@ export function taskDetailHtml(item,project){
  return `<p>${esc(t.projectName)} · ${esc(t.target)} · ${esc(t.state)}</p><div class="detailmetrics"><div><b>${t.total?Math.round(t.done/t.total*100)+'%':'—'}</b><small>按已完成步骤计算</small></div><div><b>${t.done}/${t.total}</b><small>步骤完成</small></div><div><b>${esc(t.target)}</b><small>执行位置</small></div></div><h3>执行展开</h3>${t.steps.map((s,i)=>`<div class="evidence"><span style="color:${s.done===true?'var(--ws-success)':'var(--ws-muted)'}">${s.done===true?'✓':'○'} &nbsp; ${i+1}. ${esc(s.title||'未命名步骤')}</span><span style="color:var(--ws-muted)">${s.done===true?'已完成':'未完成'}</span></div>`).join('')||'<p>尚无步骤</p>'}<h3>输入与产物</h3><p>输入：${esc(d.inputScope||d.description||'未指定输入')}</p><p>产物：${esc(d.expectedOutput||'未指定预期输出')}</p>${project?`<button class="btn" data-project="${esc(project.id)}" style="margin-top:16px">返回所属项目</button>`:''}<p class="notice">DSH 执行：${esc(execution)}。</p>`;
 }
 
-export function createTaskDetail(document,send,{openProject,onEdit,openCanvas,onLinkMaterial,onInlineChange=null,notify=()=>{}}){
+export function createTaskDetail(document,send,{openProject,onEdit,openCanvas,onLinkMaterial,onInlineChange=null,notify=()=>{},generatedView=null,onOpenSubject=null}){
  // 与「编辑任务」用同一套取值，不另立一套（VI §6 同一控件唯一实现）。
  const statusOptions=[['todo','待办'],['waiting','等待'],['in_progress','进行中'],['done','已完成'],['cancelled','已取消']];
  const targetOptions=[['local','当前 DSH 主机'],['mini','Mini']];
@@ -45,11 +45,34 @@ export function createTaskDetail(document,send,{openProject,onEdit,openCanvas,on
   const refs=refLabels(send);
   const refLine=document.createElement('p');refLine.dataset.refsLine='1';
   const actions=document.createElement('div');actions.className='modalactions';
-   const make=(label,cls,run,id)=>{const button=document.createElement('button');button.className='btn'+(cls?' '+cls:'');button.textContent=label;if(id)button.id=id;button.onclick=run;actions.append(button);return button};
+   const make=(label,cls,run,id,container=actions)=>{const button=document.createElement('button');button.className='btn'+(cls?' '+cls:'');button.textContent=label;if(id)button.id=id;button.onclick=run;container.append(button);return button};
+   // 动作区只留**一个主操作**（spec/56 §2：动作区 ≤2，B2 把次要动作移进正文）：
+   // 执行历史 / 画布关联 / 关联材料 是「看和连」，不是决定；放进正文的工具行，动作区只留「编辑任务」。
    // 执行历史与"执行器是否开启"是两件事：历史记录可以在执行器关闭时依然存在，
  // 因此这里**不禁用**按钮；是否接入由历史窗口如实说明（见 history()）。
- make('查看执行历史','',()=>history(item),'taskhistory');make('在画布中查看关联','',()=>openCanvas?.(item.id),'taskcanvas');if(onLinkMaterial)make('关联已有材料','',()=>onLinkMaterial(item),'tasklinkmaterial');make('编辑任务','primary',()=>onEdit?.('task',item));
-  body.append(actions);
+  const tools=document.createElement('div');tools.className='detailtools';tools.dataset.detailtools='1';
+  make('查看执行历史','',()=>history(item),'taskhistory',tools);
+  make('在画布中查看关联','',()=>openCanvas?.(item.id),'taskcanvas',tools);
+  if(onLinkMaterial)make('关联已有材料','',()=>onLinkMaterial(item),'tasklinkmaterial',tools);
+  make('编辑任务','primary',()=>onEdit?.('task',item));
+  body.append(tools,actions);
+  // ── 生成视图（27 号方案 G3）：任务详情里的「阻塞说明」入口 ──
+  // 单一区块，不新增页面/入口；回答"卡在哪、等谁、下一步做什么"。
+  // 预览不落库；保存（存为判断/简报）走 view_save → 既有收件箱确认。
+  if(generatedView&&typeof generatedView.block==='function'){
+   const viewBlock=generatedView.block({
+    subjectId:item.id,
+    subjectTitle:item.data?.title??'这条任务',
+    subjectKind:'任务',
+    heading:'AI 分析',
+    summary:'看这条任务卡在哪、在等谁、下一步做什么；只是预览，不保存，关闭即弃。',
+    templates:[{id:'blocker',label:'生成阻塞说明',params:{}}],
+    onOpenSubject:id=>{if(id!==item.id)onOpenSubject?.(id)},
+    emptyActions:onEdit?{blocker:{label:'去补等待原因',run:()=>onEdit('task',item)}}:undefined,
+   });
+   if(actions.isConnected)actions.before(viewBlock.element);
+   else body.append(viewBlock.element);
+  }
   // 负责人/依赖/截止/关联材料这一行必须插在动作区之前：原先在 actions 还没进 DOM 时就 before(refLine)，
   // 按规范那是空操作——这一行（以及 0.8.0 承诺的"详情显示负责人与依赖"）实际从未出现。现在先挂 actions 再插。
   // W2-7：决定字段（负责人/业务状态/截止/执行端）放到弹窗最上面 —— 手机 390 首屏就能看到，

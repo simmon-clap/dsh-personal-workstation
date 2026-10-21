@@ -9,7 +9,7 @@ const J=(id,title,status,projectId,evidence,uncertainty)=>({id,kind:'judgment',r
 
 test('same subject is judged by shared topic words, not by status or punctuation',()=>{
  assert.equal(sameSubject('与示例伙伴的合作真实存在','与示例伙伴的合作并不存在'),true);
- assert.equal(sameSubject('服务器方案当前并不存在（明年 3 月投片）','服务器的价格短期接受不了'),false,'不同主题不能硬凑成矛盾');
+ assert.equal(sameSubject('当前方案并不存在（时间安排）','服务器的价格短期接受不了'),false,'不同主题不能硬凑成矛盾');
  assert.equal(sameSubject('对方的性能与成本数字全部是自述','对方的功耗与成本数字是自述'),true);
 });
 
@@ -28,8 +28,8 @@ test('conflicts carry both judgments, both sources and a reason',()=>{
 
 test('an affirmed candidate contradicts a denied existing judgment',()=>{
  const conflicts=findConflicts([
-  J('a','服务器方案当前并不存在','current','p1',[EV('file','纪要.md#2','服务器方案未立项')]),
-  J('b','服务器方案当前已经存在','current','p1',[EV('file','纪要.md#5','服务器方案已立项')]),
+  J('a','当前方案并不存在','current','p1',[EV('file','纪要.md#2','方案未立项')]),
+  J('b','当前方案已经存在','current','p1',[EV('file','纪要.md#5','方案已立项')]),
  ]);
  assert.equal(conflicts.length,1,'「已经存在」与「并不存在」必须判成相反结论');
  assert.match(conflicts[0].reason,/相反结论/);

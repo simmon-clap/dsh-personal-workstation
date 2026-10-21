@@ -1,7 +1,9 @@
 import {escapeHtml as esc,ring} from './project-render.mjs';
 import {showEmpty} from './empty-state.mjs';
 import {taskModel,taskRow} from './task-render.mjs';
-export function taskModels(items){const live=items.filter(x=>!x.archived),byId=new Map(live.map(x=>[x.id,x]));return live.filter(x=>x.kind==='task').map(x=>{const d=x.data;return {...taskModel(x,live.filter(p=>p.kind==='project').map(p=>({id:p.id,name:p.data.title,deliverables:p.data.deliverables??[]}))),businessStatus:d.status,executionStatus:x.execution?.status??null,dependencies:(d.dependsOn??[]).map(id=>byId.get(id)?.data.title||id),input:d.inputScope||d.description||''};});}
+import {cardOpen,cardClose} from './card.mjs';
+import {taskStatusLabels} from './status-vocab.mjs';
+export function taskModels(items){const live=items.filter(x=>!x.archived),byId=new Map(live.map(x=>[x.id,x]));return live.filter(x=>x.kind==='task').map(x=>{const d=x.data;const owner=byId.get(d.ownerId);return {...taskModel(x,live.filter(p=>p.kind==='project').map(p=>({id:p.id,name:p.data.title,deliverables:p.data.deliverables??[]}))),ownerName:owner?.kind==='person'?String(owner.data?.title??''):'',businessStatus:d.status,executionStatus:x.execution?.status??null,dependencies:(d.dependsOn??[]).map(id=>byId.get(id)?.data.title||id),input:d.inputScope||d.description||''};});}
 export {taskRow};
 // ── 负责人筛选（第 3 批 P1-1，方案 A）────────────────────────────────────────────
 // 选项只来自**真实存在的 person 记录**：items 是当前工作区的活跃对象全集（readWorkspaceItems 分页读全），
@@ -52,7 +54,8 @@ export function mountTaskViews(document,items,onOpen,{onCreate}={}){const tasks=
  bar?.sync();
  // 指标：只显示**有内容的**；待办第一（真实数据 5 条全是待办，旧版把它藏起来、四个 0 占满首屏）。
  const taskMetrics=document.querySelector('#taskmetrics');taskMetrics.dataset.groupcount='1';taskMetrics.closest('.view')?.setAttribute('data-metricsscope','1');
- const counts=[['待办',ts.filter(t=>t.state==='待办').length],['运行中',ts.filter(t=>t.state==='运行中').length],['等待中',ts.filter(t=>t.state==='等待中').length],['已完成',ts.filter(t=>t.state==='已完成').length]];
+ const runningLabel=taskStatusLabels.in_progress;
+ const counts=[[taskStatusLabels.todo,ts.filter(t=>t.state===taskStatusLabels.todo).length],[runningLabel,ts.filter(t=>t.state===runningLabel).length],[taskStatusLabels.waiting,ts.filter(t=>t.state===taskStatusLabels.waiting).length],[taskStatusLabels.done,ts.filter(t=>t.state===taskStatusLabels.done).length]];
  const totalSteps=ts.reduce((s,t)=>s+t.total,0);
  const shownMetrics=counts.filter(([,n])=>n>0);
  if(totalSteps>0)shownMetrics.push(['步骤完成',ts.reduce((s,t)=>s+t.done,0)+'/'+totalSteps]);
@@ -62,13 +65,13 @@ export function mountTaskViews(document,items,onOpen,{onCreate}={}){const tasks=
  if(mode==='board'&&ts.length){
   // 列顺序固定为「待办→等待中→运行中→已完成→其它真实状态」；**只渲染有卡片的列**，
   // 空列折叠成看板下方一行灰字（46 号审计：待办被写死在第 4 列、前三列 75% 是空的）。
-  const ORDER=['待办','等待中','运行中','已完成'];
+  const ORDER=[taskStatusLabels.todo,taskStatusLabels.waiting,taskStatusLabels.in_progress,taskStatusLabels.done];
   const extras=[...new Set(ts.map(t=>t.state))].filter(s=>!ORDER.includes(s));
   const stateOrder=[...ORDER,...extras];
   const filled=stateOrder.filter(s=>ts.some(t=>t.state===s));
   const emptyStates=stateOrder.filter(s=>!ts.some(t=>t.state===s));
   // 只有一个有内容的分组时，让这一列宽一些：卡片标题不再挤成两三行（W2-1 字阶放大后 5 张卡需仍在首屏）。
-  body.innerHTML='<div class="kanban'+(filled.length===1?' single':'')+'">'+filled.map(s=>`<div class="column" data-groupcount="1"><h3>${s} · ${ts.filter(t=>t.state===s).length}</h3>${ts.filter(t=>t.state===s).map(t=>`<button data-task="${esc(t.id)}"><span class="taskcontext">${esc(t.projectName)} / ${esc(t.target)}</span><h3 style="color:var(--ws-ink);margin:var(--ws-space-4) 0">${esc(t.name)}</h3>${t.total?ring(t.done,t.total):''}<p>${t.total?`${t.done} / ${t.total} 步骤 · ${Math.round(t.done/t.total*100)}%`:'尚无步骤'}</p>${t.state==='等待中'?`<p class="tagline" data-blocked="1">等待原因：${esc(t.blockedReason||'原因未记录')}</p>`:''}${t.deliverableName?`<p class="tagline" data-deliverable="1">支撑交付项：${esc(t.deliverableName)}</p>`:''}${t.dueDate?`<p class="tagline" data-due="1">截止 ${esc(t.dueDate)}</p>`:''}<div class="taskrail">${t.steps.map(s=>`<i class="${s.done?'done':''}"></i>`).join('')}</div></button>`).join('')}</div>`).join('')+'</div>'
+  body.innerHTML='<div class="kanban'+(filled.length===1?' single':'')+'">'+filled.map(s=>`<div class="column" data-groupcount="1"><h3>${s} · ${ts.filter(t=>t.state===s).length}</h3>${ts.filter(t=>t.state===s).map(t=>`${cardOpen({task:t.id})}<span class="taskcontext">${esc(t.projectName)} / ${esc(t.target)}</span><h3 style="color:var(--ws-ink);margin:var(--ws-space-4) 0">${esc(t.name)}</h3>${t.total?ring(t.done,t.total):''}<p>${t.total?`${t.done} / ${t.total} 步骤 · ${Math.round(t.done/t.total*100)}%`:'尚无步骤'}</p>${t.ownerName?`<p class="tagline" data-owner="1">负责人 ${esc(t.ownerName)}</p>`:''}${t.state===taskStatusLabels.waiting?`<p class="tagline" data-blocked="1">等待原因：${esc(t.blockedReason||'原因未记录')}</p>`:''}${t.deliverableName?`<p class="tagline" data-deliverable="1">支撑交付项：${esc(t.deliverableName)}</p>`:''}${t.dueDate?`<p class="tagline" data-due="1">截止 ${esc(t.dueDate)}</p>`:''}<div class="taskrail">${t.steps.map(s=>`<i class="${s.done?'done':''}"></i>`).join('')}</div>`+cardClose()).join('')}</div>`).join('')+'</div>'
    +(emptyStates.length?`<p class="kanbancollapsed" data-emptycolumns="${emptyStates.map(esc).join(',')}">${emptyStates.map(esc).join(' · ')}：暂无任务</p>`:'');
  }
  else body.innerHTML='<div class="surface pad"><h2>任务依赖 · 当前筛选</h2><p>节点可点击；每个任务只展示其已声明的输入条件。</p>'+ts.map(t=>`<div style="display:grid;grid-template-columns:1fr 30px 1.6fr;align-items:center;margin:var(--ws-space-16) 0"><span class="chip">${esc(t.dependencies.length?t.dependencies.join('、'):'未声明前置任务')}</span><span style="text-align:center;color:var(--ws-line)">→</span><div>${taskRow(t)}</div></div>`).join('')+'</div>';

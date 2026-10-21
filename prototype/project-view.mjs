@@ -40,7 +40,12 @@ export function filterBarHtml({id,toggleId=id+'toggle',chips=[],chipAttribute='d
 export function wireFilterBar(root,{id,toggleId=id+'toggle',state={},counted=[],defaults={},chips=null,onToggle}={}){
  const toggle=root?.querySelector('#'+toggleId),panel=root?.querySelector('#'+id);
  if(!toggle||!panel)return null;
- const count=()=>counted.filter(key=>String(state[key]??'')!==String(defaults[key]??'')).length;
+ // 默认值可以是数组：「这些都算默认视图」（收件箱的「待确认」是默认视图，「全部」等于没筛）。
+ const count=()=>counted.filter(key=>{
+  const value=String(state[key]??'');
+  const fallback=defaults[key];
+  return Array.isArray(fallback)?!fallback.map(String).includes(value):value!==String(fallback??'');
+ }).length;
  const sync=()=>{
   const total=count();
   toggle.textContent=total?'筛选 · '+total:'筛选';
@@ -369,20 +374,31 @@ export async function mountProjectViews(document,send,onOpen,{onCreate}={}){
  const all=await readProjectModels(send);
  // 默认按优先级（重要×紧急）排序：用户要求"默认对项目紧急程度和重要程度自动排序"。
  const projects=sortByPriority(all);
+ // 总览页「重点项目」：首页的卡片带（与项目页是两个页面，不算重复表达）。
  renderProjectStrip(document.querySelector('#projectstrip'),projects,{onCreate});
  const body=document.querySelector('#projectsbody');
- body.innerHTML='<div class="projectstrip"></div><div class="sectionhead"><h2>交付与阻塞分布</h2></div><div class="surface pad"></div>';
- renderProjectStrip(body.querySelector('.projectstrip'),projects,{onCreate});
- const compositionSurface=body.querySelector('.surface.pad');
- // 空库时不再留一张只有脚注的空卡：直接给出可执行的空态。
- if(!projects.length)showEmpty(compositionSurface,{illustration:'projects',title:'还没有交付项',description:'项目建立后，这里按已完成 / 全部交付项展示进度。',action:onCreate?{label:'新建项目',run:onCreate}:undefined});
- else compositionSurface.innerHTML=projects.map(p=>`<button style="width:100%;text-align:left" data-project="${escapeHtml(p.id)}"><div class="meter"${p.total?'':' data-empty="1"'}><span>${escapeHtml(p.name)}</span>${p.total?`<i><em style="width:${Math.round(p.done/p.total*100)}%;background:${p.color}"></em></i>`:''}<b>${p.total?p.done+'/'+p.total:'尚无交付项'}</b></div></button>`).join('');
- const composition=compositionSurface.innerHTML;
+ // 项目组合页：**一张项目卡只出现一次**（spec/54 §3.2 / PJ-01）。
+ // 原来组合页是「卡片带 + 交付与阻塞分布」两处表达同一批项目，现在只留卡片带：
+ // 真实交付进度已经在卡片里（0/0 不画环），交付构成只在「时间路线图 → 构成」那一个视图里看。
+ const PORTFOLIO_HTML='<div class="projectstrip"></div>';
+ const compositionHtml=list=>{
+  const withDelivery=list.filter(p=>p.total);
+  if(!withDelivery.length)return emptyState(document,{illustration:'complete',title:'还没有交付项',description:'给项目定下要交什么之后，这里按已完成 / 全部交付项展示进度。'}).outerHTML;
+  return withDelivery.map(p=>`<button style="width:100%;text-align:left" data-project="${escapeHtml(p.id)}"><div class="meter"><span>${escapeHtml(p.name)}</span><i><em style="width:${Math.round(p.done/p.total*100)}%;background:${p.color}"></em></i><b>${p.done}/${p.total}</b></div></button>`).join('');
+ };
+ let currentVisible=projects;
  const roadmap=document.querySelector('#roadmap');
- const roadmapHtml=()=>projects.length?projectRoadmap(projects):emptyState(document,{illustration:'complete',title:'还没有计划区间',description:'项目设置计划开始与截止日期后，这里显示计划区间。'}).outerHTML;
- roadmap.innerHTML=roadmapHtml();
- const roadtabs=document.querySelector('#roadtabs');const switchRoad=event=>{const tab=event.target.closest('[data-road]');if(!tab)return;for(const b of roadtabs.querySelectorAll('button')){const active=b===tab;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));}roadmap.innerHTML=tab.dataset.road==='plan'?roadmapHtml():composition;};roadtabs.addEventListener('click',switchRoad);
-  const portfolio=body.innerHTML;const tabs=document.querySelector('#projecttabs');
+ const roadmapHtml=list=>list.length?projectRoadmap(list):emptyState(document,{illustration:'complete',title:'还没有计划区间',description:'项目设置计划开始与截止日期后，这里显示计划区间。'}).outerHTML;
+ const paintPortfolio=list=>{
+  if(!body.hidden)body.innerHTML=PORTFOLIO_HTML;
+  const strip=body.querySelector('.projectstrip');
+  if(strip)renderProjectStrip(strip,list,{onCreate});
+  if(!list.length&&!body.querySelector('.v7-empty'))showEmpty(body,{illustration:'projects',title:'还没有项目',description:'创建第一个项目后，交付项、任务与资料都会汇总到这里。',action:onCreate?{label:'新建项目',run:onCreate}:undefined});
+ };
+ paintPortfolio(projects);
+ roadmap.innerHTML=roadmapHtml(projects);
+ const roadtabs=document.querySelector('#roadtabs');const switchRoad=event=>{const tab=event.target.closest('[data-road]');if(!tab)return;for(const b of roadtabs.querySelectorAll('button')){const active=b===tab;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));}roadmap.innerHTML=tab.dataset.road==='plan'?roadmapHtml(currentVisible):compositionHtml(currentVisible);};roadtabs.addEventListener('click',switchRoad);
+ const portfolio=PORTFOLIO_HTML;const tabs=document.querySelector('#projecttabs');
   // 第三段「名册」：用户 2026-10-15 拍板放在**项目页**（不在关联空间）。名册本体挂在 #projectsbody
   // 之后而不是里面 —— 里面那两段会被整块 innerHTML 重写，名册要保住自己读到的数据与搜索词。
   const roster=createProjectRoster(document,{onOpen,onCreate,projects:all,readLists:(kind,offset)=>send('list',{kind,limit:200,offset,includeArchived:false})});
@@ -403,21 +419,24 @@ export async function mountProjectViews(document,send,onOpen,{onCreate}={}){
   // 另外两段点了只变样式。实测：点「名册」aria-pressed 变 true，而 #projectsbody 仍是项目卡片。
   tabs.addEventListener('click',switchMode);
   tabs.dataset.pmode=mode;
-  if(mode==='roster'){body.hidden=true;roster?.open();return}roster?.setMode('portfolio');body.hidden=false;body.innerHTML=mode==='portfolio'?portfolio:'<div class="surface pad">'+roadmapHtml()+'<div class="chartfoot">每条横线表示计划区间，非实际工时；点击展开阶段与任务。</div></div>';};tabs.addEventListener('click',switchMode);
+  if(mode==='roster'){body.hidden=true;roster?.open();return}roster?.setMode('portfolio');body.hidden=false;
+  if(mode==='portfolio'){paintPortfolio(currentVisible)}
+  else body.innerHTML='<div class="surface pad">'+roadmapHtml(currentVisible)+'<div class="chartfoot">每条横线表示计划区间，非实际工时；点击展开阶段与任务。</div></div>';
+ };tabs.addEventListener('click',switchMode);
   // 重新挂载后按记住的那一段恢复（与「画布 ｜ 列表」原来那版同一个口径：选择不因重新挂载而丢）。
   if(tabs.dataset.pmode==='roster'){rosterTab.classList.add('active');rosterTab.setAttribute('aria-pressed','true');roster?.open()}
   // 筛选栏：注入到项目页签之后；变更时重渲染组合卡与路线图（不重新拉数据）。
  const filters=mountFilters(document,send);
  const renderWithFilters=state=>{
   const visible=applyProjectFilters(all,state);
+  currentVisible=visible;
   // **必须先确认元素在**。切到「时间路线图」时 `body.innerHTML` 被整块重写，
   // `.projectstrip` 随之消失；此后任何一个 `project-filters` 事件（例如在收件箱同意一条改动
   // 引发重绘）都会让 querySelector 返回 null，`renderProjectStrip` 里 `root.innerHTML=` 当场抛
   // 「Cannot set properties of null」。实测栈：renderProjectStrip ← renderWithFilters ← project-filters 监听。
   const strip=body.querySelector('.projectstrip');
-  if(strip)renderProjectStrip(strip,visible,{onCreate});
-  const surface=body.querySelector('.surface.pad');
-  if(surface)surface.innerHTML=visible.length?visible.map(p=>`<button style="width:100%;text-align:left" data-project="${escapeHtml(p.id)}"><div class="meter"${p.total?'':' data-empty="1"'}><span>${escapeHtml(p.name)}</span>${p.total?`<i><em style="width:${p.done/p.total*100}%;background:${p.color}"></em></i>`:''}<b>${p.total?p.done+'/'+p.total:'尚未设置'}</b></div></button>`).join(''):`<p class="notice" data-filtered-empty="1">当前筛选没有项目。筛选条件：${[
+  if(strip)renderProjectStrip(strip,visible,{onCreate:visible.length?onCreate:undefined});
+  if(!visible.length&&!strip)body.innerHTML=`<p class="notice" data-filtered-empty="1">当前筛选没有项目。筛选条件：${[
    state.stage&&'阶段 '+state.stage,state.partnerId&&'机构',state.ownerId&&'负责人',
    state.importance&&'重要度 '+(state.importance==='none'?'未设置':priorityLabels(state.importance)),
    state.urgency&&'紧急度 '+(state.urgency==='none'?'未设置':priorityLabels(state.urgency)),

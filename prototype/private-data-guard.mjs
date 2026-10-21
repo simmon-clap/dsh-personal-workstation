@@ -50,6 +50,34 @@ function looksLikeSecret(text) {
   return null;
 }
 
+/** ③ 的判据做成纯函数，方便单测/自检直接注入文件清单（不必造一个真仓库）。 */
+export function dataShapeProblem(path) {
+  const hit = DATA_PATTERNS.find(({test}) => test.test(path));
+  return hit ? hit.why : null;
+}
+export function checkTrackedData(files) {
+  return files
+    .filter(path => !path.endsWith('/'))
+    .map(path => ({path, why: dataShapeProblem(path)}))
+    .filter(item => item.why)
+    .map(item => '仓库 tracked 文件里有业务数据（' + item.why + '）：' + item.path);
+}
+
+// 自检：注入已知数据文件形状必须判红，普通源码/文档必须放行。
+if (process.argv.includes('--self-test')) {
+  const canaries = ['src/store.mjs', 'README.md', 'src/v7/app.mjs', 'src/data.sqlite', 'src/data.sqlite-wal', '会议/纪要.md', 'voice/a.m4a', 'src/会议纪要.md'];
+  const expected = ['src/data.sqlite', 'src/data.sqlite-wal', '会议/纪要.md', 'voice/a.m4a', 'src/会议纪要.md'];
+  const found = checkTrackedData(canaries).length;
+  const clean = checkTrackedData(['src/store.mjs', 'README.md', 'src/v7/app.mjs']).length;
+  if (found !== expected.length || clean !== 0) {
+    console.log('FAIL: 业务数据守卫自检未通过（期望判红 ' + expected.length + ' 个、实际 ' + found + '；干净清单误报 ' + clean + ' 个）。');
+    process.exit(1);
+  }
+  console.log('PASS: 自检通过（数据库/录音/纪要/数据目录 都会判红，普通源码与文档放行）。');
+  process.exit(0);
+}
+
+export function runGuard() {
 const problems = [];
 const notes = [];
 
@@ -90,10 +118,23 @@ for (const path of packed) {
   if (entropy) problems.push('发布产物里疑似高熵密钥：' + path + ' → ' + entropy.slice(0, 24) + '…');
 }
 
-// ── ③ 插件目录里不得有数据文件（打包规则之外也可能躺着） ──────────────────────
-for (const path of packed) notes.push(path);
-const looseData = packed.filter(path => DATA_PATTERNS.some(({test}) => test.test(path)));
-if (!looseData.length) notes.push('发布产物 ' + packed.length + ' 个文件，未发现业务数据或凭证');
+// ── ③ 仓库里不得 tracked 数据文件（bypass 打包规则也要拦） ────────────────────
+// 旧版把 ③ 写成"npm pack 清单里再筛一遍"，而 ① 已经做过了：③ 因此永远是空转，
+// 后来 `git add` 一个 .sqlite 也不会红。现在改成真查 `git ls-files`：
+// 只要数据文件被 tracked（哪怕 package.json 的 files 没声明到），就视为仓库边界失守。
+let tracked = [];
+try {
+  // PATH 上的 git 在本机可能是坏的 x86 二进制（实测 Bad CPU type）；与 release.mjs 同口径用 /usr/bin/git。
+  const GIT = process.env.GIT_BIN || '/usr/bin/git';
+  const raw = execFileSync(GIT, ['-C', plugin, 'ls-files', '-z'], {encoding: 'utf8', maxBuffer: 64 * 1024 * 1024});
+  tracked = raw.split('\u0000').filter(Boolean);
+} catch {
+  problems.push('拿不到 git ls-files 清单 —— 无法判定仓库里是否 tracked 了业务数据，按失败处理');
+}
+if (tracked.length) {
+  problems.push(...checkTrackedData(tracked));
+  notes.push('仓库 tracked 文件 ' + tracked.length + ' 个，其中数据形状 ' + checkTrackedData(tracked).length + ' 个');
+}
 
 // ── ④ 仓库根的数据目录：提示性检查（只报告，不判失败 —— 仓库边界由发布流程决定） ──
 const repoDataDirs = ['会议', 'voice', 'workstation-data'].filter(name => existsSync(join(repo, name)));
@@ -109,3 +150,7 @@ if (problems.length) {
   process.exit(1);
 }
 console.log('PASS: 发布产物 ' + packed.length + ' 个文件里没有业务数据、没有凭证。');
+}
+
+// 只有直接运行（node prototype/private-data-guard.mjs）才执行检查；被单测 import 时不产生副作用。
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) runGuard();

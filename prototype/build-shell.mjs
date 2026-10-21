@@ -6,7 +6,7 @@ import {JSDOM} from '../dev-deps.mjs';
 import {PRESETS,tokenizeShell} from './shell-tokenize.mjs';
 
 // 「纸上秩序」图标集：以 VI 图标替换原型自绘 sprite，同时保留原型与模块使用的 #i-* 名称。
-const icons=new URL('../../design-system/assets/icons/',import.meta.url);
+const icons=new URL('../design-system/assets/icons/',import.meta.url);
 const iconNames=readdirSync(fileURLToPath(icons)).filter(name=>name.endsWith('.svg')).map(name=>name.replace('.svg',''));
 const aliases={home:'overview',star:'assistant',doc:'file',chip:'chip'};
 
@@ -19,11 +19,24 @@ function iconBody(name){
 /** 用 VI 图标重建 sprite；原型的 #i-* 名称保持可用，另外补上 VI 新增的名称。 */
 export function designSprite(){
  const ids=[...new Set([...Object.keys(aliases),...iconNames])];
- return '<svg style="display:none" aria-hidden="true"><defs>'+ids.map(id=>`<symbol id="i-${id}" viewBox="0 0 24 24">${iconBody(aliases[id]??id)}</symbol>`).join('')+'</defs></svg>';
+ const extras=[];
+ // 纸上玻璃新增图标（62 个）：统一加 pg- 前缀，避免与 VI 35 个同名覆盖。
+ for(const dir of ['icons','icons-extra']){
+  const base=new URL('../design-system/paper-glass/'+dir+'/',import.meta.url);
+  let names=[];try{names=readdirSync(fileURLToPath(base))}catch{continue}
+  for(const name of names){
+   if(!name.endsWith('.svg'))continue;
+   const id='pg-'+name.replace('.svg','');
+   if(ids.includes(id))continue;
+   const inner=readFileSync(new URL(name,base),'utf8').replace(/^[\s\S]*?<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'').trim();
+   if(inner)extras.push([id,inner]);
+  }
+ }
+ return '<svg style="display:none" aria-hidden="true"><defs>'+ids.map(id=>`<symbol id="i-${id}" viewBox="0 0 24 24">${iconBody(aliases[id]??id)}</symbol>`).join('')+extras.map(([id,inner])=>`<symbol id="i-${id}" viewBox="0 0 24 24">${inner}</symbol>`).join('')+'</defs></svg>';
 }
 
 export function buildShell(source){
- if(createHash('sha256').update(source).digest('hex')!=='e863a0aa7765968243689307240222cc87aac91539ed3cb7ab86726d9cd5f4a5')throw Error('V7基线变化，请重新核对');
+ if(createHash('sha256').update(source).digest('hex')!=='222a4471c32f0895c5912122bd0d10c8ac93298179bb07a5d99a79e47b8602f9')throw Error('V7基线变化，请重新核对');
  const dom=new JSDOM(source,{runScripts:'dangerously',pretendToBeVisual:true,beforeParse(w){w.ResizeObserver=class{observe(){}disconnect(){}};}});
  try{
  const d=dom.window.document;
@@ -33,11 +46,11 @@ export function buildShell(source){
  // 模块里用 #i-<名> 或 icon('<名>') 动态引用的图标也必须存在，否则运行时会出现空图标。
  for(const file of readdirSync(fileURLToPath(new URL('./',import.meta.url))).filter(name=>name.endsWith('.mjs')&&!['build-shell.mjs','build-v7.mjs','extract-v7.mjs','verify-v7.mjs','visual-check.mjs','control-audit.mjs','visual-seed.mjs'].includes(name))){
   const text=readFileSync(new URL('./'+file,import.meta.url),'utf8');
-  for(const match of text.matchAll(/#i-([a-z]+)/g))used.add(match[1]);
-  for(const match of text.matchAll(/\bicon\('([a-z]+)'\)/g))used.add(match[1]);
+  for(const match of text.matchAll(/#i-([a-z0-9-]+)/g))used.add(match[1]);
+  for(const match of text.matchAll(/\bicon\('([a-z0-9-]+)'\)/g))used.add(match[1]);
  }
  const sprite=designSprite();
- for(const id of used)if(!sprite.includes('id="i-'+id+'"'))throw Error('V7 引用了 VI 图标集中不存在的图标：'+id);
+ for(const id of used)if(id!=='pg-'&&!sprite.includes('id="i-'+id+'"'))throw Error('V7 引用了 VI 图标集中不存在的图标：'+id);
  d.querySelector('body > svg[aria-hidden]')?.remove();
  d.body.insertAdjacentHTML('afterbegin',sprite);
  for(const id of ['metrics','projectstrip','roadmap','taskmini','projectsbody','taskmetrics','tasksbody','knowbody','personalbody','spaceSvg','detailbody'])d.getElementById(id).replaceChildren();
@@ -191,7 +204,7 @@ export function buildShell(source){
  // VI 标识：设计方参考页把 mark.svg 内联在 .brandmark 中，这里照做，品牌区不再用星形符号。
  const brandmark=d.querySelector('.brandmark');
  if(!brandmark)throw Error('外壳缺少品牌区');
- const markInner=readFileSync(new URL('../../design-system/assets/mark.svg',import.meta.url),'utf8').replace(/^[\s\S]*?<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'').trim();
+ const markInner=readFileSync(new URL('../design-system/assets/mark.svg',import.meta.url),'utf8').replace(/^[\s\S]*?<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'').trim();
  if(!markInner)throw Error('VI 标识为空');
  brandmark.innerHTML='<svg viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="个人工作台标识">'+markInner+'</svg>';
  // VI 验收第 3 条「主按钮只有一个」：顶栏只保留「＋录入」为主色，其余降为白底描边。
@@ -199,7 +212,7 @@ export function buildShell(source){
  if(!createButton)throw Error('外壳缺少新建入口');
  createButton.className='btn';
  // 「纸上秩序」VI：变量与覆盖样式必须在原型内联样式之后加载，才能覆盖默认视觉。
- for(const [order,href]of [['tokens','/personal-workstation/v7/tokens.css'],['hosttheme','/personal-workstation/v7/v7-host-theme.css'],['data','/personal-workstation/v7/v7-data.css'],['visual','/personal-workstation/v7/v7-visual.css'],['dark','/personal-workstation/v7/v7-dark.css'],['contrast','/personal-workstation/v7/v7-contrast.css'],['workbench','/personal-workstation/v7/v7-workbench.css']]){
+ for(const [order,href]of [['tokens','/personal-workstation/v7/tokens.css'],['paperglass','/personal-workstation/v7/paper-glass-tokens.css'],['hosttheme','/personal-workstation/v7/v7-host-theme.css'],['data','/personal-workstation/v7/v7-data.css'],['visual','/personal-workstation/v7/v7-visual.css'],['dark','/personal-workstation/v7/v7-dark.css'],['contrast','/personal-workstation/v7/v7-contrast.css'],['workbench','/personal-workstation/v7/v7-workbench.css'],['paperglassskin','/personal-workstation/v7/v7-paper-glass-v26.css']]){
   const style=d.createElement('link');style.rel='stylesheet';style.href=href;style.dataset.design=order;d.head.append(style);
  }
  // 空态：极简样式由工作台自己维护，插画取 VI 资产（VI 只定义了手册里的展示样式）。
@@ -211,7 +224,7 @@ export function buildShell(source){
  }finally{dom.window.close();}
 }
 if(process.argv[1]===new URL(import.meta.url).pathname){
- const source=readFileSync(new URL('../../工作台-视觉原型-v7.html',import.meta.url),'utf8');
+ const source=readFileSync(new URL('./frozen/workbench-v7.html',import.meta.url),'utf8');
  writeFileSync(new URL('./live-shell.html',import.meta.url),buildShell(source));
  console.log('Built V7 initialized shell without demo scripts or business records. Not published.');
 }

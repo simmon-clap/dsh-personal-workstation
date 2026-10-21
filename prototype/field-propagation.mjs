@@ -18,11 +18,11 @@ const read=relative=>readFileSync(join(root,relative),'utf8');
 
 /** 界面面 → 文件。一个面可以有多个文件（任一命中即算到位）。 */
 const SURFACES={
- card:['prototype/project-render.mjs','prototype/task-render.mjs','prototype/knowledge-view.mjs'],
+ card:['prototype/project-render.mjs','prototype/task-render.mjs','prototype/knowledge-view-v2.mjs'],
  detail:['prototype/project-populated.mjs','prototype/project-detail.mjs','prototype/task-detail.mjs','prototype/record-detail.mjs'],
  editor:['prototype/editor.mjs'],
  filter:['prototype/project-view.mjs','prototype/task-view.mjs'],
- canvas:['prototype/space-view.mjs','src/graph.mjs'],
+ canvas:['prototype/space-view-v5.mjs','src/graph.mjs'],
  labels:['prototype/batch.mjs'],
  skill:['skills/personal-workstation/SKILL.md'],
  // 信息简报（在知识页卡片上渲染）
@@ -32,7 +32,8 @@ const SURFACES={
  fetchedAt:{surfaces:['card','labels']},
  linkStatus:{surfaces:['card','labels']},
  uncertainty:{surfaces:['card','labels']},
-
+ // 生成视图 v1（18 号 §3）在项目/任务/知识弹窗内的区块里渲染（渲染器 prototype/generated-view.mjs）。
+ generatedView:['prototype/generated-view-v2.mjs','src/v7/generated-view-v2.mjs'],
 };
 
 /** 每个字段要求在哪些面出现。理由写在注释里，避免"为了过门禁乱加"。 */
@@ -47,7 +48,7 @@ const MATRIX={
  goal:{surfaces:['detail','editor','labels']},
  stage:{surfaces:['card','detail','editor','filter','labels','skill']},
  // stageHistory 在卡片上以派生名 stageEnteredAt 显示（进入当前阶段的时间）
- stageHistory:{surfaces:['card','detail','labels','skill'],via:['stageEnteredAt']},
+ stageHistory:{surfaces:['detail','labels','skill'],via:['stageEnteredAt']},
  importance:{surfaces:['card','detail','editor','filter','canvas','labels','skill']},
  urgency:{surfaces:['card','detail','editor','filter','canvas','labels','skill']},
  folder:{surfaces:['card','detail','editor','canvas','labels','skill']},
@@ -56,6 +57,17 @@ const MATRIX={
  startDate:{surfaces:['detail','editor','labels']},
  dueDate:{surfaces:['detail','editor','filter','labels']},
  deliverables:{surfaces:['detail','editor','labels','skill']},
+ // 角色模型（A1/A2）：分类是 organization 的字段、模板与参与者是 project 的字段、视觉映射是 layout 的字段。
+ // 这四类字段的可见面：画布（结构态按角色分组/上色/排序）与批次差异的中文标签；详情/编辑在 B1/B2 接。
+ defaultRole:{surfaces:['detail','editor','canvas','labels']},
+ roleTemplate:{surfaces:['detail','editor','canvas','labels']},
+ participants:{surfaces:['detail','canvas','labels']},
+ roleColors:{surfaces:['canvas','labels']},
+ roleShapes:{surfaces:['canvas','labels']},
+ order:{surfaces:['canvas','labels']},
+ // 组织/联系人的说明字段（A1 补校验缺口：以前能写进表单但被校验拒掉）
+ contactId:{surfaces:['detail','editor','labels']},
+ note:{surfaces:['detail','editor','labels']},
  // 任务
  status:{surfaces:['card','detail','editor','labels']},
  steps:{surfaces:['card','detail','editor','labels']},
@@ -100,7 +112,7 @@ const MATRIX={
  to:{surfaces:['canvas','labels']},
  evidence:{surfaces:['canvas','labels']},
  reason:{surfaces:['canvas','labels']},
- basis:{surfaces:['canvas','labels']},
+ basis:{surfaces:['generatedView','canvas','labels']},
  // 信息简报（在知识页卡片上渲染）
  source:{surfaces:['card','labels']},
  sourceUrl:{surfaces:['card','labels']},
@@ -116,7 +128,19 @@ const MATRIX={
  // 来源（2026-10-17 用户拍板：「可以把来源记下来，最好只是 TAG」）：
  // 只出现在**详情的一枚标签**与**导出文档的一行字**里；不进卡片（避免信息更复杂的呈现），
  // 也没有手工输入（用户新建=你说的、Agent 新建=AI 起草，自动判定）。
- origin:{surfaces:['detail','labels','skill']},
+ // 生成视图的出处条也要显示来源（AI 生成 / 由你生成 / 来源未记录）。
+ origin:{surfaces:['generatedView','detail','labels','skill']},
+ // 生成视图（18 号 §3）：渲染器要读到模板、对象、参数、引用、生成时间、状态与动作；
+ // savedAs 只用于「转存为判断/简报」后的回执联动，不单独成面（批次差异里按标签显示）。
+ template:{surfaces:['generatedView','labels']},
+ analysis:{surfaces:['generatedView','labels']},
+ subject:{surfaces:['generatedView','labels']},
+ params:{surfaces:['generatedView','labels']},
+ dataRefs:{surfaces:['generatedView','labels']},
+ generatedAt:{surfaces:['generatedView','labels']},
+ state:{surfaces:['generatedView','labels']},
+ actions:{surfaces:['generatedView','labels']},
+ savedAs:{skip:true},
 
 };
 

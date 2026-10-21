@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {JSDOM} from '../dev-deps.mjs';import {mountTaskViews,taskModels} from '../prototype/task-view.mjs';
-test('V7 task tabs and original target filters keep real dependencies and steps',()=>{const dom=new JSDOM(readFileSync(new URL('../prototype/replica/index.html',import.meta.url),'utf8'));const items=[{id:'p',kind:'project',data:{title:'P'}},{id:'a',kind:'task',data:{title:'A',projectId:'p',executionTarget:'mini',status:'waiting',steps:[{done:false},{done:true}]}},{id:'b',kind:'task',data:{title:'B',status:'in_progress',dependsOn:['a']}}],opened=[];const view=mountTaskViews(dom.window.document,items,id=>opened.push(id));try{const doc=dom.window.document;doc.querySelector('#taskfilters [data-target="Mini"]').click();assert.equal(doc.querySelectorAll('#tasksbody [data-task]').length,1);doc.querySelector('#taskfilters [data-target="all"]').click();doc.querySelector('#tasktabs button:not([data-tmode="board"])').click();assert.match(doc.querySelector('#tasksbody').textContent,/A/);doc.querySelector('#tasksbody [data-task="b"]').click();assert.deepEqual(opened,['b']);assert.equal(taskModels(items)[1].state,'运行中');assert.equal(taskModels(items)[1].executionStatus,null);assert.equal(taskModels(items)[0].steps[1].done,true);}finally{view.dispose();dom.window.close()}});
+test('V7 task tabs and original target filters keep real dependencies and steps',()=>{const dom=new JSDOM(readFileSync(new URL('../prototype/replica/index.html',import.meta.url),'utf8'));const items=[{id:'p',kind:'project',data:{title:'P'}},{id:'a',kind:'task',data:{title:'A',projectId:'p',executionTarget:'mini',status:'waiting',steps:[{done:false},{done:true}]}},{id:'b',kind:'task',data:{title:'B',status:'in_progress',dependsOn:['a']}}],opened=[];const view=mountTaskViews(dom.window.document,items,id=>opened.push(id));try{const doc=dom.window.document;doc.querySelector('#taskfilters [data-target="Mini"]').click();assert.equal(doc.querySelectorAll('#tasksbody [data-task]').length,1);doc.querySelector('#taskfilters [data-target="all"]').click();doc.querySelector('#tasktabs button:not([data-tmode="board"])').click();assert.match(doc.querySelector('#tasksbody').textContent,/A/);doc.querySelector('#tasksbody [data-task="b"]').click();assert.deepEqual(opened,['b']);assert.equal(taskModels(items)[1].state,'进行中');assert.equal(taskModels(items)[1].executionStatus,null);assert.equal(taskModels(items)[0].steps[1].done,true);}finally{view.dispose();dom.window.close()}});
 
 // ── W1 P0-3：真实数据里 5 条任务全是「待办」、其余三列全空 ────────────────────────
 // 46 号审计实测：四个 0 指标 + 「待办 · 5」排在第 4 列 + 每张卡一个 68px 空环 + 手机首屏 0 条任务。
@@ -34,7 +34,7 @@ test('P0-3 看板只渲染有内容的列、待办第一列、空列折叠一行
   const collapsed=doc.querySelector('[data-emptycolumns]');
   assert(collapsed,'空列必须折叠成一行');
   assert.match(collapsed.textContent,/等待中/);
-  assert.match(collapsed.textContent,/运行中/);
+  assert.match(collapsed.textContent,/进行中/);
   assert.match(collapsed.textContent,/已完成/);
   assert.equal(doc.querySelectorAll('#tasksbody svg.ring').length,0,'0 步骤的卡不得画 68px 空环');
  }finally{view.dispose();dom.window.close()}

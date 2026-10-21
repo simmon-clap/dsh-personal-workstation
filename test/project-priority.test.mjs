@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {JSDOM} from '../dev-deps.mjs';
 import {projectModels,sortByPriority,priorityLabels} from '../prototype/project-data.mjs';
 import {validateData} from '../src/validation.mjs';
-import {mountKnowledge} from '../prototype/knowledge-view.mjs';
+import {mountKnowledge} from '../prototype/knowledge-view-v2.mjs';
 
 const items=[
  {id:'plain',kind:'project',revision:1,data:{title:'一般项目'}},

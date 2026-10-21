@@ -54,7 +54,7 @@ export function runReleaseCheck({tarball}={}){
   newest=Math.max(newest,statSync(join(root,'package.json')).mtimeMs);
   return newest;
  })();
- const archive=tarball??join(root,'releases',`${manifest.name}-${manifest.version}.tgz`);
+ const archive=tarball??process.env.RELEASE_TARBALL??join(root,'releases',`${manifest.name}-${manifest.version}.tgz`);
  const findings={archive,version:manifest.version,problems:[]};
  if(!existsSync(archive)){
   findings.problems.push('找不到发布包：'+archive+'（请先运行 pnpm pack --pack-destination releases，且版本应与 package.json 一致）');
@@ -175,6 +175,11 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   }else{
    const installedVersion=JSON.parse(readFileSync(join(installedRoot,'package.json'),'utf8')).version;
    const repoVersion=JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version;
+   // 发布机上常见「装着上一版」：那不是本版验收的失败，而是这条核对不适用于当前已装副本。
+   // 明确降级为 warning（不是通过），只有版本相同才做逐字比对。
+   if(installedVersion!==repoVersion){
+    console.log('（已装版本 '+installedVersion+' ≠ 仓库版本 '+repoVersion+'：跳过"已装=这一版"逐字比对 —— 这不是通过；装好本版后再跑。）');
+   }else{
    // **只比"真的会装进去的"文件**：package.json 的 files 里有 4 条 `!` 排除
    // （例如 !src/*-client.mjs、!src/files.mjs）—— 那些文件在仓库里有、包里故意没有，
    // 我第一次没排除，于是门禁把 13 个"故意不发"的文件当成"已装包缺文件"报了出来（假失败）。
@@ -204,6 +209,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     findings.passed=false;
    }else{
     console.log('PASS: 客户端资源与已装包逐字一致（"看到的 = 装的"这一步成立）。');
+   }
    }
   }
  }catch(error){

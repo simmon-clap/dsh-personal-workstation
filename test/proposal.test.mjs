@@ -22,7 +22,7 @@ function makeStore() {
   const seed = store.draft(ctx, {
     title: '建判断',
     changes: [{op: 'create', id: 'j-1', kind: 'judgment', data: {
-      title: '服务器端短期难以成立', evidence: [basis()], validFrom: '2026-10-11', status: 'current',
+      title: '短期难以成立', evidence: [basis()], validFrom: '2026-10-11', status: 'current',
     }}],
   });
   store.commit(ctx, {batchId: seed.id, revision: 1, key: 'seed'});

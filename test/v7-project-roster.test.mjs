@@ -52,7 +52,7 @@ const rowIds=panel=>[...panel.querySelectorAll('.rosterrow')].map(node=>node.dat
 // ── ① 关联空间回到原样（搬家不许在两处各留一份）──────────────────────────────
 test('关联空间回到原样：工具栏只剩 范围 / 聚焦 / 查找 / 更多，没有分段控件也没有列表',async()=>{
  const store=new WorkstationStore(':memory:'),dom=shell(),document=dom.window.document,send=bridge(store);rosterSeed(store);
- const {mountSpace}=await import('../prototype/space-view.mjs');
+ const {mountSpace}=await import('../prototype/space-view-v5.mjs');
  const view=mountSpace(document,{send,batch:{draft:async()=>{}},open:()=>{},notify:()=>{},projects:[],key:()=>'layout:test'});
  try{
   await view.load();
@@ -65,14 +65,17 @@ test('关联空间回到原样：工具栏只剩 范围 / 聚焦 / 查找 / 更�
   assert.ok(toolbar.querySelector('#scopefilter'),'范围还在');
   assert.ok(toolbar.querySelector('#projectfocus'),'聚焦项目还在');
   assert.ok(toolbar.querySelector('#graphsearch'),'查找节点还在');
+  // 画布默认范围已改为结构态（spec/54 §2 / D8）：这里量的是「真实对象都在画布上」，
+  // 所以先切到关系态再看——结构态只画机构与未归属项目（项目要单击机构后才展开）。
+  {const scope=document.querySelector('#scopefilter');scope.value='all';scope.onchange()}
   assert.equal(document.querySelectorAll('#spaceSvg [data-node]').length,5,'画布照常渲染真实对象');
   for(const id of ['less','more','fitspace','resetlayout'])assert.ok(document.querySelector('#'+id),'画布缩放/适配控件还在：'+id);
  }finally{view.dispose();store.close();dom.window.close()}
 });
 test('反回归：列表相关的那一套东西不许再从任何地方长回来',async()=>{
- const sources=['space-view.mjs','project-view.mjs','v7-workbench.css'];
+ const sources=['space-view-v5.mjs','project-view.mjs','v7-workbench.css'];
  const text=Object.fromEntries(sources.map(name=>[name,readFileSync(new URL('../prototype/'+name,import.meta.url),'utf8')]));
- for(const name of ['space-view.mjs','v7-workbench.css']){
+ for(const name of ['space-view-v5.mjs','v7-workbench.css']){
   assert.equal(/spacelist|spaceviewswitch|spaceview/i.test(text[name]),false,name+' 里不许再有列表那一套的选择器/id');
   assert.equal(/listGroupTitles|spaceListGroups|spaceListEmpty|projectListInfo|organizationListInfo|personListInfo/.test(text[name]),false,name+' 里不许再留列表的读数实现（搬走就是搬走）');
  }
@@ -162,7 +165,7 @@ test('名册分组：读不到的类不给行、不冒充"这一类一个都没�
  // 名字只有**一个来源**：spec/registry.json 的 uiVocabulary.nouns。
  // 加这条是因为 2026-10-15 发现同一个对象有三个名字（注册表"机构"、界面"组织"、列表"企业"），
  // 违反 03 §7 禁造词与 VI V9「唯一来源」。以后改名字必须改注册表，改一处就够。
- {const registry=JSON.parse(readFileSync(new URL('../../spec/registry.json',import.meta.url),'utf8'));
+ {const registry=JSON.parse(readFileSync(new URL('./fixtures/registry.json',import.meta.url),'utf8'));
   const nouns=registry.uiVocabulary.nouns;
   // 注册表登记的是**对象名**；名册标题里混了**角色名**，两者不是一回事：
   //   · 项目 / 组织 —— 对象名，必须在注册表里
