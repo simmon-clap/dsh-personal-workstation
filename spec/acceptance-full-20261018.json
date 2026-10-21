@@ -1,0 +1,111 @@
+{
+  "startedAt": "2026-10-18T06:37:25.920Z",
+  "origin": "http://127.0.0.1:52537",
+  "checks": [
+    {
+      "label": "新开会话",
+      "ok": true
+    },
+    {
+      "label": "流式阶段组件数递增",
+      "ok": true,
+      "detail": "states=15 growth=0→1→2→3→5→7→10→11→12→13→14→15"
+    },
+    {
+      "label": "工具定稿（有可渲染内容）",
+      "ok": true
+    },
+    {
+      "label": "卡片渲染（result）",
+      "ok": true,
+      "detail": "{\"nodes\":21,\"errors\":0,\"text\":\"\"}"
+    },
+    {
+      "label": "展开后卡片可见（信息项）",
+      "ok": true,
+      "detail": "innerText 非空"
+    },
+    {
+      "label": "卡片里有 Form（text + select + 提交）",
+      "ok": true,
+      "detail": "{\"hasText\":true,\"hasSelect\":true,\"hasSubmit\":true}"
+    },
+    {
+      "label": "Form 文本框可输入",
+      "ok": true,
+      "detail": "value=验收备注-001"
+    },
+    {
+      "label": "Form 下拉可选",
+      "ok": true,
+      "detail": "value=B"
+    },
+    {
+      "label": "点到 Form 提交",
+      "ok": true
+    },
+    {
+      "label": "Form 提交后出现字段值（真实用户消息）",
+      "ok": true,
+      "detail": "{\"outsideCount\":1,\"sample\":\"备注: 验收备注-001\"}"
+    },
+    {
+      "label": "点到 open 动作按钮",
+      "ok": true,
+      "detail": "打开版权页"
+    },
+    {
+      "label": "open 动作打开 http(s) 页面",
+      "ok": true,
+      "detail": "https://www.openstreetmap.org/copyright"
+    },
+    {
+      "label": "点到 Chips「交互验收-A」",
+      "ok": true
+    },
+    {
+      "label": "Chips 点击后出现真实用户消息",
+      "ok": true,
+      "detail": "{\"outsideCount\":1}"
+    },
+    {
+      "label": "三态截图已保存（克隆页面）",
+      "ok": true,
+      "detail": "/Users/simon/Desktop/DSH/智能界面/acceptance/out/20261018063804-*.png"
+    },
+    {
+      "label": "控制台无本插件错误",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "consoleErrors": [],
+  "streaming": {
+    "states": 15,
+    "growth": [
+      0,
+      1,
+      2,
+      3,
+      5,
+      7,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      17,
+      19,
+      20
+    ],
+    "firstAt": 1792305465819,
+    "lastAt": 1792305473910
+  },
+  "card": {
+    "nodes": 21,
+    "errors": 0,
+    "text": ""
+  },
+  "finishedAt": "2026-10-18T06:38:10.712Z"
+}

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>冻结原型收敛选择 · v1.0</title>
+<style>
+:root{--paper:#F8F9F7;--surface:#FFF;--ink:#252A31;--muted:#626C78;--line:#DCE1E5;--action:#315ED0;
+--success:#28735B;--warning:#8A601D;--danger:#B33F44;--soft:#EDF2FF}
+*{box-sizing:border-box}
+body{margin:0;padding:40px 24px 80px;background:var(--paper);color:var(--ink);
+font:15px/1.75 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+main{max-width:1000px;margin:0 auto}
+h1{font-size:32px;line-height:1.3;margin:0 0 8px}
+h2{font-size:22px;margin:48px 0 12px}
+h3{font-size:15px;margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{font-size:15px;color:var(--muted);max-width:66ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;margin:16px 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:20px 0}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+.fig b{display:block;font-size:32px;line-height:1.2;font-variant-numeric:tabular-nums}
+.fig small{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:500}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.sw{display:inline-flex;align-items:center;gap:8px}
+.sw i{width:22px;height:22px;border-radius:6px;border:1px solid rgba(37,42,49,.14);flex:none}
+.sw code{font-size:12px;color:var(--ink)}
+td small{color:var(--muted);font-size:11px;display:block}
+.tag{font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.tag.ok{background:#EDF6F1;color:var(--success)}
+.tag.warn{background:#FBF4E6;color:var(--warning)}
+.tag.bad{background:#FBEFF0;color:var(--danger)}
+.ruler{position:relative;height:64px;margin:24px 0 8px}
+.ruler:before{content:"";position:absolute;inset:26px 0 auto;height:1px;background:var(--line)}
+.tick{position:absolute;top:18px;transform:translateX(-50%);text-align:center;font-style:normal}
+.tick b{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tick:after{content:"";display:block;width:1px;height:9px;background:var(--line);margin:2px auto 0}
+.amb{position:absolute;top:0;transform:translateX(-50%);text-align:center;font-style:normal}
+.amb b{font-size:12px;color:var(--danger);font-variant-numeric:tabular-nums}
+.amb:after{content:"";display:block;width:1px;height:26px;background:var(--danger);margin:2px auto 0}
+.pick{border-left:3px solid var(--action);background:#EDF2FF}
+.no{border-left:3px solid var(--danger)}
+.yes{border-left:3px solid var(--success)}
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style></head><body><main>
+
+<h1>冻结原型收敛选择</h1>
+<p class="lead">批次 5（VI 收敛）的四项红门禁<b>全部卡在同一个问题上</b>：要不要动冻结原型
+<code>工作台-视觉原型-v7.html</code>。它由 <code>build-v7.mjs</code> 直接读进来生成 <code>src/v7-shell.html</code>，
+里面的颜色、间距、字号都是内联写死的。</p>
+
+<div class="figures">
+  <div class="fig"><small>原型里的不同颜色</small><b>147</b><small>共 164 处</small></div>
+  <div class="fig"><small>真的显示给用户的</small><b>26</b><small>其余 82% 已被 VI 层盖掉</small></div>
+  <div class="fig"><small>与 VI 色板肉眼接近</small><b>64</b><small>ΔE &lt; 10</small></div>
+  <div class="fig"><small>明显不同</small><b>15</b><small>ΔE ≥ 25</small></div>
+</div>
+
+<p class="lead">换句话说：<b>原型的色板基本就是 VI 色板的"略偏版本"</b>——VI 正是从它提炼出来的。
+所以把 shell 收敛到 15 色，视觉变化比想象的<b>小得多</b>，而且能顺带拆掉那层靠 <code>!important</code> 硬压的补丁。</p>
+
+<h2>当前四项红门禁</h2>
+<div class="card" style="padding:8px 16px">
+<table><thead><tr><th>门禁</th><th>现状</th><th>其中在壳内</th></tr></thead><tbody><tr><td>1 色值 = 0</td><td class="num">212</td><td class="muted">壳内 140</td></tr><tr><td>2 间距 = 0</td><td class="num">143</td><td class="muted">壳内 113</td></tr><tr><td>3 字号 = 0</td><td class="num">35</td><td class="muted">壳内 35</td></tr><tr><td>9 !important = 0</td><td class="num">25</td><td class="muted">壳内 5</td></tr></tbody></table>
+</div>
+
+<h2>色板对照（按出现次数）</h2>
+<p class="muted" style="font-size:13px">左＝原型实际写的颜色，右＝最接近的 VI token。ΔE 是感知色差，越小越像。</p>
+<div class="card" style="padding:8px 16px">
+<table><thead><tr><th>原型色值</th><th>次数</th><th>最近的 VI token</th><th>ΔE</th><th>判定</th></tr></thead>
+<tbody><tr><td><span class="sw"><i style="background:#EDF0F5"></i><code>#EDF0F5</code></span></td><td>×4</td><td><span class="sw"><i style="background:#F3EFF8"></i><code>#F3EFF8</code></span><small>--ws-knowledge-soft</small></td><td class="num">3.2</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#EDF4FF"></i><code>#EDF4FF</code></span></td><td>×3</td><td><span class="sw"><i style="background:#EDF2FF"></i><code>#EDF2FF</code></span><small>--ws-action-soft</small></td><td class="num">1.4</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#2867DB"></i><code>#2867DB</code></span></td><td>×3</td><td><span class="sw"><i style="background:#315ED0"></i><code>#315ED0</code></span><small>--ws-action</small></td><td class="num">4.2</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#FFFFFF"></i><code>#FFFFFF</code></span></td><td>×2</td><td><span class="sw"><i style="background:#FFFFFF"></i><code>#FFFFFF</code></span><small>--ws-surface</small></td><td class="num">0.0</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#EDF2FF"></i><code>#EDF2FF</code></span></td><td>×2</td><td><span class="sw"><i style="background:#EDF2FF"></i><code>#EDF2FF</code></span><small>--ws-action-soft</small></td><td class="num">0.0</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#EAF2FF"></i><code>#EAF2FF</code></span></td><td>×2</td><td><span class="sw"><i style="background:#EDF2FF"></i><code>#EDF2FF</code></span><small>--ws-action-soft</small></td><td class="num">1.0</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#F3EFFB"></i><code>#F3EFFB</code></span></td><td>×2</td><td><span class="sw"><i style="background:#F3EFF8"></i><code>#F3EFF8</code></span><small>--ws-knowledge-soft</small></td><td class="num">1.5</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#EDF3FC"></i><code>#EDF3FC</code></span></td><td>×2</td><td><span class="sw"><i style="background:#EDF2FF"></i><code>#EDF2FF</code></span><small>--ws-action-soft</small></td><td class="num">2.1</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#2E6CE2"></i><code>#2E6CE2</code></span></td><td>×2</td><td><span class="sw"><i style="background:#315ED0"></i><code>#315ED0</code></span><small>--ws-action</small></td><td class="num">6.0</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#4880EE"></i><code>#4880EE</code></span></td><td>×2</td><td><span class="sw"><i style="background:#315ED0"></i><code>#315ED0</code></span><small>--ws-action</small></td><td class="num">14.4</td><td><span class="tag warn">能看出差别</span></td></tr>
+<tr><td><span class="sw"><i style="background:#BC985D"></i><code>#BC985D</code></span></td><td>×2</td><td><span class="sw"><i style="background:#8A601D"></i><code>#8A601D</code></span><small>--ws-warning</small></td><td class="num">22.5</td><td><span class="tag warn">能看出差别</span></td></tr>
+<tr><td><span class="sw"><i style="background:#9985B7"></i><code>#9985B7</code></span></td><td>×2</td><td><span class="sw"><i style="background:#7555A1"></i><code>#7555A1</code></span><small>--ws-knowledge</small></td><td class="num">24.0</td><td><span class="tag warn">能看出差别</span></td></tr>
+<tr><td><span class="sw"><i style="background:#6488D6"></i><code>#6488D6</code></span></td><td>×2</td><td><span class="sw"><i style="background:#7555A1"></i><code>#7555A1</code></span><small>--ws-knowledge</small></td><td class="num">25.8</td><td><span class="tag bad">明显不同</span></td></tr>
+<tr><td><span class="sw"><i style="background:#EEF3FF"></i><code>#EEF3FF</code></span></td><td>×1</td><td><span class="sw"><i style="background:#EDF2FF"></i><code>#EDF2FF</code></span><small>--ws-action-soft</small></td><td class="num">0.6</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#ECF6F0"></i><code>#ECF6F0</code></span></td><td>×1</td><td><span class="sw"><i style="background:#EDF6F1"></i><code>#EDF6F1</code></span><small>--ws-success-soft</small></td><td class="num">0.6</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#EEF7F3"></i><code>#EEF7F3</code></span></td><td>×1</td><td><span class="sw"><i style="background:#EDF6F1"></i><code>#EDF6F1</code></span><small>--ws-success-soft</small></td><td class="num">0.6</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#EAF5F0"></i><code>#EAF5F0</code></span></td><td>×1</td><td><span class="sw"><i style="background:#EDF6F1"></i><code>#EDF6F1</code></span><small>--ws-success-soft</small></td><td class="num">0.9</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#F2EEF9"></i><code>#F2EEF9</code></span></td><td>×1</td><td><span class="sw"><i style="background:#F3EFF8"></i><code>#F3EFF8</code></span><small>--ws-knowledge-soft</small></td><td class="num">1.1</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#FCF4E8"></i><code>#FCF4E8</code></span></td><td>×1</td><td><span class="sw"><i style="background:#FBF4E6"></i><code>#FBF4E6</code></span><small>--ws-warning-soft</small></td><td class="num">1.1</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#EAF0FF"></i><code>#EAF0FF</code></span></td><td>×1</td><td><span class="sw"><i style="background:#EDF2FF"></i><code>#EDF2FF</code></span><small>--ws-action-soft</small></td><td class="num">1.3</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#FFF8E9"></i><code>#FFF8E9</code></span></td><td>×1</td><td><span class="sw"><i style="background:#FBF4E6"></i><code>#FBF4E6</code></span><small>--ws-warning-soft</small></td><td class="num">1.4</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#FAFBFC"></i><code>#FAFBFC</code></span></td><td>×1</td><td><span class="sw"><i style="background:#FFFFFF"></i><code>#FFFFFF</code></span><small>--ws-surface</small></td><td class="num">1.6</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#F8F2E7"></i><code>#F8F2E7</code></span></td><td>×1</td><td><span class="sw"><i style="background:#FBF4E6"></i><code>#FBF4E6</code></span><small>--ws-warning-soft</small></td><td class="num">1.7</td><td><span class="tag ok">肉眼接近</span></td></tr>
+<tr><td><span class="sw"><i style="background:#E9EFFF"></i><code>#E9EFFF</code></span></td><td>×1</td><td><span class="sw"><i style="background:#EDF2FF"></i><code>#EDF2FF</code></span><small>--ws-action-soft</small></td><td class="num">1.9</td><td><span class="tag ok">肉眼接近</span></td></tr></tbody></table>
+</div>
+
+<h2>间距：哪些能自动落位，哪些要你定</h2>
+<p>标尺是 <code>4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 / 96</code>。壳内标尺外共 <b>140 处</b>：
+<b>91 处能唯一映射</b>；剩下 <b>49 处</b>落在下面这 4 个值上，
+它们<b>正好卡在两档中间</b>（红字），必须人来定：</p>
+<div class="card">
+<div class="ruler"><i class="tick" style="left:0.0%"><b>4</b></i><i class="tick" style="left:12.5%"><b>8</b></i><i class="tick" style="left:25.0%"><b>12</b></i><i class="tick" style="left:37.5%"><b>16</b></i><i class="tick" style="left:50.0%"><b>24</b></i><i class="tick" style="left:62.5%"><b>32</b></i><i class="tick" style="left:75.0%"><b>48</b></i><i class="tick" style="left:87.5%"><b>64</b></i><i class="tick" style="left:100.0%"><b>96</b></i><i class="amb" style="left:6.2%"><b>6</b></i><i class="amb" style="left:18.8%"><b>10</b></i><i class="amb" style="left:31.2%"><b>14</b></i><i class="amb" style="left:43.8%"><b>20</b></i></div>
+<p class="muted" style="margin:0;font-size:12px">红字＝有歧义的值；灰字＝标尺档位。</p>
+</div>
+
+<h2>字号：6 个取值、共 36 处不在字阶上</h2>
+<p>字阶是 <code>11 / 12 / 13 / 14 / 15 / 18 / 22 / 32</code>。壳内字号取值：
+<span class="tag bad">9px ×3</span> <span class="tag bad">10px ×28</span> <span class="tag bad">24px ×1</span> <span class="tag bad">25px ×2</span> <span class="tag bad">26px ×1</span> <span class="tag bad">29px ×1</span></p>
+
+<h2>三条路，各自的真实代价</h2>
+<div class="cards">
+  <div class="card pick"><h3>A′ · 扩充 token</h3>
+   <p>承认原型那套颜色合法，登记进 <code>tokens.json</code>；门禁口径改成"必须来自 tokens"。</p>
+   <p><b>代价：</b>零视觉变化、零风险。<b>但</b>色板会从 15 色涨到 100+ 色——VI 的"克制"就没了。</p>
+   <p class="muted">适合：你认为"外观已经认可，一个字都别动"。</p></div>
+
+  <div class="card no"><h3>B′ · 永久例外</h3>
+   <p>把 shell 与对比度补丁层登记为生成物例外，四项门禁豁免。</p>
+   <p><b>代价：</b>这四项"= 0"<b>永远达不到</b>，门禁变成摆设。</p>
+   <p class="muted">不建议。</p></div>
+
+  <div class="card yes"><h3>C′ · 按 VI 收敛（推荐）</h3>
+   <p>把 shell 的颜色/间距/字号换成 VI token 与标尺，删掉靠 <code>!important</code> 硬压的补丁层。</p>
+   <p><b>代价：</b>改的是你认可的界面外观，需要重出验收基准与截图。<b>实测：</b>
+   64/147 种颜色只是略偏，15 种明显不同；真正显示给用户的只有 26 种。</p>
+   <p class="muted">适合：你认为"VI 是硬标准，外观该按 VI 收敛"。</p></div>
+</div>
+
+<p style="margin-top:24px"><b>我的建议：C′。</b>数据支持它：VI 本来就从原型提炼而来，绝大多数颜色只是略偏；
+而且<u>不收敛的话，那层 <code>!important</code> 补丁永远拆不掉</u>——它是"同一件事两套颜色"的根源，会一直要求后来人绕着走。
+间距那 49 处歧义值我会逐个说明取哪一档、为什么，再给你看改前改后的对照截图。</p>
+
+<footer>
+数据可复现：<code>npm run plan:prototype</code>（干跑，不写一个字节）· 本页由 <code>spec/build-prototype-choice.py</code> 生成（v1.0），改版本改脚本、不要手改产物。<br>
+色值取自 <code>design-system/tokens.json</code>，标尺取自 <code>spec/registry.json</code>。
+</footer>
+</main></body></html>

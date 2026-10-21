@@ -1,0 +1,11 @@
+# 证据与演示产物不进公开仓库（宪章 v1.3 第八条：业务数据永不出去）
+# 这些目录仍留在磁盘上，靠文件同步在两台机器之间走；只是不版本化。
+screenshots/
+ui-audit-20261018/
+openui-audit-20261019/
+view-evidence/
+im-evidence/
+openui-evidence/
+canvas-ecosystem-demo/
+*.png
+*.log

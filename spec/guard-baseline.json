@@ -1,0 +1,20 @@
+{
+  "_readme": "宪章守卫的棘轮基线。任何一项违规数上升即门禁失败；下降后可用 charter-guard --update-baseline 收紧。批次 5 的目标是把它们全部降到 0。",
+  "updatedAt": "2026-10-13",
+  "counts": {
+    "colors": 0,
+    "important": 0,
+    "spacing": 0,
+    "fontSize": 0,
+    "entries": 0,
+    "objects": 0,
+    "wordlist": 0,
+    "emoji": 0,
+    "kindWhitelists": 0,
+    "toolWhitelist": 0,
+    "argWhitelists": 0,
+    "dataPalette": 0,
+    "componentOwners": 0,
+    "duplicateAuthorities": 0
+  }
+}

@@ -1,0 +1,397 @@
+{
+ "宪章": {
+  "序 · 它是什么": {
+   "human": "产品定位，无法机械判定"
+  },
+  "第一条 · 终极愿景": {
+   "human": "愿景，无法机械判定"
+  },
+  "第二条 · 三重身份": {
+   "human": "身份定义，无法机械判定"
+  },
+  "第三条 · 判断是一等公民": {
+   "gate": "judgment-browser-check"
+  },
+  "第四条 · 建议必须闭环": {
+   "gate": "advice-browser-check"
+  },
+  "第五条 · 人机分工不可逆": {
+   "gate": "charter-ux-audit"
+  },
+  "第六条 · 品味（六条）": {
+   "gate": "charter-ux-audit + craft-audit + wording-audit"
+  },
+  "关于主动（第六条补充）": {
+   "gate": "heartbeat-browser-check"
+  },
+  "第七条 · 长期性": {
+   "gate": "type-scale-audit + geom-diff"
+  },
+  "第八条 · 边界：明确不做": {
+   "gate": "charter-ux-audit + wording-audit"
+  },
+  "v1.3 补 · 不做把个人数据带出本机的事": {
+   "gate": "private-data-guard",
+   "human": "仓库与 .gitignore 由发布流程负责（spec/13 §1 的另两条判据）"
+  },
+  "第九条 · 宪章的修改规则": {
+   "human": "改宪章要走讨论并留档（本次 v1.1 已照做）"
+  },
+  "检验判据：愿景是否成立（六条）": {
+   "human": "六条检验判据，靠阶段验收"
+  }
+ },
+ "VI": {
+  "0 · 与宪章的关系": {
+   "human": "关系声明"
+  },
+  "1 · 标识": {
+   "human": "标识使用，目前未出现在界面"
+  },
+  "2 · 色彩": {
+   "gate": "craft-audit + space-color-check"
+  },
+  "3 · 字体与排版": {
+   "gate": "type-scale-audit"
+  },
+  "4 · 间距、圆角、层": {
+   "gate": "craft-audit + geom-diff"
+  },
+  "5 · 图标与简笔画": {
+   "gate": "charter-guard"
+  },
+  "6 · 组件唯一来源（V9 精致）": {
+   "gate": "control-audit + dialog-audit"
+  },
+  "7 · 状态与反馈语言": {
+   "gate": "status-audit"
+  },
+  "8 · 判断与建议的视觉语言（V1–V3，本版新增）": {
+   "gate": "judgment-browser-check + advice-browser-check"
+  },
+  "9 · 关系与画布": {
+   "gate": "space-color-check + layout-metrics"
+  },
+  "10 · 分享与导出形态（V7）": {
+   "gate": "export-browser-check"
+  },
+  "11 · 无障碍与多端": {
+   "gate": "mobile-audit"
+  },
+  "12 · 宿主主题（V6）": {
+   "gate": "css-var-audit"
+  },
+  "13 · 门禁清单（必须进 `verify`，机械检查）": {
+   "human": "本门禁（spec-coverage-audit）就是它：每条规范都要有责任人或人工说明"
+  },
+  "14 · 增补条款 V1–V9 一览（权威定义）": {
+   "gate": "charter-guard"
+  },
+  "15 · 交付资产": {
+   "gate": "release-check"
+  }
+ },
+ "功能": {
+  "0 · 判据": {
+   "human": "判据定义"
+  },
+  "1 · 六组能力 · 24 个功能点": {
+   "human": "能力清单，逐条靠功能验收"
+  },
+  "一 · 收进来 Capture（宪章五）": {
+   "gate": "advice-browser-check"
+  },
+  "二 · 认出来 Recognize（宪章五，Agent 侧）": {
+   "human": "Agent 侧整理，靠会话验收"
+  },
+  "三 · 想清楚 Judge（宪章三 · **当前空缺，最高优先**）": {
+   "gate": "judgment-browser-check"
+  },
+  "四 · 建议闭环 Advisory（宪章四 · **当前空缺，最高优先**）": {
+   "gate": "advice-browser-check"
+  },
+  "五 · 拿出来 Recall & Share（宪章一）": {
+   "gate": "export-browser-check"
+  },
+  "六 · 主动 Heartbeat（宪章六补充）": {
+   "gate": "heartbeat-browser-check"
+  },
+  "2 · 十二条交互律": {
+   "gate": "charter-ux-audit"
+  },
+  "十二条之外 · 就地编辑（2026-10-15 补，用户要求）": {
+   "gate": "charter-ux-audit + control-audit"
+  },
+  "3 · 丝滑六标准（可检验）": {
+   "gate": "motion-audit + charter-ux-audit"
+  },
+  "4 · 状态语言（六种，固定说法与固定样子）": {
+   "gate": "status-audit"
+  },
+  "5 · 关键流程": {
+   "gate": "advice-browser-check + judgment-browser-check"
+  },
+  "6 · 克制与主动的平衡机制": {
+   "gate": "heartbeat-browser-check"
+  },
+  "7 · 概念审计（禁造词）": {
+   "gate": "wording-audit"
+  },
+  "8 · 符合性检查": {
+   "human": "自评表，靠更新维护"
+  },
+  "9 · 验收判据": {
+   "human": "验收清单"
+  },
+  "10 · 判断的数据契约（批次 1 开工必需）": {
+   "gate": "judgment-browser-check"
+  },
+  "11 · 出声额度：可调初值（批次 8 开工必需）": {
+   "gate": "heartbeat-browser-check"
+  },
+  "12 · 出声级别的命名澄清": {
+   "gate": "heartbeat-browser-check"
+  }
+ },
+ "约束": {
+  "0 · 开发目标": {
+   "human": "目标声明"
+  },
+  "1 · 起点盘点（施工前必须核实的现状）": {
+   "human": "盘点表，靠更新维护"
+  },
+  "2 · 三条不可违背的约束": {
+   "human": "总述，下面三条各自有判据"
+  },
+  "约束一 · 依据门": {
+   "gate": "judgment-browser-check"
+  },
+  "约束二 · 不自行设计": {
+   "human": "靠人工对照规范（本门禁本身就是它的一部分）"
+  },
+  "约束三 · 未接入不伪造": {
+   "gate": "field-relevance-audit + charter-ux-audit"
+  },
+  "3 · 分批计划": {
+   "human": "计划表"
+  },
+  "批次 0 · 护栏（必须先做）": {
+   "human": "护栏自身的门禁就是 verify 链本身（wording/activation/release）"
+  },
+  "批次 1 · 判断对象（F6 / F8 / F9）": {
+   "gate": "judgment-browser-check"
+  },
+  "批次 2 · 待核对（F7）": {
+   "gate": "judgment-browser-check"
+  },
+  "批次 3 · 建议闭环 · 规则与数据（F10–F14 后端）": {
+   "gate": "advice-browser-check"
+  },
+  "批次 4 · 建议闭环 · 界面（F10–F12）": {
+   "gate": "advice-browser-check"
+  },
+  "批次 5 · VI 落地与精致（V1–V3、V9）": {
+   "gate": "craft-audit + charter-guard"
+  },
+  "批次 6 · 拿出来（F15–F18）": {
+   "gate": "export-browser-check"
+  },
+  "批次 7 · 主动 · 做事与留痕（F19–F22、F24）": {
+   "gate": "heartbeat-browser-check"
+  },
+  "批次 8 · 主动 · 出声（F23）": {
+   "gate": "heartbeat-browser-check"
+  },
+  "批次 9 · 终验": {
+   "human": "终验要真入口 + 真实数据走一遍，靠人（live-entry-check 只覆盖可机械判定的部分）"
+  },
+  "4 · 防跑偏协议": {
+   "human": "本门禁即其落地：规范→责任人的对照表，缺一条就红"
+  },
+  "开工前（固定顺序，不得跳步）": {
+   "human": "施工顺序，靠交付报告里的步骤记录核对"
+  },
+  "每批三条硬门（不过不进下一批）": {
+   "gate": "activation-replay + release-check"
+  },
+  "完成门": {
+   "human": "完成门的定义，靠每批的交付报告逐条对"
+  },
+  "偏离即停（出现即停止编码，先报告）": {
+   "human": "遇到偏离要先报告而不是继续编码 —— 靠交付报告里\"按指令未改但存疑\"一节体现"
+  },
+  "5 · 连续工作节奏（几十小时）": {
+   "human": "工作节奏约定，不可机械判定"
+  },
+  "6 · 必须停下来问用户的情况": {
+   "human": "触发条件清单，靠交付报告里\"已向你确认过\"的记录"
+  },
+  "7 · 不做清单（写下来防漂移）": {
+   "human": "不做清单，靠与本对照表的交叉核对防止悄悄破例"
+  },
+  "8 · 门禁与证据要求": {
+   "human": "取证纪律（不得用管道吞退出码）；靠交付报告里的取证命令与退出码"
+  },
+  "附 · 一句话记住的约束": {
+   "human": "摘要，无独立判据"
+  }
+ },
+ "条级": {
+  "note": "条级对照（2026-10-16 加）：规范里的**条**（12 条交互律、6 条检验判据、V1–V9、F1–F24）此前只以\"整节一条\"的形式被认领 —— 于是出现\"某条律没有任何门禁点名\"也照样通过。这里逐条指到**真实存在的判据 id 或断言原文**，由 spec-coverage-audit 到门禁源码里核对；核对不到即判失败。",
+  "items": {
+   "交互律 01 · 人只在分叉点出现": {
+    "gate": "charter-ux-audit.mjs#A3a"
+   },
+   "交互律 02 · 默认不打扰；出声必须分级、有额度、有理由": {
+    "gate": "heartbeat-browser-check.mjs#显示出声额度与阶段（初值 40 / 试用期）"
+   },
+   "交互律 03 · 一个视图一个主动作": {
+    "gate": "charter-ux-audit.mjs#C6"
+   },
+   "交互律 04 · 任何状态都能点回到原因": {
+    "gate": "charter-ux-audit.mjs#D8"
+   },
+   "交互律 05 · 低风险必须可逆、可逆必须可见": {
+    "gate": "charter-ux-audit.mjs#A2a"
+   },
+   "交互律 06 · 向下钻，不横向跳": {
+    "gate": "charter-ux-audit.mjs#B4b"
+   },
+   "交互律 07 · 回应必须顺手，理由必须极短": {
+    "gate": "advice-browser-check.mjs#四个回应都在卡上"
+   },
+   "交互律 08 · 理解不常驻显示，但必须可追问": {
+    "gate": "charter-ux-audit.mjs#B5c"
+   },
+   "交互律 09 · 一切可按时间回看": {
+    "gate": "judgment-browser-check.mjs#推翻理由可见（不抹掉当时为什么这么想）"
+   },
+   "交互律 10 · 分享是一个动作，不是一条流程": {
+    "gate": "export-browser-check.mjs#默认不写 share 的记录按「仅自己」处理"
+   },
+   "交互律 11 · 主动做事，不主动打断": {
+    "gate": "heartbeat-browser-check.mjs#留痕写出\"没打扰你的原因\""
+   },
+   "交互律 12 · 每次出声都要能回答\"为什么现在告诉你\"": {
+    "gate": "heartbeat-browser-check.mjs#留痕里带着具体理由（不是空话）"
+   },
+   "判据 1 · 三个月前的口头承诺被主动提醒，且能点回原始出处": {
+    "gate": "heartbeat-browser-check.mjs#留痕写出\"这次看了\"什么"
+   },
+   "判据 2 · 出差时手机上能独立完成一次「看→判断→决定」": {
+    "gate": "mobile-audit.mjs#移动端"
+   },
+   "判据 3 · 任何一条判断能追回录音或文件的那一段": {
+    "gate": "judgment-browser-check.mjs#依据给了「看原始出处」的入口"
+   },
+   "判据 4 · 换模型、换 Agent，事实与治理不重来": {
+    "gate": "release-check.mjs#PASS: 发布包自洽"
+   },
+   "判据 5 · 最近 20 条建议的采纳／改写／否决比率可查": {
+    "gate": "advice-browser-check.mjs#采纳情况"
+   },
+   "判据 6 · 一条判断能被另一个需要它的人直接拿走用": {
+    "gate": "export-browser-check.mjs#文档写明「谁在何时判断」"
+   },
+   "F1 四门同源录入 · 录入零确认": {
+    "human": "看四条入口（工作台页面 / 普通对话 / IM 助理 / 语音转写）各录一条，是否落到同一批对象、同一条留痕、且录入时没有确认框。目前只有\"客户端入口注册\"的测试（test/client-entry.test.mjs），**四条链路的端到端同源没有门禁** —— 这条要人工走。"
+   },
+   "F2 原始材料留底 · 摘要不覆盖原件": {
+    "human": "拿一份真实录音或会议记录，整理一次后再看原件是否仍在、摘要是否只作为另一条记录存在。**没有任何门禁在管这件事**。"
+   },
+   "F3 未归属如实显示": {
+    "gate": "test/material-project-link.test.mjs#未归属"
+   },
+   "F4 对象识别与归属候选 · 产出候选而非事实": {
+    "gate": "test/relation-candidates.test.mjs#每条候选都要带\"凭什么提它\"，没信号的对一条都不提"
+   },
+   "F5 行动与建议分开 · \"可以考虑\"不变成已承诺": {
+    "human": "口述一段含\"可以考虑\"的话，看它落地后是\"建议\"还是\"承诺\"。**门禁只覆盖了建议卡本身，没有覆盖\"语气到类型\"的判定**。"
+   },
+   "F6 判断成为一等对象": {
+    "gate": "judgment-browser-check.mjs#卡片显示依据条数与状态"
+   },
+   "F7 待核对筛选视图 · 不新增入口": {
+    "gate": "judgment-browser-check.mjs#研究议题页签存在（未新增一级入口）"
+   },
+   "F8 依据回链 · 点回原始出处": {
+    "gate": "judgment-browser-check.mjs#依据给了「看原始出处」的入口"
+   },
+   "F9 推翻留痕": {
+    "gate": "judgment-browser-check.mjs#被推翻的判断显示推翻状态"
+   },
+   "F10 建议卡 · 四回应全在卡上": {
+    "gate": "advice-browser-check.mjs#四个回应都在卡上"
+   },
+   "F11 理由记录 · 改写与否决必须留一句理由": {
+    "gate": "test/proposal.test.mjs#否决必须留一句理由；采纳可以免理由"
+   },
+   "F12 为什么这么建议 · 列不出来就自曝": {
+    "gate": "advice-browser-check.mjs#为什么这么建议"
+   },
+   "F13 采纳情况用数字": {
+    "gate": "advice-browser-check.mjs#采纳情况"
+   },
+   "F14 不重复推荐": {
+    "gate": "test/advice-basis-and-revival.test.mjs#F14：被否决的建议不再复活"
+   },
+   "F15 十年检索 · 结果自带出处": {
+    "human": "按人/机构/项目/时间检索历史判断与承诺，并检查结果是否自带出处。门禁只覆盖了\"跨类型能搜到\"（test/find.test.mjs），**\"结果自带出处\"与\"十年跨度\"没有门禁** —— 这条要人工走。"
+   },
+   "F16 判断导出": {
+    "gate": "export-browser-check.mjs#确实产出了文档"
+   },
+   "F17 分享默认仅自己": {
+    "gate": "export-browser-check.mjs#默认不写 share 的记录按「仅自己」处理"
+   },
+   "F18 记忆治理 · 可见可纠正可撤回": {
+    "human": "让助理记一条引用，然后在工作台里找到它、改它、撤回它，看确认与推断是否分开显示。**目前只有\"换工作区都看得到\"的测试，治理动作没有门禁**。"
+   },
+   "F19 守承诺 · 每日": {
+    "gate": "heartbeat-browser-check.mjs#留痕写出\"这次看了\"什么"
+   },
+   "F20 盯依赖 · 事件触发": {
+    "gate": "test/heartbeat.test.mjs#盯依赖：依赖解锁才说话，还在等就写清在等谁"
+   },
+   "F21 做简报 · 每周 · 默认不出声": {
+    "gate": "test/briefing.test.mjs#简报"
+   },
+   "F22 复核旧判断 · 每周": {
+    "gate": "test/heartbeat.test.mjs#复核旧判断：到了你定的复核时间要说；待核对但没新证据就不要打扰"
+   },
+   "F23 出声分级与额度": {
+    "gate": "heartbeat-browser-check.mjs#显示出声额度与阶段（初值 40 / 试用期）"
+   },
+   "F24 留痕与假死告警": {
+    "gate": "test/heartbeat-stall.test.mjs#报假死"
+   },
+   "V1 来源三态": {
+    "gate": "judgment-browser-check.mjs#依据分来源三态"
+   },
+   "V2 判断三要素": {
+    "gate": "charter-ux-audit.mjs#B5b"
+   },
+   "V3 建议的四种状态": {
+    "gate": "advice-browser-check.mjs#四个回应都在卡上"
+   },
+   "V4 安静靠秩序": {
+    "gate": "charter-ux-audit.mjs#'C6'"
+   },
+   "V5 新增准入": {
+    "gate": "charter-ux-audit.mjs#E10b"
+   },
+   "V6 不越权改主题": {
+    "gate": "charter-guard.mjs#!important 覆盖（V6）"
+   },
+   "V7 分享形态": {
+    "gate": "export-browser-check.mjs#导出前显示将分享与剔除数量（F17 硬要求）"
+   },
+   "V8 边界（禁止清单）": {
+    "gate": "charter-ux-audit.mjs#A3c"
+   },
+   "V9 图标与符号": {
+    "gate": "charter-guard.mjs#界面用 emoji 当图标（V9）"
+   }
+  }
+ }
+}
