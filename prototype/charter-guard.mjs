@@ -452,6 +452,9 @@ function listMarkdown() {
   const walk = dir => {
     for (const entry of readdirSync(dir, {withFileTypes: true})) {
       if (entry.name.startsWith('.')) continue;
+      // 软链不算第二份文档（2026-10-22：spec/ 挪进仓库后，工作区根留了 spec -> workstation/spec
+      // 的软链，扫描器把同一份规范数了两遍，62 处"同名多版本"全是假报）。
+      if (entry.isSymbolicLink()) continue;
       const full = join(dir, entry.name);
       const rel = full.slice(repo.length + 1);
       if (IGNORE.test(rel)) continue;

@@ -4,6 +4,7 @@ import {SubagentExecutor} from './subagent-executor.mjs';
 import {ExecutionStore} from './execution-store.mjs';
 import {HeartbeatStore} from './heartbeat-store.mjs';
 import {BeatStore} from './beat-store.mjs';
+import {IntakeStore} from './intake-store.mjs';
 import {runHeartbeat} from './heartbeat.mjs';
 import {SpeakStore} from './speak-store.mjs';
 import {readFileSync,mkdirSync,chmodSync} from 'node:fs';
@@ -119,6 +120,8 @@ export function apply(ctx,config){
    const heartbeat=new HeartbeatStore(store);
    // 常驻节点心跳（宪章 v1.4 第七条 · 13 §10）：判活靠记账，不靠 ssh 探活。
    const beat=new BeatStore(store);
+   // 收件本（宪章 v1.4 第二条「事事有回应」· 03 §13）：每条输入都要有归属。
+   const intake=new IntakeStore(store);
    // 出声反馈表（F23 双向计量）：你的回应，与它做了什么分开存。
    const speak=new SpeakStore(store);
    const fs=ctx.get?.('fs');
@@ -207,14 +210,14 @@ export function apply(ctx,config){
      try{const workspace=rootWorkspaceId?ctx.workspaceRegistry?.get?.(rootWorkspaceId):null;workspacePath=workspace?.path??null;workspaceTitle=workspace?.title??null}catch{/* 读不到工作区就只报 cwd unknown */}
      return readImHealthFromDisk({bundles,plugins,workspacePath,workspaceTitle,home:process.env.HOME??''});
     };
-    const adapter=new DshAdapter({integrations:resolved.integrations,appleCalendar,appleConfig:resolved.appleCalendar,store,files,knowledge,executions,heartbeat,speak,runner,speech:ctx.get?.('speechToText'),office:ctx.get?.('officeToPdf'),audio,executionConfig:resolved.execution,transcribeWithoutApproval:resolved.transcribeWithoutApproval,sessions:ctx.sessions,workspaceRegistry:ctx.workspaceRegistry,approval:ctx.approval,allowedWorkspaces,heartbeatTiming,imHealth});
+    const adapter=new DshAdapter({integrations:resolved.integrations,appleCalendar,appleConfig:resolved.appleCalendar,store,files,knowledge,executions,heartbeat,speak,intake,runner,speech:ctx.get?.('speechToText'),office:ctx.get?.('officeToPdf'),audio,executionConfig:resolved.execution,transcribeWithoutApproval:resolved.transcribeWithoutApproval,sessions:ctx.sessions,workspaceRegistry:ctx.workspaceRegistry,approval:ctx.approval,allowedWorkspaces,heartbeatTiming,imHealth});
    disposers.push(ctx.tools.register(toolDefinition(adapter)));
    const skillPath=fileURLToPath(new URL('../skills/personal-workstation/SKILL.md',import.meta.url));
    disposers.push(ctx.skills.register({name:'personal-workstation',description:'在 DSH 对话中管理工作台项目、任务、资料、日程及变更收件箱。',source:'runtime',resourceBase:{kind:'directory',path:dirname(skillPath)},path:skillPath,content:readFileSync(skillPath,'utf8'),invocation:{modelInvocable:true,userInvocable:true}}));
    const connection=ctx.get?.('connection');
    const webServer=ctx.get?.('webServer');
    if(connection&&webServer)disposers.push(webServer.register(browserLoginRoute(connection)));
-   if(connection&&webServer)disposers.push(webServer.register(httpRoute({schedule,heartbeatTiming,rootWorkspaceId,rootStatus,config:resolved,apple:appleCalendar,store,connection,files,knowledge,executions,heartbeat,speak,beat,runner,office:ctx.get?.('officeToPdf'),speech:ctx.get?.('speechToText'),sessionQuery:ctx.get?.('sessionQuery'),audio,grants:grantStore,workspaceFs,transcribeWithoutApproval:resolved.transcribeWithoutApproval,workspaceRegistry:ctx.workspaceRegistry,allowedWorkspaces,workspaces:workspaceStore,configuredWorkspaces:resolved.allowedWorkspaces,executionEnabled:Boolean(resolved.execution?.enabled),imHealth})));
+   if(connection&&webServer)disposers.push(webServer.register(httpRoute({schedule,heartbeatTiming,rootWorkspaceId,rootStatus,config:resolved,apple:appleCalendar,store,connection,files,knowledge,executions,heartbeat,speak,beat,intake,runner,office:ctx.get?.('officeToPdf'),speech:ctx.get?.('speechToText'),sessionQuery:ctx.get?.('sessionQuery'),audio,grants:grantStore,workspaceFs,transcribeWithoutApproval:resolved.transcribeWithoutApproval,workspaceRegistry:ctx.workspaceRegistry,allowedWorkspaces,workspaces:workspaceStore,configuredWorkspaces:resolved.allowedWorkspaces,executionEnabled:Boolean(resolved.execution?.enabled),imHealth})));
   }catch(e){try{const pending=cleanup();if(pending)return pending.then(()=>{throw e},cleanupError=>{throw new AggregateError([e,cleanupError],'工作台注册及清理失败')})}catch(cleanupError){throw new AggregateError([e,cleanupError],'工作台注册及清理失败')}throw e;}
   return cleanup;
  },'personal workstation: store, tools and skill');

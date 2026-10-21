@@ -1,4 +1,5 @@
 import {DomainError} from './store.mjs';
+import {recordCommittedIntake} from './intake-record.mjs';
 import {exportViewMarkdown} from './view-spec.mjs';
 import {appleStatus,runAppleSync} from './apple-sync.mjs';
 import {createAudioInput} from './audio-input.mjs';
@@ -17,8 +18,8 @@ import {buildViewPreview,previewAndSaveView} from './view-spec.mjs';
 
 /** Only host-owned dependencies and configuration are accepted here. */
 export class DshAdapter {
-  constructor({store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat=null,speak=null,runner,executionConfig,speech,office,audio=createAudioInput(),transcribeWithoutApproval=false,allowedWorkspaces=[],integrations={},appleCalendar=null,appleConfig={},heartbeatTiming={scheduled:false,intervalMinutes:0},imHealth=null}){
-    Object.assign(this,{store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat,speak,runner,executionConfig,speech,office,audio,transcribeWithoutApproval,integrations,appleCalendar,appleConfig,heartbeatTiming,imHealth});
+  constructor({store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat=null,speak=null,intake=null,runner,executionConfig,speech,office,audio=createAudioInput(),transcribeWithoutApproval=false,allowedWorkspaces=[],integrations={},appleCalendar=null,appleConfig={},heartbeatTiming={scheduled:false,intervalMinutes:0},imHealth=null}){
+    Object.assign(this,{store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat,speak,intake,runner,executionConfig,speech,office,audio,transcribeWithoutApproval,integrations,appleCalendar,appleConfig,heartbeatTiming,imHealth});
     // 允许列表可能来自配置文件，也可能来自界面里的运行时授权；不缓存集合，界面刚授权的要立刻可用。
     this.allowedSource=allowedWorkspaces;
   }
@@ -207,7 +208,10 @@ export class DshAdapter {
     }
     if(args.action==='cancel_draft')return this.store.cancelDraft(fresh,args.id,args.revision);
     if(args.action==='undo_draft')return this.store.undoDraft(fresh,args.key);
-    return this.store.commit(fresh,{batchId:args.id,revision:args.revision,key:args.key});
+    // 五个口之一「对话」：对话里提交成功 = 这条输入接住了（spec/03 §13）。
+    const committed=this.store.commit(fresh,{batchId:args.id,revision:args.revision,key:args.key});
+    recordCommittedIntake({intake:this.intake,store:this.store,ctx:fresh,source:'chat',batchId:args.id,receipt:committed});
+    return committed;
   }
 }
 

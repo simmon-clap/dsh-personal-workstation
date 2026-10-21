@@ -113,3 +113,38 @@ test('今日汇总：四个数对得上明细', () => {
   assert.equal(summary.captured, 2);
  } finally { store.close(); }
 });
+
+// ── 接住的那一步：提交成功后写一行 ─────────────────────────────────────────
+import {recordCommittedIntake} from '../src/intake-record.mjs';
+
+test('提交成功：新建了对象就把归属写上，来源记成对话', () => {
+ const {store, intake} = setup();
+ try {
+  const fakeStore = {batch: () => ({title: '整理会议纪要'})};
+  const receipt = {at: NOW.toISOString(), before: [null], after: [{id: 'proj-1', kind: 'project'}]};
+  const row = recordCommittedIntake({intake, store: fakeStore, ctx, source: 'chat', batchId: 'b1', receipt});
+  assert.equal(row.state, 'captured');
+  assert.equal(row.subjectId, 'proj-1');
+  assert.equal(row.subjectKind, 'project');
+  assert.equal(row.source, 'chat');
+  assert.match(row.summary, /整理会议纪要/);
+ } finally { store.close(); }
+});
+
+test('提交成功但只是改字段：没有新建，就不硬编一个归属', () => {
+ const {store, intake} = setup();
+ try {
+  const fakeStore = {batch: () => ({title: '改一下截止时间'})};
+  const receipt = {at: NOW.toISOString(), before: [{id: 'task-1', kind: 'task'}], after: [{id: 'task-1', kind: 'task'}]};
+  const row = recordCommittedIntake({intake, store: fakeStore, ctx, source: 'page', batchId: 'b2', receipt});
+  assert.equal(row.unassigned, true, '只改了字段，本来就没有"归到哪"这回事，标未归属比编一个更诚实');
+ } finally { store.close(); }
+});
+
+test('收件本没接入或记账失败：不许连累这次提交', () => {
+ const fakeStore = {batch: () => ({title: 'x'})};
+ const receipt = {at: NOW.toISOString(), before: [], after: []};
+ assert.equal(recordCommittedIntake({intake: null, store: fakeStore, ctx, source: 'page', batchId: 'b3', receipt}), null);
+ const broken = {append() { throw new Error('库写坏了'); }};
+ assert.equal(recordCommittedIntake({intake: broken, store: fakeStore, ctx, source: 'page', batchId: 'b4', receipt}), null);
+});

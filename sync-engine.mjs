@@ -366,7 +366,7 @@ if (FILES) {
   // 代码**不走文件同步**（2026-10-21 实测事故）：`workstation/` 是 git 仓库，两端必须从同一个 commit
   // 出发；用 `rsync --update` 搬代码只会按文件 mtime 互相覆盖，长出两套不一致的树
   // （当时 Mini 的 HEAD 在笔记本上根本不存在，两边各有一版画布）。代码只走 git。
-  const rsyncArgs = ['-a', '--update', '--exclude', '.DS_Store', '--exclude', 'workstation-data', '--exclude', 'workstation', '--exclude', '.git'];
+  const rsyncArgs = ['-a', '--update', '--exclude', '.DS_Store', '--exclude', 'workstation-data', '--exclude', 'workstation', '--exclude', '.git', '--exclude', 'spec'];
   const runRsync = (from, to) => execFileSync('rsync', [...rsyncArgs, from, to], {encoding: 'utf8', maxBuffer: 1 << 28});
   const remoteSpec = REMOTE + ':' + REMOTE_ROOT.replace(/ /g, '\\ ');
   console.log('\n=== 材料文件 ===');
@@ -376,7 +376,7 @@ if (FILES) {
   // 前一版把前缀剥离交给 sed，而 root 里带引号和斜杠，剥不掉 → 两边全部"对不上"（5190/5190 全假报）。
   // 改成在 Node 里剥：先取 size\t绝对路径，再砍掉根本身。
   const listing = (root, viaSsh) => {
-    const cmd = `find ${JSON.stringify(root)} -type f -not -path '*/.git/*' -not -path '*/workstation-data/*' -not -path '*/workstation/*' -not -name 'workstation-data' -not -name '.DS_Store' -not -name '*.syncbak-*' -exec stat -f '%z\t%N' {} + 2>/dev/null`;
+    const cmd = `find ${JSON.stringify(root)} -type f -not -path '*/.git/*' -not -path '*/workstation-data/*' -not -path '*/workstation/*' -not -name 'workstation-data' -not -name 'spec' -not -path '*/spec/*' -not -name '.DS_Store' -not -name '*.syncbak-*' -exec stat -f '%z\t%N' {} + 2>/dev/null`;
     const out = viaSsh
       ? execFileSync('ssh', [...SSH_OPTS, REMOTE, cmd], {encoding: 'utf8', maxBuffer: 1 << 28})
       : execFileSync('bash', ['-c', cmd], {encoding: 'utf8', maxBuffer: 1 << 28});
