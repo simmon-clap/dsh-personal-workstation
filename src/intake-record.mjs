@@ -45,3 +45,24 @@ export function recordCommittedIntake({intake, store, ctx, source, batchId, rece
   return null;
  }
 }
+
+/** 这次输入是从哪个口进来的（spec/03 §13 入口矩阵）。
+ *  DSH 的 IM 会话 id 形如 `im:feishu_…:dm:…`，其余算工作台内对话。
+ *  只做归类，不做"哪个更重要"的判断 —— 权重属于 P3 判断层。 */
+export function sourceForSession(sessionId, fallback = 'chat') {
+ const id = String(sessionId ?? '');
+ if (id.startsWith('im:')) return 'im';
+ if (id.startsWith('voice:') || id.startsWith('audio:')) return 'voice';
+ return fallback;
+}
+
+/** 记一条"已经接住但没有落到某个对象"的输入（语音转写、IM 收到的一条消息等）。
+ *  与 recordCommittedIntake 共用同一条纪律：记账失败不许反噬业务。 */
+export function recordIntakeSafely({intake, ctx, source, summary, sourceRef = null}) {
+ if (!intake) return null;
+ try {
+  return intake.append(ctx, {source, summary, state: 'captured', sourceRef});
+ } catch {
+  return null;
+ }
+}

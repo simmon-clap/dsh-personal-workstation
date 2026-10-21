@@ -148,3 +148,22 @@ test('收件本没接入或记账失败：不许连累这次提交', () => {
  const broken = {append() { throw new Error('库写坏了'); }};
  assert.equal(recordCommittedIntake({intake: broken, store: fakeStore, ctx, source: 'page', batchId: 'b4', receipt}), null);
 });
+
+test('来路按会话归类：im: 前缀算飞书等 IM 渠道，其余算对话', async () => {
+ const {sourceForSession} = await import('../src/intake-record.mjs');
+ assert.equal(sourceForSession('im:feishu_abc:dm:oc_123'), 'im');
+ assert.equal(sourceForSession('voice:20261022'), 'voice');
+ assert.equal(sourceForSession('sess-ordinary'), 'chat');
+ assert.equal(sourceForSession(undefined), 'chat');
+});
+
+test('语音转写：记一条"接住了"，但摘要只写一句话、不抄全文', async () => {
+ const {recordIntakeSafely} = await import('../src/intake-record.mjs');
+ const {store, intake} = setup();
+ try {
+  const row = recordIntakeSafely({intake, ctx, source: 'voice', summary: '一段录音转成了文字：明天十点开会', sourceRef: 'voice/a.m4a'});
+  assert.equal(row.source, 'voice');
+  assert.equal(row.unassigned, true, '转写出来的文字还没落到任何对象，标未归属比编一个更诚实');
+  assert.equal(recordIntakeSafely({intake: null, ctx, source: 'voice', summary: 'x'}), null);
+ } finally { store.close(); }
+});

@@ -1,5 +1,5 @@
 import {DomainError} from './store.mjs';
-import {recordCommittedIntake} from './intake-record.mjs';
+import {recordCommittedIntake,sourceForSession} from './intake-record.mjs';
 import {exportViewMarkdown} from './view-spec.mjs';
 import {appleStatus,runAppleSync} from './apple-sync.mjs';
 import {createAudioInput} from './audio-input.mjs';
@@ -208,9 +208,11 @@ export class DshAdapter {
     }
     if(args.action==='cancel_draft')return this.store.cancelDraft(fresh,args.id,args.revision);
     if(args.action==='undo_draft')return this.store.undoDraft(fresh,args.key);
-    // 五个口之一「对话」：对话里提交成功 = 这条输入接住了（spec/03 §13）。
+    // 五个口之一「对话 / 飞书 / 语音」：提交成功 = 这条输入接住了（spec/03 §13）。
+    // 来路按会话标识归类（im: → 飞书等 IM 渠道），不再一律记成"对话"。
+    const source=sourceForSession(this.store.batch(fresh,args.id)?.source?.sessionId ?? exec?.agent?.id);
     const committed=this.store.commit(fresh,{batchId:args.id,revision:args.revision,key:args.key});
-    recordCommittedIntake({intake:this.intake,store:this.store,ctx:fresh,source:'chat',batchId:args.id,receipt:committed});
+    recordCommittedIntake({intake:this.intake,store:this.store,ctx:fresh,source,batchId:args.id,receipt:committed});
     return committed;
   }
 }

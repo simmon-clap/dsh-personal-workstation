@@ -14,7 +14,7 @@ import {overview} from './overview.mjs';
 import {buildPendingChecks} from './pending-checks.mjs';
 import {exportCalendar} from './calendar.mjs';
 import {runtimeStatus} from './runtime-status.mjs';
-import {recordCommittedIntake} from './intake-record.mjs';
+import {recordCommittedIntake,recordIntakeSafely} from './intake-record.mjs';
 import {readBatchOrigin} from './session-origin.mjs';
 import {artifactState} from './artifact-state.mjs';
 import {ingestFile,knowledgeState} from './knowledge-ingest.mjs';
@@ -171,13 +171,16 @@ export function browserRoute({store,connection,workspaceRegistry,allowedWorkspac
       const result=await speech.transcribe(spec);
       // 与 Agent 侧同一口径（含 language 兜底）：本机宿主保证该字段，这里只防契约变化，
       // 让界面拿到的转写结果字段形状稳定（HTTP 侧走 JSON.stringify，缺字段会被静默丢掉）。
+      // 五个口之一「语音」：录音被转成了文字，这条输入就接住了（spec/03 §13）。
+      // 记的是"有一句话进来了"，不是转写全文（正文留在原处，收件本不做第二份来源）。
+      recordIntakeSafely({intake,ctx,source:'voice',summary:'一段录音转成了文字：'+(String(result.text??'').trim().slice(0,60)||'（没有识别出内容）'),sourceRef:body.path??null});
       return output({text:result.text,audioSeconds:result.audioSeconds,inferenceSeconds:result.inferenceSeconds,provider:spec.provider?.info?.id??null,language:spec.language??null,grantId:body.grantId,path:body.path,bytes:audio.size,converted:normalized.converted===true,converter:normalized.converter??null});
      }
      case 'file_save':if(!files)throw new DomainError('UNAVAILABLE','文件服务未接入');return output(await files.save(ctx,body));
      case 'layout_get':return output({item:readLayout(store,ctx,body.view)});
      // 苹果日历：status 只读；sync 会写用户的日历（操作者点击即授权，与文件预览同一套语义）；import 只生成草稿。
      case 'apple_status':return output(await appleStatus({apple,config:appleConfig}));
-     case 'apple_sync':return output(await runAppleSync({store,ctx,apple,config:appleConfig,mode:['push','pull','both'].includes(body.mode)?body.mode:'both'}));
+     case 'apple_sync':return output(await runAppleSync({store,ctx,apple,config:appleConfig,intake,mode:['push','pull','both'].includes(body.mode)?body.mode:'both'}));
      case 'apple_import':return output(await appleImportDraft({store,ctx,apple,config:appleConfig}));
      case 'layout_save':return output(saveLayout(store,ctx,body));
      // 生成视图 v1（18 号 §3）：预览只读、不落库；保存只生成 draft，由既有 batch 审核，不直接 commit。
