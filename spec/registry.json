@@ -723,7 +723,7 @@
    {
     "id": "command-palette",
     "owner": "src/v7/command-palette.mjs",
-    "signature": "cmdk",
+    "signature": "className\\s*=\\s*['\"]cmdk-veil",
     "surface": "\\.cmdk\\b",
     "width": 560,
     "hint": "命令面板是独立浮层控件（不是详情弹窗）：全站唯一实现，宽度 560 已登记；详情弹窗仍只允许 760",
