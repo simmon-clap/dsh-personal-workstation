@@ -348,7 +348,7 @@ export function createInbox(document,send,batch,{notify=()=>{},openLogin,project
   return node.outerHTML;
  }
 
-  function listHtml(rows,total,blockedCount=0,checks=[]){
+  function listHtml(rows,total,blockedCount=0,checks=[],assistant=null){
   const cards=rows.map(({item,blocked})=>{const counts=new Map();for(const change of item.changes??[])counts.set(change.op,(counts.get(change.op)??0)+1);
    const names=(item.changes??[]).slice(0,3).map(change=>change.data?.title||change.id).join('、');
    const state=blocked?'需补充/冲突':(statusNames[item.status]||item.status);
@@ -423,7 +423,12 @@ export function createInbox(document,send,batch,{notify=()=>{},openLogin,project
   // 收件箱是**工作队列**，不是知识：在这里把这一点说明白（标签与位置沿用原型与 PRD）。
   const heading=`<div class="sectionhead"><h2>待你决定的改动</h2><small>同意后才写进工作台；不同意就一点都不改</small></div>`;
   const statsBlock=`<details class="proposalstats" data-proposalstats="1"><summary>最近的建议你采纳了多少</summary><div data-statsbody="1">展开后先生成</div></details>`;
-  return heading+statsBlock+filterBar+`<p class="notice">材料入库和项目修改都会汇总成一条改动，等你同意；来源与项目筛选只影响当前列表。</p>${pendingChecksHtml(checks)}${note}<div class="resourcegrid" data-inboxgrid="1">${cards||emptyMarkup(blockedCount)}</div>`;
+  // 助理后台（spec/55 P4）：今天收了多少、多少在等你、多少还没归属。
+  // 一行纯文字，不新增组件/颜色/图标 —— 这四条数字回答的是"它有没有接住"，不是新功能入口。
+  const assistantLine=assistant&&Number.isFinite(assistant.today)
+   ?`<p class="inboxmeta" data-assistant="1">今天收了 ${assistant.today} 件${assistant.needsYou?` · ${assistant.needsYou} 件等你一句话`:''}${assistant.unassigned?` · ${assistant.unassigned} 件还没归属`:''}</p>`
+   :'';
+  return heading+statsBlock+assistantLine+filterBar+`<p class="notice">材料入库和项目修改都会汇总成一条改动，等你同意；来源与项目筛选只影响当前列表。</p>${pendingChecksHtml(checks)}${note}<div class="resourcegrid" data-inboxgrid="1">${cards||emptyMarkup(blockedCount)}</div>`;
  }
  function wireList(root){
   wireSelects(root,{document});
@@ -599,11 +604,14 @@ export function createInbox(document,send,batch,{notify=()=>{},openLogin,project
   const {items}=await send('inbox',{status:queryStatus(status),limit:50});
   let checks=[];
   try{const result=await send('pending_checks',{limit:3});checks=Array.isArray(result?.items)?result.items:[]}catch{checks=[]}
+  // 助理后台的四个数（失败就不显示这一行，不编一个 0 —— 0 会被读成"今天什么都没有"）。
+  let assistant=null;
+  try{const summary=await send('intake_summary');if(summary&&summary.available!==false)assistant=summary}catch{assistant=null}
   const decorated=(await decorate(items)).filter(row=>matches(row.item));
   const rows=status==='pending'?decorated.filter(row=>!row.blocked):status==='blocked'?decorated.filter(row=>row.blocked):decorated;
   rendered=rows;
   if(!root?.isConnected)return rows;
-  root.innerHTML=listHtml(rows,items.length,decorated.filter(row=>row.blocked).length,checks);wireList(root);
+  root.innerHTML=listHtml(rows,items.length,decorated.filter(row=>row.blocked).length,checks,assistant);wireList(root);
   return rows;
  }
  // 接入状态：只呈现工作台自己观测得到的结论；观测不到的一律交给用户确认，不猜。
