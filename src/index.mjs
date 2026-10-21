@@ -181,7 +181,7 @@ export function apply(ctx,config){
     // 唯一事实源（W1 P0-1）：设置页/浏览器/Agent 三条通道都只读这一份。
     const heartbeatTiming={scheduled:autoHeartbeat,intervalMinutes:heartbeatMinutes};
     if(autoHeartbeat){
-     const timerCtx=()=>({workspace:rootWorkspaceId??store.batchScopes()[0],actor:'heartbeat',canWrite:true});
+     const timerCtx=()=>({workspace:rootWorkspaceId()??store.batchScopes()[0],actor:'heartbeat',canWrite:true});
      disposers.push(timer.interval(()=>{
       try{
        const ctxNow=timerCtx();
@@ -197,7 +197,7 @@ export function apply(ctx,config){
    // 只有常驻节点开口 —— 承诺不对称（宪章 v1.4 第七条）：两端各说一次，用户第一周就会关掉它。
    // 这个 tick 什么都不算（纯时间比较，0 token），真到点才跑一次判定。
    if(resolved.assistant.residentNode&&resolved.assistant.anchors&&timer){
-    const openingCtx=()=>({workspace:rootWorkspaceId??store.batchScopes()[0],actor:'assistant',canWrite:true});
+    const openingCtx=()=>({workspace:rootWorkspaceId()??store.batchScopes()[0],actor:'assistant',canWrite:true});
     disposers.push(timer.interval(()=>{
      try{runOpening({store,ctx:openingCtx(),heartbeat,loop,openings})}
      catch{/* 开口失败不该影响插件本身；下一次 tick 还会试 */}
@@ -208,7 +208,7 @@ export function apply(ctx,config){
    // 笔记本若去判别人的心跳，会把"我看不到它"误报成"它停了"（2026-10-21 的原始事故）。
    // 这里不碰网络、不调模型，只是"我还在按时醒"这一个事实，0 token。
    if(resolved.assistant.residentNode&&timer){
-    const beatCtx=()=>({workspace:rootWorkspaceId??store.batchScopes()[0],actor:'beat',canWrite:true});
+    const beatCtx=()=>({workspace:rootWorkspaceId()??store.batchScopes()[0],actor:'beat',canWrite:true});
     const beatOnce=source=>{try{beat.append(beatCtx(),{side:'resident',source})}catch{/* 记不上一笔不该影响插件本身 */}};
     beatOnce('load');
     disposers.push(timer.interval(()=>beatOnce('timer'),resolved.assistant.beatMinutes*60*1000));
@@ -227,7 +227,7 @@ export function apply(ctx,config){
      try{bundles=(await ctx.get?.('pluginManager')?.listBundles?.())??null}catch{/* 宿主没这个服务或读失败：交给 readImHealth 报 unknown */}
      try{plugins=(await ctx.get?.('pluginManager')?.listPlugins?.())??null}catch{/* 同上 */}
      let workspacePath=null,workspaceTitle=null;
-     try{const workspace=rootWorkspaceId?ctx.workspaceRegistry?.get?.(rootWorkspaceId):null;workspacePath=workspace?.path??null;workspaceTitle=workspace?.title??null}catch{/* 读不到工作区就只报 cwd unknown */}
+     try{const workspace=rootWorkspaceId?ctx.workspaceRegistry?.get?.(rootWorkspaceId()):null;workspacePath=workspace?.path??null;workspaceTitle=workspace?.title??null}catch{/* 读不到工作区就只报 cwd unknown */}
      return readImHealthFromDisk({bundles,plugins,workspacePath,workspaceTitle,home:process.env.HOME??''});
     };
     const adapter=new DshAdapter({integrations:resolved.integrations,appleCalendar,appleConfig:resolved.appleCalendar,store,files,knowledge,executions,heartbeat,speak,intake,loop,runner,speech:ctx.get?.('speechToText'),office:ctx.get?.('officeToPdf'),audio,executionConfig:resolved.execution,transcribeWithoutApproval:resolved.transcribeWithoutApproval,sessions:ctx.sessions,workspaceRegistry:ctx.workspaceRegistry,approval:ctx.approval,allowedWorkspaces,heartbeatTiming,imHealth});
