@@ -22,7 +22,7 @@ import {readLayout,saveLayout} from './layout.mjs';
 import {buildViewPreview,saveViewDraft} from './view-spec.mjs';
 const output=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 /** Installed on the authenticated DSH connection; no standalone server. */
-export function browserRoute({store,connection,workspaceRegistry,allowedWorkspaces,rootWorkspaceId,rootStatus,files,knowledge,schedule,heartbeatTiming={scheduled:false,intervalMinutes:0},executions,heartbeat,speak,beat=null,intake=null,loop=null,runner,office,speech,sessionQuery,grants,workspaceFs,workspaces,configuredWorkspaces=[],integrations={},apple=null,appleConfig={},audio:audio_input=createAudioInput(),transcribeWithoutApproval=false,executionEnabled=false,imHealth=null}){
+export function browserRoute({store,connection,workspaceRegistry,allowedWorkspaces,rootWorkspaceId,rootStatus,files,knowledge,schedule,heartbeatTiming={scheduled:false,intervalMinutes:0},executions,heartbeat,speak,beat=null,intake=null,loop=null,openings=null,runner,office,speech,sessionQuery,grants,workspaceFs,workspaces,configuredWorkspaces=[],integrations={},apple=null,appleConfig={},audio:audio_input=createAudioInput(),transcribeWithoutApproval=false,executionEnabled=false,imHealth=null}){
  // 允许列表可能是配置数组，也可能是"配置 ∪ 界面运行时授权"的取函数；不缓存，界面刚授权的要立刻生效。
  const allowedSet=()=>new Set(typeof allowedWorkspaces==='function'?allowedWorkspaces():allowedWorkspaces??[]);
  // 工作区清单来自 DSH 工作区注册表（不允许手填 id）。configured 表示来自配置文件、界面不能撤销。
@@ -111,7 +111,7 @@ export function browserRoute({store,connection,workspaceRegistry,allowedWorkspac
       return output({status:heartbeat.status(ctx,heartbeatTiming),latest:heartbeat.latest(ctx),items:heartbeat.list(ctx,{limit:body.limit??20,offset:body.offset??0}).items});
      }
      // 与 Agent 工具同源：浏览器设置面板也必须看到真实加载情况，否则会误报未接入。
-    case 'runtime_status':return output({...runtimeStatus(files,ctx.workspace,knowledge,runner,{office:Boolean(office),apple:Boolean(apple),speech,transcribeWithoutApproval:transcribeWithoutApproval===true,assistant:beat?beat.state(ctx,{residentSide:'resident'}):null,config:{integrations}}),imHealth:typeof imHealth==='function'?await imHealth():null,workspace:{id:ctx.workspace,title:workspaceRegistry.get?.(ctx.workspace)?.title??null},writeRequiresApproval:true});
+    case 'runtime_status':return output({...runtimeStatus(files,ctx.workspace,knowledge,runner,{office:Boolean(office),apple:Boolean(apple),speech,transcribeWithoutApproval:transcribeWithoutApproval===true,assistant:beat?beat.state(ctx,{residentSide:'resident'}):null,lastOpening:openings?openings.list(ctx,{limit:1})[0]??null:null,config:{integrations}}),imHealth:typeof imHealth==='function'?await imHealth():null,workspace:{id:ctx.workspace,title:workspaceRegistry.get?.(ctx.workspace)?.title??null},writeRequiresApproval:true});
      case 'calendar_export':return output(exportCalendar(store,ctx,{ids:body.ids}));
      // 收件本（spec/03 §13 · spec/55 P1）：给界面看「今天收了多少、多少还悬着、多少等你一句话」。
      // 没接入时如实说没接入，不返回一个"0"让界面看起来像"今天什么都没发生"（17 C8）。
@@ -121,6 +121,8 @@ export function browserRoute({store,connection,workspaceRegistry,allowedWorkspac
      case 'intake_assign':{if(!intake)throw new DomainError('UNAVAILABLE','收件本未接入');return output(intake.assign(ctx,body.id,{subjectKind:body.kind,subjectId:body.subjectId}));}
      // 着落本（spec/55 P2）：每件挂起的事写清终态。界面在 P4 接，这里先给 API。
      case 'intake_resolve':{if(!intake)throw new DomainError('UNAVAILABLE','收件本未接入');return output(intake.resolve(ctx,body.id,{answer:body.answer,note:body.note}));}
+     // 开口记录（spec/55 P3）：最近几次它开口说了什么、筛掉了什么。
+     case 'opening_list':return output(openings?{items:openings.list(ctx,{limit:body.limit??5})}:{available:false,items:[]});
      case 'loop_close':{if(!loop)throw new DomainError('UNAVAILABLE','着落本未接入');return output(loop.close(ctx,{subjectKind:body.subjectKind,subjectId:body.subjectId,state:body.state,waitingFor:body.waitingFor,waitingUntil:body.waitingUntil,note:body.note}));}
      case 'loop_list':return output(loop?{items:loop.list(ctx,{state:body.state,limit:body.limit})}:{available:false,items:[]});
      case 'loop_sweep':return output(loop?loop.sweep(ctx,{subjects:store.list(ctx,{kind:'task',limit:1000}).map(t=>({kind:'task',id:t.id,title:t.data?.title??t.id,dueDate:t.data?.dueDate}))}):{available:false,overdue:[],unlanded:[]});
