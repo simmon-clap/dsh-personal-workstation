@@ -73,23 +73,23 @@ test('常驻节点 + 开口开启：注册了一个 5 分钟的开口检查', ()
  } finally { booted.cleanup(); }
 });
 
-test('到 09:35 触发一次：真的会落一条开口记录', () => {
+test('到 09:35 触发一次：真的会落一条开口记录', async () => {
  const booted = bootPlugin();
  try {
   const timer = booted.captured.find(item => item.delay === 5 * 60 * 1000);
   const before = openCount(booted.safeDirectory);
-  withFrozenClock(new Date('2026-10-22T09:35:00+08:00'), () => timer.callback());
+  await withFrozenClock(new Date('2026-10-22T09:35:00+08:00'), () => timer.callback());
   const after = openCount(booted.safeDirectory);
   assert.equal(after, before + 1, '到点触发应当落一条开口记录（这是"它真的开过口"的唯一证据）');
  } finally { booted.cleanup(); }
 });
 
-test('不是开口点触发：什么都不写（不许为了"有动作"而开口）', () => {
+test('不是开口点触发：什么都不写（不许为了"有动作"而开口）', async () => {
  const booted = bootPlugin();
  try {
   const timer = booted.captured.find(item => item.delay === 5 * 60 * 1000);
   const before = openCount(booted.safeDirectory);
-  withFrozenClock(new Date('2026-10-22T13:00:00+08:00'), () => timer.callback());
+  await withFrozenClock(new Date('2026-10-22T13:00:00+08:00'), () => timer.callback());
   assert.equal(openCount(booted.safeDirectory), before);
  } finally { booted.cleanup(); }
 });

@@ -26,7 +26,7 @@ function setup() {
  return {store, heartbeat, loop, openings, create};
 }
 
-test('不是开口点就不开口', () => {
+test('不是开口点就不开口', async () => {
  const {store, openings} = setup();
  try {
   const decision = shouldOpen({openings, ctx, now: NOON});
@@ -35,11 +35,11 @@ test('不是开口点就不开口', () => {
  } finally { store.close(); }
 });
 
-test('到点 + 今天没开过 → 开口一次，并留下说了什么/为什么没说', () => {
+test('到点 + 今天没开过 → 开口一次，并留下说了什么/为什么没说', async () => {
  const {store, heartbeat, loop, openings, create} = setup();
  try {
   create('建任务', [{op: 'create', id: 'a', kind: 'task', data: {title: '交周报', dueDate: '2026-10-22', status: 'todo'}}]);
-  const result = runOpening({store, ctx, heartbeat, loop, openings, now: MORNING});
+  const result = await await runOpening({store, ctx, heartbeat, loop, openings, now: MORNING});
   assert.equal(result.opened, true);
   assert.equal(result.anchor, 'morning');
   assert(Array.isArray(result.opening.items));
@@ -49,11 +49,11 @@ test('到点 + 今天没开过 → 开口一次，并留下说了什么/为什�
  } finally { store.close(); }
 });
 
-test('同一个锚点再触发：不催促，也不改写已有记录', () => {
+test('同一个锚点再触发：不催促，也不改写已有记录', async () => {
  const {store, heartbeat, loop, openings} = setup();
  try {
-  const first = runOpening({store, ctx, heartbeat, loop, openings, now: MORNING});
-  const again = runOpening({store, ctx, heartbeat, loop, openings, now: new Date('2026-10-22T09:40:00+08:00')});
+  const first = await await runOpening({store, ctx, heartbeat, loop, openings, now: MORNING});
+  const again = await runOpening({store, ctx, heartbeat, loop, openings, now: new Date('2026-10-22T09:40:00+08:00')});
   assert.equal(first.opened, true);
   assert.equal(again.opened, false);
   assert.match(again.why, /已经开过口/);
@@ -61,11 +61,11 @@ test('同一个锚点再触发：不催促，也不改写已有记录', () => {
  } finally { store.close(); }
 });
 
-test('开口记录按天+锚点唯一：第二天同一锚点可以再开', () => {
+test('开口记录按天+锚点唯一：第二天同一锚点可以再开', async () => {
  const {store, heartbeat, loop, openings} = setup();
  try {
-  runOpening({store, ctx, heartbeat, loop, openings, now: MORNING});
-  const nextDay = runOpening({store, ctx, heartbeat, loop, openings, now: new Date('2026-10-23T09:35:00+08:00')});
+  await runOpening({store, ctx, heartbeat, loop, openings, now: MORNING});
+  const nextDay = await runOpening({store, ctx, heartbeat, loop, openings, now: new Date('2026-10-23T09:35:00+08:00')});
   assert.equal(nextDay.opened, true);
   assert.equal(openings.list(ctx).length, 2);
  } finally { store.close(); }

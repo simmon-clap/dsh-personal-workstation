@@ -1,5 +1,6 @@
 import {runHeartbeat} from './heartbeat.mjs';
 import {selectForAnchor, anchorOf} from './judge.mjs';
+import {deliverOpening} from './deliver.mjs';
 
 /** 助理后台的编排：到开口点醒来一次（spec/55 P3）。
  *
@@ -31,8 +32,8 @@ export function shouldOpen({openings, ctx, now = new Date(), windowMinutes = 30}
  * 跑一次开口：判定 → 三问筛选 → 记录。
  * @returns {anchor, run, opening, opened}
  */
-export function runOpening({store, ctx, heartbeat, loop = null, openings, judge = null,
- now = new Date(), cap = 5, windowMinutes = 30} = {}) {
+export async function runOpening({store, ctx, heartbeat, loop = null, openings, judge = null,
+ now = new Date(), cap = 5, windowMinutes = 30, imSend = null, push = true, logger = null} = {}) {
  const decision = shouldOpen({openings, ctx, now, windowMinutes});
  if (!decision.open) return {anchor: decision.anchor, opened: false, why: decision.why, run: null, opening: null};
 
@@ -50,5 +51,10 @@ export function runOpening({store, ctx, heartbeat, loop = null, openings, judge 
   runId: run.startedAt ?? null,
   at: now.toISOString(),
  });
- return {anchor: decision.anchor, opened: true, why: decision.why, run, opening};
+ // 开口记录写完才发送：先留痕、再出声。发送失败不影响这条开口存在——
+ // 「说了什么」与「发没发出去」必须分开，否则失败一次就等于这件事没发生过。
+ const delivery = push
+  ? await deliverOpening({imSend, opening, logger: (event, body) => { try { store.log?.(ctx, event, body); } catch {} }})
+  : {sent: false, reason: '你没开主动推送，只排在收件箱里'};
+ return {anchor: decision.anchor, opened: true, why: decision.why, run, opening, delivery};
 }

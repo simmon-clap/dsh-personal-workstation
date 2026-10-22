@@ -210,7 +210,10 @@ export class DshAdapter {
     // 没有这一条，用户在对话里说的事只要没生成改动，收件本里就查无此条 —— 那就不叫"事事有回应"。
     if(args.action==='intake_record'){
      if(!this.intake)throw new DomainError('UNAVAILABLE','收件本未接入');
-     return this.intake.append(fresh,{source:args.source??'chat',summary:args.summary,state:args.state??'captured',
+     // 来路按会话归类：从飞书/微信那边说的话，不该被记成"工作台内对话"。
+     // （2026-10-22 实测：在飞书会话里调这个动作，落库成了 chat；收件本的来源分布就会失真。）
+     const source=args.source??sourceForSession(exec?.agent?.id);
+     return this.intake.append(fresh,{source,summary:args.summary,state:args.state??'captured',
       reason:args.reason??null,subjectKind:args.kind??null,subjectId:args.subjectId??null});
     }
     if(args.action==='loop_close'){

@@ -70,6 +70,8 @@ export function resolveConfig(config={}){
   beatMinutes:Number.isFinite(assistantBeatRaw)&&assistantBeatRaw>0?Math.min(120,Math.floor(assistantBeatRaw)):15,
   // 开口是"会出声"的事，默认开，但允许关掉（关掉后仍然只在收件箱里排序）。
   anchors:assistantAnchors!==false,
+  // 推到 IM 也默认开（用户要"主动通知"）；关掉就只排序，不推送。
+  pushToIM:unwrap(assistantRaw.pushToIM)!==false,
  };
  for(const key of Object.keys(integrations)){
   const value=unwrap(config[key]);
@@ -199,7 +201,8 @@ export function apply(ctx,config){
    if(resolved.assistant.residentNode&&resolved.assistant.anchors&&timer){
     const openingCtx=()=>({workspace:rootWorkspaceId()??store.batchScopes()[0],actor:'assistant',canWrite:true});
     disposers.push(timer.interval(()=>{
-     try{runOpening({store,ctx:openingCtx(),heartbeat,loop,openings})}
+     // 投递失败不抛（runOpening 内部已兜住），这里再兜一层，避免未处理的 Promise 拒绝
+     try{return Promise.resolve(runOpening({store,ctx:openingCtx(),heartbeat,loop,openings,imSend:ctx.get?.('imSend')??null,push:resolved.assistant.pushToIM})).catch(()=>{})}
      catch{/* 开口失败不该影响插件本身；下一次 tick 还会试 */}
     },5*60*1000));
    }
