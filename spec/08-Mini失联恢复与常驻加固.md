@@ -54,16 +54,16 @@ sudo pmset -a sleep 0 disablesleep 1
 <plist version="1.0"><dict>
   <key>Label</key><string>com.simon.tailscaled</string>
   <key>ProgramArguments</key><array>
-    <string>/Users/simmon/.homebrew/bin/tailscaled</string>
+    <string>~/.homebrew/bin/tailscaled</string>
     <string>--tun=userspace-networking</string>
     <string>--socks5-server=localhost:1055</string>
-    <string>--state=/Users/simmon/tailscale-userspace/tailscaled.state</string>
-    <string>--socket=/Users/simmon/tailscale-userspace/tailscaled.sock</string>
+    <string>--state=~/tailscale-userspace/tailscaled.state</string>
+    <string>--socket=~/tailscale-userspace/tailscaled.sock</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
-  <key>StandardOutPath</key><string>/Users/simmon/tailscale-userspace/tailscaled.log</string>
-  <key>StandardErrorPath</key><string>/Users/simmon/tailscale-userspace/tailscaled.err.log</string>
+  <key>StandardOutPath</key><string>~/tailscale-userspace/tailscaled.log</string>
+  <key>StandardErrorPath</key><string>~/tailscale-userspace/tailscaled.err.log</string>
 </dict></plist>
 ```
 
@@ -95,8 +95,8 @@ mini 的 DSH 是**桌面版 App**（`DeepSeek Harness.app`），现在不是开�
 
 | # | 验收 | 怎么测 |
 | --- | --- | --- |
-| 1 | 三个端口通 | `nc -z 100.103.17.44 22/5900/19387` |
-| 2 | SSH 免密进得去 | `ssh simmon@100.103.17.44` |
+| 1 | 三个端口通 | `nc -z 100.64.x.x 22/5900/19387` |
+| 2 | SSH 免密进得去 | `ssh simmon@100.64.x.x` |
 | 3 | **睡一晚之后仍然通**（最关键的验收） | 第二天早上我再测一次 |
 | 4 | 重启 mini 之后自动恢复 | 重启后我不碰它，看 Tailscale/DSH 是否自己回来 |
 | 5 | 简报按时到（09:30 / 21:00） | 微信里有没有收到 |

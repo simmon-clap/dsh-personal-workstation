@@ -1,4 +1,5 @@
 import {DomainError} from './store.mjs';
+import {recordCommittedIntake,sourceForSession} from './intake-record.mjs';
 import {exportViewMarkdown} from './view-spec.mjs';
 import {appleStatus,runAppleSync} from './apple-sync.mjs';
 import {createAudioInput} from './audio-input.mjs';
@@ -17,8 +18,8 @@ import {buildViewPreview,previewAndSaveView} from './view-spec.mjs';
 
 /** Only host-owned dependencies and configuration are accepted here. */
 export class DshAdapter {
-  constructor({store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat=null,speak=null,runner,executionConfig,speech,office,audio=createAudioInput(),transcribeWithoutApproval=false,allowedWorkspaces=[],integrations={},appleCalendar=null,appleConfig={},heartbeatTiming={scheduled:false,intervalMinutes:0},imHealth=null}){
-    Object.assign(this,{store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat,speak,runner,executionConfig,speech,office,audio,transcribeWithoutApproval,integrations,appleCalendar,appleConfig,heartbeatTiming,imHealth});
+  constructor({store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat=null,speak=null,intake=null,loop=null,runner,executionConfig,speech,office,audio=createAudioInput(),transcribeWithoutApproval=false,allowedWorkspaces=[],integrations={},appleCalendar=null,appleConfig={},heartbeatTiming={scheduled:false,intervalMinutes:0},imHealth=null}){
+    Object.assign(this,{store,sessions,workspaceRegistry,approval,files,knowledge,executions,heartbeat,speak,intake,loop,runner,executionConfig,speech,office,audio,transcribeWithoutApproval,integrations,appleCalendar,appleConfig,heartbeatTiming,imHealth});
     // 允许列表可能来自配置文件，也可能来自界面里的运行时授权；不缓存集合，界面刚授权的要立刻可用。
     this.allowedSource=allowedWorkspaces;
   }
@@ -40,7 +41,7 @@ export class DshAdapter {
   }
   async run(args,exec){
     if(!args||typeof args!=='object'||Array.isArray(args))throw new DomainError('INVALID','参数格式无效');
-    const permitted=new Set(['action','id','kind','status','limit','offset','title','changes','proposal','candidates','revision','key','view','positions','viewport','focus','query','baseId','topK','includeArchived','taskId','projectId','executionTarget','grantId','path','language','mode','feedback','condition','subjectId','template','params','viewId','viewData','analysis','roleColors','roleShapes','order']);
+    const permitted=new Set(['action','id','kind','status','limit','offset','title','changes','proposal','candidates','revision','key','view','positions','viewport','focus','query','baseId','topK','includeArchived','taskId','projectId','executionTarget','grantId','path','language','mode','feedback','condition','subjectId','template','params','viewId','viewData','analysis','roleColors','roleShapes','summary','state','source','reason','waitingFor','waitingUntil','note','order']);
     if(Object.keys(args).some(k=>!permitted.has(k)))throw new DomainError('INVALID','不接受工作区、权限或未知参数');
     try{args=structuredClone(args)}catch{throw new DomainError('INVALID','参数必须为可复制的数据')}
     const ctx=await this.context(exec);
@@ -136,7 +137,7 @@ export class DshAdapter {
       case 'view_export':return exportViewMarkdown(args.viewData);
       case 'view_preview':return {view:buildViewPreview({store:this.store,ctx,template:args.template,subjectId:args.subjectId,params:args.params,viewId:args.viewId,now:new Date()})};
     }
-    if(!['layout_save','draft','commit','undo_draft','cancel_draft','knowledge_ingest','heartbeat_run','speak_feedback','view_save'].includes(args.action))throw new DomainError('INVALID','未知工作台动作');
+    if(!['layout_save','draft','commit','undo_draft','cancel_draft','knowledge_ingest','heartbeat_run','speak_feedback','view_save','intake_record','loop_close'].includes(args.action))throw new DomainError('INVALID','未知工作台动作');
     // PRD v1.3 CH-06-2「建议、歧义和草稿留待处理」：草稿只是待处理的建议，落进收件箱等待取舍，
     // 不改变任何业务数据，因此不要求审批；真正改变业务数据的 commit 与画布布局 layout_save 仍然必须审批。
     // 收录会写入宿主知识库（另一个系统），与提交一样需要审批；审批后才有可写上下文。
@@ -163,7 +164,7 @@ export class DshAdapter {
     if(args.action==='heartbeat_run'){
      if(!this.heartbeat)throw new DomainError('UNAVAILABLE','主动做事的记录尚未接入');
      const previous=this.heartbeat.status(fresh,this.heartbeatTiming);
-     const record=runHeartbeat({store:this.store,ctx:fresh,now:new Date(),since:previous.lastSuccessAt,
+     const record=runHeartbeat({store:this.store,ctx:fresh,now:new Date(),since:previous.lastSuccessAt,loop:this.loop,
       scheduled:false,intervalMinutes:this.heartbeatTiming.intervalMinutes,
       speak:candidate=>decideLevel(candidate,{budget:this.speak?this.speak.state(fresh).budget:40,now:new Date(),
        spokenThisWeek:spokenThisWeek(this.heartbeat.list(fresh,{limit:50}).items),channelReady:false})});
@@ -205,16 +206,33 @@ export class DshAdapter {
      }
      return created;
     }
+    // 五个口之一「对话」的**另一半**：有些话不需要落成对象，但也要有交代。
+    // 没有这一条，用户在对话里说的事只要没生成改动，收件本里就查无此条 —— 那就不叫"事事有回应"。
+    if(args.action==='intake_record'){
+     if(!this.intake)throw new DomainError('UNAVAILABLE','收件本未接入');
+     return this.intake.append(fresh,{source:args.source??'chat',summary:args.summary,state:args.state??'captured',
+      reason:args.reason??null,subjectKind:args.kind??null,subjectId:args.subjectId??null});
+    }
+    if(args.action==='loop_close'){
+     if(!this.loop)throw new DomainError('UNAVAILABLE','着落本未接入');
+     return this.loop.close(fresh,{subjectKind:args.kind,subjectId:args.subjectId,state:args.state,
+      waitingFor:args.waitingFor,waitingUntil:args.waitingUntil,note:args.note});
+    }
     if(args.action==='cancel_draft')return this.store.cancelDraft(fresh,args.id,args.revision);
     if(args.action==='undo_draft')return this.store.undoDraft(fresh,args.key);
-    return this.store.commit(fresh,{batchId:args.id,revision:args.revision,key:args.key});
+    // 五个口之一「对话 / 飞书 / 语音」：提交成功 = 这条输入接住了（spec/03 §13）。
+    // 来路按会话标识归类（im: → 飞书等 IM 渠道），不再一律记成"对话"。
+    const source=sourceForSession(this.store.batch(fresh,args.id)?.source?.sessionId ?? exec?.agent?.id);
+    const committed=this.store.commit(fresh,{batchId:args.id,revision:args.revision,key:args.key});
+    recordCommittedIntake({intake:this.intake,store:this.store,ctx:fresh,source,batchId:args.id,receipt:committed});
+    return committed;
   }
 }
 
 export function toolDefinition(adapter){return {
  name:'workstation',
  description:'查询和维护当前授权工作区的项目、任务、材料、日程和变更收件箱。先读取对象版本，再生成这次改动和预览；同意只会处理用户授权的范围，并返回真实记录编号。可按模板生成只读视图：预览不写进工作台，保存只生成一条还没确认的改动。数据字段请先阅读 personal-workstation Skill。',
- parameters:{type:'object',additionalProperties:false,required:['action'],properties:{action:{type:'string',enum:['relation_candidates','assistant_context','judgment_checks','pending_checks','list','get','inbox','execution_start','execution_history','runtime_status','knowledge_bases','knowledge_search','knowledge_status','knowledge_ingest','overview','graph','node_search','layout_get','layout_save','view_preview','view_export','view_save','preview','receipt','draft','commit','undo_draft','cancel_draft','transcribe','proposal_history','heartbeat_run','heartbeat_status','speak_status','speak_feedback']},id:{type:'string'},kind:{type:'string'},status:{type:'string'},limit:{type:'integer'},offset:{type:'integer'},candidates:{type:'array',items:{type:'object',additionalProperties:true},description:'可选：还没写进工作台的候选判断（字段同判断记录：title/evidence/uncertainty/validFrom/status），用它们和既有判断先对一遍矛盾。'},
+ parameters:{type:'object',additionalProperties:false,required:['action'],properties:{action:{type:'string',enum:['relation_candidates','assistant_context','judgment_checks','pending_checks','list','get','inbox','execution_start','execution_history','runtime_status','knowledge_bases','knowledge_search','knowledge_status','knowledge_ingest','overview','graph','node_search','layout_get','layout_save','view_preview','view_export','view_save','preview','receipt','draft','commit','undo_draft','cancel_draft','transcribe','proposal_history','heartbeat_run','heartbeat_status','speak_status','speak_feedback','intake_record','loop_close']},id:{type:'string'},kind:{type:'string'},status:{type:'string'},summary:{type:'string',description:'一句话说明这条输入是什么（≤200 字）'},state:{type:'string',enum:['captured','not_mine','needs_you'],description:'接住后的状态：记下了 / 不用你管 / 需要你一句话'},source:{type:'string',enum:['page','chat','im','voice','calendar','mail','file','health','timer'],description:'从哪个口进来的'},waitingFor:{type:'string',description:'在等谁（选了在等谁就必须写）'},waitingUntil:{type:'string',description:'等到什么时候（ISO 时间）'},note:{type:'string',description:'一句话备注'},limit:{type:'integer'},offset:{type:'integer'},candidates:{type:'array',items:{type:'object',additionalProperties:true},description:'可选：还没写进工作台的候选判断（字段同判断记录：title/evidence/uncertainty/validFrom/status），用它们和既有判断先对一遍矛盾。'},
 title:{type:'string'},proposal:{type:'object',additionalProperties:false,properties:{evidence:{type:'array',items:{type:'object',additionalProperties:false,required:['kind','ref','quote'],properties:{kind:{type:'string',enum:['message','file','audio','web','note']},ref:{type:'string'},quote:{type:'string'},verified:{type:'boolean'}}}},uncertainty:{type:'string'},basedOn:{type:'array',items:{type:'string'}},decision:{type:'string',enum:['undecided','accepted','rewritten','rejected']},reason:{type:'string'},decidedAt:{type:'string'}}},changes:{type:'array',items:{type:'object',additionalProperties:false,required:['op'],properties:{op:{type:'string',enum:['create','update','archive','restore','delete']},id:{type:'string'},kind:{type:'string'},expectedRevision:{type:'integer'},data:{type:'object',additionalProperties:true},fields:{type:'array',items:{type:'string'},description:'只改动这些字段（合并进旧数据，其余字段原样保留）；不传=整条替换。'},sources:{type:'object',additionalProperties:{type:'string'},description:'可选：逐字段来源说明（字段名 → 证据出处，例如 会议纪要第3段 / 用户口述 / 文件路径）。只标注本次改动且确有出处的字段；不确定就留空，不要编造。'}}}},revision:{type:'integer'},key:{type:'string'},view:{type:'string'},focus:{type:'string'},query:{type:'string'},baseId:{type:'string'},taskId:{type:'string'},projectId:{type:'string'},feedback:{type:'string',enum:['followed','noted','unnecessary','ignored','missed']},condition:{type:'string'},viewData:{type:'object',additionalProperties:true,description:'view_export 用：要导出的预览视图对象（含 content），仅生成 Markdown，不落库。'},analysis:{type:'object',additionalProperties:false,description:'view_save 用：AI 解读。只能引用 view_preview 返回的 dataRefs；summary≤600字，findings 1–8 条（每条 ref/text），uncertainty≤300字。',properties:{summary:{type:'string'},findings:{type:'array',maxItems:8,items:{type:'object',additionalProperties:false,required:['ref','text'],properties:{ref:{type:'string'},text:{type:'string'}}}},uncertainty:{type:'string'}}},subjectId:{type:'string'},template:{type:'string',enum:['risk-matrix','timeline','compare-table','blocker'],description:'生成视图的模板：risk-matrix / timeline 用于项目（subjectId=项目），blocker 用于任务（subjectId=任务），compare-table 用 params.subjectIds 传 2–3 个判断/议题。'},params:{type:'object',additionalProperties:true,description:'模板参数：risk-matrix 可给 horizonDays（1–3650，默认 90）；compare-table 必须给 subjectIds（2–3 个），可选 dimensions；timeline / blocker 不接受参数。'},viewId:{type:'string',description:'view_preview 时可选：打开保存过的视图并按当前数据重算，引用变化会标为 stale。'},executionTarget:{type:'string'},topK:{type:'integer'},grantId:{type:'string'},path:{type:'string'},language:{type:'string'},includeArchived:{type:'boolean'},positions:{type:'object'},viewport:{type:'object'},roleColors:{type:'object'},roleShapes:{type:'object'},order:{type:'array',items:{type:'string'}}}},
  output:{schema:{type:'object',additionalProperties:true},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)}]},
  // knowledge_ingest 会导入文件并生成草稿，与会话内其它写操作共享同一对象，不算并发安全。

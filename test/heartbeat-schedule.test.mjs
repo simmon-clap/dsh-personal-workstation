@@ -26,7 +26,9 @@ test('配置项存在且默认是 0（不自动醒）', () => {
 });
 
 test('配置键白名单同步（否则整插件启用失败 —— 这个错踩过两次）', () => {
-  assert.match(index, /'appleCalendar','heartbeat'\]/, 'resolveConfig 的白名单必须包含 heartbeat');
+  assert.match(index, /'appleCalendar','heartbeat','assistant'\]/, 'resolveConfig 的白名单必须包含 heartbeat 与 assistant');
+  // 这条断言故意钉住字面量：白名单漏一个键，整插件启用失败（1.1.0 / 1.6.1 两次都是这个错）。
+  assert.match(schema, /assistant:schema\.object\(/, 'config-schema 里必须有 assistant 配置块');
 });
 
 test('间隔为 0 时不会装定时器；装的时候用的是宿主 timer 且只跑心跳', () => {

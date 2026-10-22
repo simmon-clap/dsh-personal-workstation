@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync, existsSync} from 'node:fs';
+import {mkdtempSync, existsSync, readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -42,6 +42,14 @@ test('回滚：新字段不改变数据库结构（旧版不会遇到未知列�
 
 test('回滚：旧版能读含新字段的库；写入必须先还原备份（真实边界，不美化）', async t => {
   if (!existsSync(installedStore)) return t.skip('本机没有已安装包（' + installedStore + '），无法验证旧版兼容');
+  // 2026-10-22：本机装的就是**当前版本**时，这个测试拿不到"旧版"——它会变成"用自己验证自己"，
+  // 必然假红（实测：装上 3.10.0 后这里开始失败，测试本身没问题，是前提失效）。
+  // 如实 skip，并写明该怎么补：要验证回滚，得指定一个真正的旧包。
+  const installedVersion = JSON.parse(readFileSync(join(installedStore, '..', '..', 'package.json'), 'utf8')).version;
+  const currentVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+  if (installedVersion === currentVersion) {
+    return t.skip('本机安装的就是当前版本 ' + currentVersion + '，没有"旧版"可比；回滚验证需要指定一个旧包（2026-10-22 如实跳过）');
+  }
   const old = await import(pathToFileURL(installedStore).href);
   const OldStore = old.WorkstationStore;
   assert.equal(typeof OldStore, 'function', '已安装包应导出 WorkstationStore');

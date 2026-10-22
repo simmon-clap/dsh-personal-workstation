@@ -86,6 +86,7 @@ export const Config=schema.object({
  assistant:schema.object({
   residentNode:schema.boolean().default(false).volatile().description('这台机器是不是常驻节点（承担"必须在线"；笔记本/手机保持关闭）'),
   beatMinutes:schema.number().default(15).volatile().description('常驻节点多久记一次心跳（分钟）'),
+  anchors:schema.boolean().default(true).volatile().description('到 09:30 / 21:00 各开口一次（关掉就只在收件箱里排序，绝不主动出声）'),
  }).description('助理后台：只有常驻节点记心跳，用来判断"它还在不在"，与是否出声无关'),
 });
 

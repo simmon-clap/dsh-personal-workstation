@@ -1,3 +1,4 @@
+import {recordCommittedIntake} from './intake-record.mjs';
 import {DomainError} from './store.mjs';
 import {toZonedDateTime} from './validation.mjs';
 import {APPLE_SOURCE,DEFAULT_TARGET,NOISE_CALENDARS,isNoiseCalendar,planSync,planImport,pullFields,eventFingerprint,toRecordDateTime} from './apple-calendar.mjs';
@@ -67,7 +68,7 @@ export async function appleStatus({apple,config={}}={}){
 function openedChanges(plan,store,ctx){return (plan.push??[]).map(item=>({op:'update',id:item.recordId,data:{externalSource:APPLE_SOURCE,externalUid:item.uid??'',externalSyncedAt:new Date().toISOString(),externalFingerprint:''}}))}
 
 /** 执行同步。mode：both | push | pull。返回可直接展示的摘要。 */
-export async function runAppleSync({store,ctx,apple,config={},mode='both',now=new Date()}={}){
+export async function runAppleSync({store,ctx,apple,config={},mode='both',now=new Date(),intake=null}={}){
  if(!apple)throw new DomainError('UNAVAILABLE','未加载苹果日历桥接（苹果日历同步仅在本机 macOS 上可用）');
  const target=config.targetCalendar??APPLE_DEFAULTS.targetCalendar;
  const window=appleWindow({...config,now});
@@ -119,7 +120,9 @@ export async function runAppleSync({store,ctx,apple,config={},mode='both',now=ne
       externalSource:APPLE_SOURCE,externalUid:item.uid,externalSyncedAt:now.toISOString(),
       externalFingerprint:eventFingerprint({title:item.fields.title,start:item.fields.start,end:item.fields.end,allDay:item.fields.allDay,location:item.fields.location})};
      const batch=store.draft(ctx,{title:'苹果日历同步 · 拉取新建',changes:[{op:'create',kind:'event',data,sources:{title:'苹果日历同步拉取'}}]});
-     store.commit(ctx,{batchId:batch.id,revision:batch.revision,key:`apple-pull-create:${item.uid}:${now.toISOString()}`});
+     const receipt=store.commit(ctx,{batchId:batch.id,revision:batch.revision,key:`apple-pull-create:${item.uid}:${now.toISOString()}`});
+     // 五个口之一「日历」：从日历进来的新事务也算"接住了"（spec/03 §13）。
+     recordCommittedIntake({intake,store,ctx,source:'calendar',batchId:batch.id,receipt});
      pushedUids.add(item.uid);
      result.actions.pull.push({op:'create',uid:item.uid,title:item.fields.title});
     }else{

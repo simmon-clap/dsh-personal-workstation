@@ -171,19 +171,51 @@ export const HEARTBEAT_RULES = [
    return {looked: [{what: '判断', count: judgments.length}, {what: '材料', count: materials.length}], candidates, silenced};
   },
  },
+ {
+  id: 'verdicts', label: '看落实',
+  run: ({store, ctx, now, loop}) => {
+   const candidates = [], silenced = [];
+   const tasks = store.list(ctx, {kind: 'task', limit: 1000});
+   const open = tasks.filter(task => !['done', 'cancelled'].includes(task.data?.status));
+   // 着落本没接入就如实说明，不假装"看过了"（约束三 · 未接入不伪造）。
+   if (!loop) {
+    return {looked: [{what: '未完成的任务', count: open.length}],
+     candidates, silenced: [{rule: '看落实', subjectId: null, title: null, what: '着落本', why: '着落本还没接入，判断不了"这件事最后去哪了"'}]};
+   }
+   const swept = loop.sweep(ctx, {now, subjects: tasks.map(task => ({
+    kind: 'task', id: task.id, title: task.data?.title ?? task.id, dueDate: task.data?.dueDate,
+   }))});
+   for (const item of swept.overdue) {
+    candidates.push({rule: '看落实', subjectId: item.subjectId, title: item.subjectId, what: '在等：' + item.waitingFor,
+     why: item.reason, level: 1, commitment: true, fresh: true, days: null});
+   }
+   for (const item of swept.unlanded) {
+    candidates.push({rule: '看落实', subjectId: item.subjectId, title: item.title,
+     what: '交付日期 ' + item.dueDate, why: item.reason, level: 2, commitment: true, fresh: true, days: null});
+   }
+   for (const task of open) {
+    const record = loop.forSubject(ctx, {subjectKind: 'task', subjectId: task.id});
+    if (record?.state === 'waiting') silenced.push({rule: '看落实', subjectId: task.id, title: task.data?.title ?? task.id,
+     what: '在等 ' + record.waitingFor, why: '说好等到 ' + record.waitingUntil + '，还没到'});
+    else if (record) silenced.push({rule: '看落实', subjectId: task.id, title: task.data?.title ?? task.id,
+     what: '已有着落：' + record.state, why: '已经写清去哪了，不再打扰'});
+   }
+   return {looked: [{what: '未完成的任务', count: open.length}], candidates, silenced};
+  },
+ },
 ];
 
 /**
  * 手动跑一次：逐条判定，任一规则抛错都记进 errors 并继续（其余规则的结论照样留痕）。
  * @returns 一次完整的留痕记录（可直接交给 HeartbeatStore.record）
  */
-export function runHeartbeat({store, ctx, now = new Date(), rules = HEARTBEAT_RULES, since = null, logger = null, speak = null, scheduled = false, intervalMinutes = 0} = {}) {
+export function runHeartbeat({store, ctx, now = new Date(), rules = HEARTBEAT_RULES, since = null, loop = null, logger = null, speak = null, scheduled = false, intervalMinutes = 0} = {}) {
  if (!store || !ctx) throw new Error('主动做事需要存储与工作区上下文');
  const startedAt = now.toISOString();
  const looked = [], candidates = [], silenced = [], errors = [];
  for (const rule of rules) {
   try {
-   const outcome = rule.run({store, ctx, now, since});
+   const outcome = rule.run({store, ctx, now, since, loop});
    looked.push(...(outcome.looked ?? []));
    candidates.push(...(outcome.candidates ?? []));
    silenced.push(...(outcome.silenced ?? []));

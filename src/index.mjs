@@ -4,6 +4,10 @@ import {SubagentExecutor} from './subagent-executor.mjs';
 import {ExecutionStore} from './execution-store.mjs';
 import {HeartbeatStore} from './heartbeat-store.mjs';
 import {BeatStore} from './beat-store.mjs';
+import {IntakeStore} from './intake-store.mjs';
+import {LoopStore} from './loop-store.mjs';
+import {OpeningStore} from './opening-store.mjs';
+import {runOpening} from './assistant.mjs';
 import {runHeartbeat} from './heartbeat.mjs';
 import {SpeakStore} from './speak-store.mjs';
 import {readFileSync,mkdirSync,chmodSync} from 'node:fs';
@@ -60,9 +64,12 @@ export function resolveConfig(config={}){
  const assistantRaw=unwrap(config.assistant)??{};
  const assistantResident=unwrap(assistantRaw.residentNode);
  const assistantBeatRaw=Number(unwrap(assistantRaw.beatMinutes));
+ const assistantAnchors=unwrap(assistantRaw.anchors);
  const assistant={
   residentNode:assistantResident===true,
   beatMinutes:Number.isFinite(assistantBeatRaw)&&assistantBeatRaw>0?Math.min(120,Math.floor(assistantBeatRaw)):15,
+  // 开口是"会出声"的事，默认开，但允许关掉（关掉后仍然只在收件箱里排序）。
+  anchors:assistantAnchors!==false,
  };
  for(const key of Object.keys(integrations)){
   const value=unwrap(config[key]);
@@ -119,6 +126,12 @@ export function apply(ctx,config){
    const heartbeat=new HeartbeatStore(store);
    // 常驻节点心跳（宪章 v1.4 第七条 · 13 §10）：判活靠记账，不靠 ssh 探活。
    const beat=new BeatStore(store);
+   // 收件本（宪章 v1.4 第二条「事事有回应」· 03 §13）：每条输入都要有归属。
+   const intake=new IntakeStore(store);
+   // 着落本（宪章 v1.4「件件有着落」· spec/55 P2）：每件挂起的事都要写清终态。
+   const loop=new LoopStore(store);
+   // 开口记录（spec/55 P3）：一天一个锚点只开口一次，说没说都留痕。
+   const openings=new OpeningStore(store);
    // 出声反馈表（F23 双向计量）：你的回应，与它做了什么分开存。
    const speak=new SpeakStore(store);
    const fs=ctx.get?.('fs');
@@ -168,11 +181,11 @@ export function apply(ctx,config){
     // 唯一事实源（W1 P0-1）：设置页/浏览器/Agent 三条通道都只读这一份。
     const heartbeatTiming={scheduled:autoHeartbeat,intervalMinutes:heartbeatMinutes};
     if(autoHeartbeat){
-     const timerCtx=()=>({workspace:rootWorkspaceId??store.batchScopes()[0],actor:'heartbeat',canWrite:true});
+     const timerCtx=()=>({workspace:rootWorkspaceId()??store.batchScopes()[0],actor:'heartbeat',canWrite:true});
      disposers.push(timer.interval(()=>{
       try{
        const ctxNow=timerCtx();
-       const record=runHeartbeat({store,ctx:ctxNow,now:new Date(),since:heartbeat.status(ctxNow).lastSuccessAt,
+       const record=runHeartbeat({store,ctx:ctxNow,now:new Date(),since:heartbeat.status(ctxNow).lastSuccessAt,loop,
         scheduled:true,intervalMinutes:resolved.heartbeatMinutes,
         speak:null,   // 定时唤醒**不直接出声**：先留痕，要不要找你仍按出声规则与人来定（避免"自己醒了就打扰你"）
        });
@@ -180,12 +193,22 @@ export function apply(ctx,config){
       }catch{/* 定时这一跑失败不该影响插件本身；下一次还会醒，失败也会留在心跳留痕的"连续失败"里 */}
      },heartbeatMinutes*60*1000));
     }
+   // 助理后台 · 开口点（spec/55 P3）：每 5 分钟问一次"是不是到点且今天还没开口"。
+   // 只有常驻节点开口 —— 承诺不对称（宪章 v1.4 第七条）：两端各说一次，用户第一周就会关掉它。
+   // 这个 tick 什么都不算（纯时间比较，0 token），真到点才跑一次判定。
+   if(resolved.assistant.residentNode&&resolved.assistant.anchors&&timer){
+    const openingCtx=()=>({workspace:rootWorkspaceId()??store.batchScopes()[0],actor:'assistant',canWrite:true});
+    disposers.push(timer.interval(()=>{
+     try{runOpening({store,ctx:openingCtx(),heartbeat,loop,openings})}
+     catch{/* 开口失败不该影响插件本身；下一次 tick 还会试 */}
+    },5*60*1000));
+   }
    // 助理后台 · 常驻节点心跳（宪章 v1.4 第七条 · 13 §10）：
    // **只有被标成常驻的机器才记**。笔记本若也记，会在常驻节点真故障时掩盖问题；
    // 笔记本若去判别人的心跳，会把"我看不到它"误报成"它停了"（2026-10-21 的原始事故）。
    // 这里不碰网络、不调模型，只是"我还在按时醒"这一个事实，0 token。
    if(resolved.assistant.residentNode&&timer){
-    const beatCtx=()=>({workspace:rootWorkspaceId??store.batchScopes()[0],actor:'beat',canWrite:true});
+    const beatCtx=()=>({workspace:rootWorkspaceId()??store.batchScopes()[0],actor:'beat',canWrite:true});
     const beatOnce=source=>{try{beat.append(beatCtx(),{side:'resident',source})}catch{/* 记不上一笔不该影响插件本身 */}};
     beatOnce('load');
     disposers.push(timer.interval(()=>beatOnce('timer'),resolved.assistant.beatMinutes*60*1000));
@@ -204,17 +227,17 @@ export function apply(ctx,config){
      try{bundles=(await ctx.get?.('pluginManager')?.listBundles?.())??null}catch{/* 宿主没这个服务或读失败：交给 readImHealth 报 unknown */}
      try{plugins=(await ctx.get?.('pluginManager')?.listPlugins?.())??null}catch{/* 同上 */}
      let workspacePath=null,workspaceTitle=null;
-     try{const workspace=rootWorkspaceId?ctx.workspaceRegistry?.get?.(rootWorkspaceId):null;workspacePath=workspace?.path??null;workspaceTitle=workspace?.title??null}catch{/* 读不到工作区就只报 cwd unknown */}
+     try{const workspace=rootWorkspaceId?ctx.workspaceRegistry?.get?.(rootWorkspaceId()):null;workspacePath=workspace?.path??null;workspaceTitle=workspace?.title??null}catch{/* 读不到工作区就只报 cwd unknown */}
      return readImHealthFromDisk({bundles,plugins,workspacePath,workspaceTitle,home:process.env.HOME??''});
     };
-    const adapter=new DshAdapter({integrations:resolved.integrations,appleCalendar,appleConfig:resolved.appleCalendar,store,files,knowledge,executions,heartbeat,speak,runner,speech:ctx.get?.('speechToText'),office:ctx.get?.('officeToPdf'),audio,executionConfig:resolved.execution,transcribeWithoutApproval:resolved.transcribeWithoutApproval,sessions:ctx.sessions,workspaceRegistry:ctx.workspaceRegistry,approval:ctx.approval,allowedWorkspaces,heartbeatTiming,imHealth});
+    const adapter=new DshAdapter({integrations:resolved.integrations,appleCalendar,appleConfig:resolved.appleCalendar,store,files,knowledge,executions,heartbeat,speak,intake,loop,runner,speech:ctx.get?.('speechToText'),office:ctx.get?.('officeToPdf'),audio,executionConfig:resolved.execution,transcribeWithoutApproval:resolved.transcribeWithoutApproval,sessions:ctx.sessions,workspaceRegistry:ctx.workspaceRegistry,approval:ctx.approval,allowedWorkspaces,heartbeatTiming,imHealth});
    disposers.push(ctx.tools.register(toolDefinition(adapter)));
    const skillPath=fileURLToPath(new URL('../skills/personal-workstation/SKILL.md',import.meta.url));
    disposers.push(ctx.skills.register({name:'personal-workstation',description:'在 DSH 对话中管理工作台项目、任务、资料、日程及变更收件箱。',source:'runtime',resourceBase:{kind:'directory',path:dirname(skillPath)},path:skillPath,content:readFileSync(skillPath,'utf8'),invocation:{modelInvocable:true,userInvocable:true}}));
    const connection=ctx.get?.('connection');
    const webServer=ctx.get?.('webServer');
    if(connection&&webServer)disposers.push(webServer.register(browserLoginRoute(connection)));
-   if(connection&&webServer)disposers.push(webServer.register(httpRoute({schedule,heartbeatTiming,rootWorkspaceId,rootStatus,config:resolved,apple:appleCalendar,store,connection,files,knowledge,executions,heartbeat,speak,beat,runner,office:ctx.get?.('officeToPdf'),speech:ctx.get?.('speechToText'),sessionQuery:ctx.get?.('sessionQuery'),audio,grants:grantStore,workspaceFs,transcribeWithoutApproval:resolved.transcribeWithoutApproval,workspaceRegistry:ctx.workspaceRegistry,allowedWorkspaces,workspaces:workspaceStore,configuredWorkspaces:resolved.allowedWorkspaces,executionEnabled:Boolean(resolved.execution?.enabled),imHealth})));
+   if(connection&&webServer)disposers.push(webServer.register(httpRoute({schedule,heartbeatTiming,rootWorkspaceId,rootStatus,config:resolved,apple:appleCalendar,store,connection,files,knowledge,executions,heartbeat,speak,beat,intake,loop,openings,runner,office:ctx.get?.('officeToPdf'),speech:ctx.get?.('speechToText'),sessionQuery:ctx.get?.('sessionQuery'),audio,grants:grantStore,workspaceFs,transcribeWithoutApproval:resolved.transcribeWithoutApproval,workspaceRegistry:ctx.workspaceRegistry,allowedWorkspaces,workspaces:workspaceStore,configuredWorkspaces:resolved.allowedWorkspaces,executionEnabled:Boolean(resolved.execution?.enabled),imHealth})));
   }catch(e){try{const pending=cleanup();if(pending)return pending.then(()=>{throw e},cleanupError=>{throw new AggregateError([e,cleanupError],'工作台注册及清理失败')})}catch(cleanupError){throw new AggregateError([e,cleanupError],'工作台注册及清理失败')}throw e;}
   return cleanup;
  },'personal workstation: store, tools and skill');

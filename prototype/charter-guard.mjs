@@ -355,6 +355,29 @@ const CHECKS = [
     },
   },
   {
+    id: 'actionAllowlist', label: '工具动作允许清单同步',
+    hint: '工具 schema 里声明的每个 action，都必须在 dsh-adapter 的动作允许清单里 —— 否则调用会被「未知工作台动作」挡掉（2026-10-22 就是这么踩的：intake_record 写了分派、漏了允许清单）',
+    run: ({files}) => {
+      const adapter = files.find(f => f.path === 'src/dsh-adapter.mjs');
+      if (!adapter) return {count: 0, samples: [], skipped: '未找到 dsh-adapter.mjs'};
+      const enumText = /action:\{type:'string',enum:\[([^\]]*)\]\}/.exec(adapter.content)?.[1];
+      const allow = /if\(!\[([^\]]*)\]\.includes\(args\.action\)\)throw new DomainError\('INVALID','未知工作台动作'\)/.exec(adapter.content)?.[1];
+      if (enumText === undefined || allow === undefined) return {count: 0, samples: [], skipped: '读取不到枚举或允许清单，检查方式需更新'};
+      const declared = [...enumText.matchAll(/'([^']+)'/g)].map(m => m[1]);
+      const allowed = new Set([...allow.matchAll(/'([^']+)'/g)].map(m => m[1]));
+      // 动作可能由三种地方处理：switch 里的 case、允许清单后的分派、或允许清单本身。
+      // 只查"三处都没有"的那种 —— 那才是真的会被「未知工作台动作」挡掉。
+      const handled = new Set([
+        ...[...adapter.content.matchAll(/case '([a-z_]+)'/g)].map(m => m[1]),
+        ...[...adapter.content.matchAll(/args\.action===?'([a-z_]+)'/g)].map(m => m[1]),
+      ]);
+      const samples = declared
+        .filter(name => !allowed.has(name) && !handled.has(name))
+        .map(name => '工具声明了 ' + name + '，但既没有 case 也不在允许清单里');
+      return {count: samples.length, samples};
+    },
+  },
+  {
     id: 'argWhitelists', label: '工具参数白名单同步',
     hint: 'dsh-adapter 里读 args.X 的参数，必须在同一文件的 permitted 白名单里 —— 否则工具调用会被"不接受未知参数"直接拒掉（与 kind 白名单同一类坑）。',
     run: ({files}) => {
@@ -452,6 +475,9 @@ function listMarkdown() {
   const walk = dir => {
     for (const entry of readdirSync(dir, {withFileTypes: true})) {
       if (entry.name.startsWith('.')) continue;
+      // 软链不算第二份文档（2026-10-22：spec/ 挪进仓库后，工作区根留了 spec -> workstation/spec
+      // 的软链，扫描器把同一份规范数了两遍，62 处"同名多版本"全是假报）。
+      if (entry.isSymbolicLink()) continue;
       const full = join(dir, entry.name);
       const rel = full.slice(repo.length + 1);
       if (IGNORE.test(rel)) continue;

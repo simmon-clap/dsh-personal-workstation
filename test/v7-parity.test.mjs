@@ -10,6 +10,15 @@ const sources=readdirSync(directory).filter(name=>name.endsWith('.mjs')).map(nam
 const intentional=new Map([
  ['receipt','已提交待确认的改动的记录编号随 preview 返回，收件箱据此显示与撤销，无需单独读取'],
  ['schedule_list','W1 P0-1：设置页删掉「定时与提醒」展示——那是实验包「自动化任务」，不是心跳定时；心跳定时由 heartbeat_status 唯一来源负责。API 保留，界面不再调用。'],
+ // P1 收件本（spec/55）：先做后台与 API，界面在 P4 才接。这不是能力缺失，是**按批次顺序还没做到**。
+ // P4 接上界面时把这几条从例外里删掉（删掉后门禁会因为"有入口"而自然通过；若忘了接线，它会继续红）。
+ ['intake_list','同上：P1 后台已就绪，界面在 P4'],
+ ['intake_open','同上：P1 后台已就绪，界面在 P4'],
+ ['intake_assign','同上：P1 后台已就绪，界面在 P4'],
+ // P2 着落本同样先后台，界面在 P4（收件箱里"这件事去哪了"的分组）接。
+ ['opening_list','开口记录的读取接口：P3 后台已能记，界面（状态面里"最近一次开口"）待接'], ['loop_close','P2 只做后台：着落本已能记终态，界面排在 P4；P4 接线后删掉本条'],
+ ['loop_list','同上：P2 后台已就绪，界面在 P4'],
+ ['loop_sweep','同上：P2 后台已就绪，界面在 P4'],
 ]);
 test('every server action the legacy UI used has a V7 entry or a recorded reason',()=>{
  const api=readFileSync(new URL('../src/browser-api.mjs',import.meta.url),'utf8');
