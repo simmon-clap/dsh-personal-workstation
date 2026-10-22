@@ -140,6 +140,14 @@ if (existsSync(logPath)) {
   add('S2', 'blocked', '找不到同步日志：' + logPath);
 }
 
+// 最后成功同步距今多少分钟（用来区分"它停了"和"我看不到它"）。
+const syncAgeMinutes = (() => {
+ if (!existsSync(stampPath)) return null;
+ const stamp = Number(readFileSync(stampPath, 'utf8').trim());
+ if (!Number.isFinite(stamp)) return null;
+ return (Date.now() - stamp) / 60000;
+})();
+
 // S4：常驻节点心跳。表在 = 能判；表里没有常驻的记录 = 还判不了（阻塞）；
 // 有记录但太旧 = 真故障（红，这是宪章 v1.4 第七条唯一的"必须在线"承诺）。
 const readBeat = () => {
@@ -164,6 +172,11 @@ const readBeat = () => {
   if (!latest) return {status: 'blocked', why: '心跳表在，但常驻节点还没有过一条心跳记录'};
   const silent = (Date.now() - Date.parse(latest)) / 60000;
   if (!Number.isFinite(silent)) return {status: 'red', why: '最后一条心跳时间读不懂：' + latest};
+  // 关键区分（2026-10-22 实测踩到）：**本机同步停了**时，看到的心跳必然是旧的 ——
+  // 那不是"常驻节点停了"，而是"我看不到它"。这两种情况必须分开说，否则门禁会诬告 Mini。
+  if (Number.isFinite(syncAgeMinutes) && syncAgeMinutes > 45) {
+   return {status: 'blocked', why: `看不到常驻节点：本机同步已经停了 ${Math.round(syncAgeMinutes)} 分钟（最后一条心跳是 ${Math.round(silent)} 分钟前的副本）`};
+  }
   if (silent > 45) return {status: 'red', why: `常驻节点已经 ${Math.round(silent)} 分钟没有心跳（承诺 15 分钟一次，超过 45 分钟算停）`};
   return {status: 'pass', why: `常驻节点最近一次心跳在 ${Math.round(silent)} 分钟前`};
 };

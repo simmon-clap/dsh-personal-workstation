@@ -84,7 +84,9 @@ const SSH_BIN = process.env.SYNC_SSH || 'ssh';
 // ConnectTimeout 只管"连上之前"；连上之后隧道断掉（Tailscale 中继切换）会**永远等**。
 // 2026-10-21 实测：一次同步挂住 6 分钟不退出，SSH 早已 100% 丢包而进程还在等。
 // 加 ServerAlive：45 秒没回应就自己断，交给上层重试。
-const SSH_OPTS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3'];
+// ConnectTimeout 从 8 秒提到 30 秒：Tailscale 走中继时 8 秒根本连不上（2026-10-22 实测：
+// 脚本里的探活给了 30 秒能通，引擎里的 8 秒却总是超时，于是每次同步都以 ssh 超时告终）。
+const SSH_OPTS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=30', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3'];
 const sshSqlite = (sql) => {
   if (REMOTE_LOCAL) { const t = sqlite(REMOTE_LOCAL, sql).trim(); return t ? JSON.parse(t) : []; }
   const out = execFileSync(SSH_BIN, [...SSH_OPTS, REMOTE, 'sqlite3', '-json', REMOTE_TARGET], {input: sql, encoding: 'utf8', maxBuffer: 1 << 28});
