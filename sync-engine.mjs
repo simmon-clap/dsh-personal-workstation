@@ -356,6 +356,43 @@ for (const {table, cols, where = '', upsert = ''} of LOG_TABLES) {
   console.log(`${table}：拉到本地 ${lv.length} 条 · 推到对端 ${rv.length} 条`);
 }
 
+// ── 助理后台的四张表（2026-10-22 补）──────────────────────────────────────
+// 为什么必须同步：宪章 v1.4 说多端是**对等副本**。收件本/着落本/开口记录/心跳本
+// 如果只留在一台机器上，"它有没有接住"在另一台就永远查不到——实测 Mini 上已有 1 条心跳，
+// 笔记本上还是 0，正是因为这几张表没在同步范围里。
+//
+// 冲突策略（刻意保守）：
+//   · beat / opening 只增不改 → 冲突就忽略；
+//   · intake / loop 会被更新（回一句话、写终态）→ **已收口的优先**：
+//     只有当对方这条已经收口（closed_at 非空）、且比本地更晚，才覆盖本地。
+//     这样"本地已经处理过"不会被对端一条旧记录改回未处理。
+const ASSISTANT_TABLES = [
+ {table: 'beat', cols: ['workspace', 'side', 'seq', 'at', 'source'],
+  conflict: 'on conflict(workspace,side,seq) do nothing'},
+ {table: 'opening', cols: ['workspace', 'id', 'day', 'anchor', 'at', 'items', 'skipped', 'summary', 'run_id'],
+  conflict: 'on conflict(workspace,id) do nothing'},
+ {table: 'intake', cols: ['workspace', 'id', 'at', 'source', 'source_ref', 'summary', 'state', 'reason', 'subject_kind', 'subject_id', 'unassigned', 'closed_at'],
+  conflict: 'on conflict(workspace,id) do update set state=excluded.state,reason=excluded.reason,subject_kind=excluded.subject_kind,subject_id=excluded.subject_id,unassigned=excluded.unassigned,closed_at=excluded.closed_at where excluded.closed_at is not null and (intake.closed_at is null or excluded.closed_at>=intake.closed_at)'},
+ {table: 'loop', cols: ['workspace', 'id', 'subject_kind', 'subject_id', 'state', 'waiting_for', 'waiting_until', 'opened_at', 'closed_at', 'note'],
+  conflict: 'on conflict(workspace,id) do update set state=excluded.state,waiting_for=excluded.waiting_for,waiting_until=excluded.waiting_until,closed_at=excluded.closed_at,note=excluded.note where excluded.closed_at is not null and (loop.closed_at is null or excluded.closed_at>=loop.closed_at)'},
+];
+for (const {table, cols, conflict} of ASSISTANT_TABLES) {
+ const existsSql = "select name from sqlite_master where type='table' and name=" + esc(table) + ";";
+ let localHas = false, remoteHas = false;
+ try { localHas = rows(LOCAL, existsSql).length > 0; } catch {}
+ try { remoteHas = sshSqlite(existsSql).length > 0; } catch {}
+ if (!localHas || !remoteHas) { console.log(`${table}：有一端还没有这张表，跳过`); continue; }
+ const select = 'select ' + cols.join(',') + ' from ' + table + ';';
+ const localRows = rows(LOCAL, select);
+ const remoteRows = sshSqlite(select);
+ // 这些表很小，不做差异规划：两边各写一遍、靠 conflict 子句保证幂等。宁可多写一次，不要漏。
+ const insert = (row) => 'insert into ' + table + '(' + cols.join(',') + ') values('
+  + cols.map(c => esc(row[c])).join(',') + ') ' + conflict + ';';
+ if (remoteRows.length) { try { sqlite(LOCAL, 'begin immediate;\n' + remoteRows.map(insert).join('\n') + '\ncommit;'); } catch (error) { console.log(`${table}：写入本地失败（${error?.message ?? error}）`); } }
+ if (localRows.length) { try { sshWrite('begin immediate;\n' + localRows.map(insert).join('\n') + '\ncommit;'); } catch (error) { console.log(`${table}：写入对端失败（${error?.message ?? error}）`); } }
+ console.log(`${table}：对端 ${remoteRows.length} 条 · 本端 ${localRows.length} 条`);
+}
+
 // ── 材料文件同步（目标要求"业务对象 + 材料文件"两端都要）─────────────────────
 // 对象同步完了不算完：资料记录指向的是**文件路径**，文件不在那边，工作台照样打不开。
 // 用 rsync 双向：先拉后推（`--update` 保证不会用旧文件盖新文件）。
