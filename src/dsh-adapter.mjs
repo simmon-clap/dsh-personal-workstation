@@ -137,7 +137,7 @@ export class DshAdapter {
       case 'view_export':return exportViewMarkdown(args.viewData);
       case 'view_preview':return {view:buildViewPreview({store:this.store,ctx,template:args.template,subjectId:args.subjectId,params:args.params,viewId:args.viewId,now:new Date()})};
     }
-    if(!['layout_save','draft','commit','undo_draft','cancel_draft','knowledge_ingest','heartbeat_run','speak_feedback','view_save'].includes(args.action))throw new DomainError('INVALID','未知工作台动作');
+    if(!['layout_save','draft','commit','undo_draft','cancel_draft','knowledge_ingest','heartbeat_run','speak_feedback','view_save','intake_record','loop_close'].includes(args.action))throw new DomainError('INVALID','未知工作台动作');
     // PRD v1.3 CH-06-2「建议、歧义和草稿留待处理」：草稿只是待处理的建议，落进收件箱等待取舍，
     // 不改变任何业务数据，因此不要求审批；真正改变业务数据的 commit 与画布布局 layout_save 仍然必须审批。
     // 收录会写入宿主知识库（另一个系统），与提交一样需要审批；审批后才有可写上下文。
